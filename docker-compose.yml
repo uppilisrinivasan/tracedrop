@@ -1,0 +1,86 @@
+version: '3.9'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tracedrop-app
+    ports:
+      - "8080:8080"
+    environment:
+      - NODE_ENV=development
+      - PORT=8080
+      - FIRESTORE_EMULATOR_HOST=firestore:8080
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - LLM_RATE_LIMIT_RPS=${LLM_RATE_LIMIT_RPS:-10}
+      - LLM_RATE_LIMIT_TOKENS_PER_DAY=${LLM_RATE_LIMIT_TOKENS_PER_DAY:-100000}
+      - GCP_PROJECT=${GCP_PROJECT:-tracedrop-dev}
+    depends_on:
+      firestore:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+    networks:
+      - tracedrop-network
+    volumes:
+      - ./backend:/app/backend
+      - ./frontend:/app/frontend
+      - ./data:/app/data
+    command: npm run dev --prefix backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  firestore:
+    image: oittaa/firestore-emulator:latest
+    container_name: tracedrop-firestore
+    ports:
+      - "8081:8080"
+    environment:
+      - FIRESTORE_EMULATOR_HOST=0.0.0.0:8080
+      - FIRESTORE_DATABASE_URL=http://firestore:8080
+    networks:
+      - tracedrop-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  neo4j:
+    image: neo4j:5-community
+    container_name: tracedrop-neo4j
+    ports:
+      - "7687:7687"
+      - "7474:7474"
+    environment:
+      - NEO4J_AUTH=none
+      - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
+      - NEO4J_server_memory_heap_initial__size=512m
+      - NEO4J_server_memory_heap_max__size=512m
+    networks:
+      - tracedrop-network
+    volumes:
+      - neo4j_data:/var/lib/neo4j/data
+      - neo4j_logs:/var/lib/neo4j/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7474"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+networks:
+  tracedrop-network:
+    driver: bridge
+
+volumes:
+  neo4j_data:
+    driver: local
+  neo4j_logs:
+    driver: local

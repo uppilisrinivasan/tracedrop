@@ -6,6 +6,103 @@ Every blood donation is a health check. TraceDrop makes sure every finding matte
 
 ---
 
+## 🚀 Quick Start (Development)
+
+### Prerequisites
+- Node.js 20+
+- Docker & Docker Compose
+- Anthropic API key
+
+### Setup
+```bash
+# 1. Copy environment template
+cp .env.example .env
+
+# 2. Add your API key to .env
+# Edit .env and set ANTHROPIC_API_KEY=sk-your-key
+
+# 3. Verify setup
+bash setup-verify.sh
+
+# 4. Start development
+docker-compose up --build
+
+# 5. Access
+- Frontend: http://localhost:8080
+- API: http://localhost:8080/api/health
+- Frontend dev: http://localhost:5173 (Vite)
+```
+
+### Local Installation (without Docker)
+```bash
+# Backend
+cd backend
+npm install
+npm run dev
+
+# Frontend (in another terminal)
+cd frontend
+npm install
+npm run dev
+```
+
+---
+
+## 📁 Project Structure
+
+```
+tracedrop/
+├── backend/                 # Node.js/Express + Anthropic ADK
+│   ├── src/
+│   │   ├── agents/         # AI agent implementations
+│   │   ├── database/       # Firestore & knowledge graph
+│   │   ├── llm/            # LLM client & rate limiting
+│   │   ├── services/       # Business logic
+│   │   ├── routes/         # API endpoints
+│   │   ├── middleware/     # Express middleware
+│   │   └── server.js       # Entry point
+│   ├── package.json
+│   └── tsconfig.json
+│
+├── frontend/                # React 19 + Vite
+│   ├── src/
+│   │   ├── pages/          # Route pages
+│   │   ├── components/     # Reusable UI components
+│   │   ├── hooks/          # React hooks
+│   │   ├── services/       # API client
+│   │   ├── types/          # TypeScript types
+│   │   └── App.tsx
+│   ├── package.json
+│   ├── vite.config.ts
+│   └── tsconfig.json
+│
+├── data/                    # Data layer
+│   ├── synthetic/          # Generated FHIR bundles
+│   ├── ontology/           # Medical ontology
+│   ├── protocols/          # Protocol rules
+│   ├── templates/          # Message templates
+│   ├── generate.py         # Data generator
+│   └── load.py             # Load to Firestore
+│
+├── docs/                    # Project documentation
+│   ├── 00-project-status/  # Project overview
+│   ├── 01-team-perspectives/
+│   ├── 02-user-perspectives/
+│   ├── 03-build/
+│   ├── 04-components/
+│   ├── 05-features/
+│   └── PERSPECTIVES_MASTER_GUIDE.md
+│
+├── docker-compose.yml      # Multi-service compose
+├── Dockerfile              # Multi-stage build
+├── .env.example            # Environment template
+├── .gitignore
+├── BUILD_START.md          # Team orientation guide
+└── README.md               # This file
+```
+
+---
+
 ## 📖 Documentation Structure
 
 **All project documentation is organized in `/docs/`:**
@@ -15,44 +112,102 @@ Every blood donation is a health check. TraceDrop makes sure every finding matte
   
 - **[/docs/01-problem-brief.md](docs/01-problem-brief.md)** - Problem analysis & market size
   
-- **[/docs/02-pitch/](docs/02-pitch/)** - Pitch deck & narrative (UPDATED with ecosystem diagram)
-  - `pitch-deck.html` - Consumer-centric slides
-  - `pitch-narrative.md` - New speaker script
+- **[/docs/02-pitch/](docs/02-pitch/)** - Pitch deck & narrative
+  - Consumer-centric slides with ecosystem diagram
   
 - **[/docs/03-build/](docs/03-build/)** - Build specifications
-  - `prototype-spec.md` - What to build (app first)
-  - `architecture.md` - Consumer-first design
+  - Prototype spec & architecture (consumer-first design)
   
-- **[/docs/04-submission/](docs/04-submission/)** - Submission materials
-  
-- **[/docs/05-strategy/](docs/05-strategy/)** - 10x Strategy Framework
-  - Complete analysis, positioning, execution plan
+- **[/docs/BUILD_START.md](BUILD_START.md)** - Team roles and entry points
 
 ---
 
-## 🎯 Quick Start
+## 🛠 Development Commands
 
-1. **Understand the strategy:** Read [`docs/00-project-status/README.md`](docs/00-project-status/README.md)
-2. **Generate the PDF:** Follow `PDF-GENERATION-INSTRUCTIONS.md`
-3. **Build the prototype:** Follow `prototype-spec.md`
-4. **Practice the pitch:** Use `pitch-narrative.md`
+### Backend
+```bash
+cd backend
+
+# Development
+npm run dev
+
+# Production
+npm start
+
+# Testing
+npm test
+
+# Linting
+npm run lint
+```
+
+### Frontend
+```bash
+cd frontend
+
+# Development server
+npm run dev
+
+# Production build
+npm run build
+
+# Preview build
+npm run preview
+
+# Type checking
+npm run type-check
+```
 
 ---
 
-## ✨ The 10x Insight
+## 🎯 Build Timeline (Days 1-10)
+
+| Days | Focus | Deliverables |
+|------|-------|--------------|
+| 1-2 | Foundation | Data schema, Firestore, Docker setup |
+| 3-4 | Consumer App | React UI, dashboard, deferral flow |
+| 5-6 | AI Agents | Navigator agent, message generation |
+| 7-8 | Integration | Care booking, follow-up workflows |
+| 9-10 | Testing & Deploy | E2E tests, production deployment |
+
+See [BUILD_START.md](BUILD_START.md) for team roles and specific entry points.
+
+---
+
+## 🎯 The 10x Insight
 
 **Donors at center, not margin.**
 
-The ecosystem diagram (Slide 2B of pitch deck) shows:
-- Donor in blue circle (center)
-- Direct benefits flow to donors
-- Institutional benefits flow from donor success
-- Result: All win when donor wins
+The ecosystem shows:
+- **Donor in center** (blue circle)
+- **Direct benefits flow to donors** (control over health data)
+- **Institutional benefits flow from donor success** (supply, trust)
+- **Result: All win when donor wins**
 
-**This is the differentiator that wins the competition.**
+This consumer-centric positioning is the differentiator for the competition.
 
 ---
 
-**Status:** Consumer-centric strategy complete. Ready to build.  
+## 📝 Environment Variables
+
+See `.env.example` for all configuration options. Key variables:
+
+- `ANTHROPIC_API_KEY` - Claude API key (required)
+- `LLM_MODEL` - Model to use (default: claude-3-5-sonnet-20241022)
+- `LLM_RATE_LIMIT_RPS` - Rate limit in requests/second
+- `NODE_ENV` - Environment (development/production)
+- `PORT` - Backend port (default: 8080)
+
+---
+
+## 🔗 Key Links
+
+- **Strategy:** [Consumer-Centric 10x Vision](memory/consumer-centric-10x-vision.md)
+- **Build Guide:** [BUILD_START.md](BUILD_START.md)
+- **User Perspectives:** [PERSPECTIVES_MASTER_GUIDE.md](docs/PERSPECTIVES_MASTER_GUIDE.md)
+
+---
+
+**Status:** Phase 1 environment scaffolding complete. Ready to build.  
 **Deadline:** October 18, 2026  
-**Next:** Generate PDF, then build.
+**Next:** Follow BUILD_START.md for team role assignments and building Day 1.
