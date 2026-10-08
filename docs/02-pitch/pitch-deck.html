@@ -56,6 +56,19 @@
   .src { font-size: 10.5px; color: var(--muted); margin-top: 6px; }
   .fill { flex: 1; min-height: 0; }
 
+  /* Ecosystem diagram */
+  .ecosystem-center { width: 140px; height: 140px; border-radius: 50%; background: var(--accent);
+    display: flex; align-items: center; justify-content: center; color: white; font-weight: 700;
+    font-size: 18px; margin: 0 auto; text-align: center; line-height: 1.2; }
+  .ecosystem-container { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; align-items: center;
+    margin-top: 12px; }
+  .ecosystem-sector { text-align: center; }
+  .ecosystem-sector h4 { font-size: 15px; font-weight: 700; margin: 0 0 6px; color: var(--accent-deep); }
+  .ecosystem-sector ul { list-style: none; padding: 0; margin: 0; font-size: 12.5px; }
+  .ecosystem-sector li { margin: 3px 0; color: var(--text-secondary); }
+  .benefit-label { font-size: 11px; font-weight: 650; color: var(--accent-deep); text-transform: uppercase;
+    letter-spacing: 0.05em; margin-top: 6px; }
+
   /* Title slide */
   .title-slide { background: linear-gradient(135deg, #0d366b 0%, #184f95 55%, #2a78d6 100%); color: #fff; }
   .title-slide .eyebrow { color: #cde2fb; }
@@ -108,8 +121,8 @@
     <div class="drop" aria-hidden="true"></div>
     <div class="eyebrow">AI Builder Cup 2026 · Sustainability &amp; Social Impact</div>
     <h1 style="font-size:58px;">TraceDrop</h1>
-    <p class="lede" style="font-size:26px;max-width:9.5in;">Every blood donation is a health check.<br>TraceDrop makes sure it counts.</p>
-    <p class="lede" style="margin-top:18px;font-size:17px;max-width:9.8in;">A Gemini-powered navigator that follows every finding from a blood donation through to care, with the blood centre's doctor and counsellor in charge.</p>
+    <p class="lede" style="font-size:26px;max-width:9.5in;">Your Health. Your Blood. Your Data.</p>
+    <p class="lede" style="margin-top:12px;font-size:20px;max-width:9.8in;">A consumer health platform powered by the donation cycle. Donors own their health, get care navigation, return because they're addicted to knowing their health.</p>
   </div>
   <div class="foot"><span>Team [name] · [members]</span><span>Prototype: [deployed link] · Repo: [GitHub link]</span></div>
 </section>
@@ -168,11 +181,77 @@
   <div class="foot"><span>TraceDrop · AI Builder Cup 2026</span><span>2</span></div>
 </section>
 
+<!-- 2B. The Ecosystem -->
+<section class="slide">
+  <div class="eyebrow">The solution model: Consumer at center</div>
+  <h2>Donors get value at every step. Institutions benefit because donors succeed.</h2>
+
+  <div style="padding: 12px 0; display: flex; flex-direction: column; align-items: center;">
+    <!-- Center: Donor -->
+    <div class="ecosystem-center">
+      Donor<br>at Center
+    </div>
+
+    <!-- Three directions of value -->
+    <div class="grid g3 fill" style="margin-top: 24px;">
+      <!-- Direct Benefits Column -->
+      <div>
+        <h3 style="color: var(--accent-deep); margin-bottom: 14px;">↓ DIRECT BENEFITS</h3>
+        <div class="card" style="background: #e1f5e1; border: 2px solid var(--good);">
+          <h4 style="color: var(--good); margin-bottom: 8px;">Donors Get:</h4>
+          <ul style="margin: 0; padding-left: 16px; font-size: 13px;">
+            <li><b>Health Visibility</b><br>See your BP/Hb trend<br>Know your risk early</li>
+            <li style="margin-top: 8px;"><b>Free Care Navigation</b><br>Booked same-day<br>No friction</li>
+            <li style="margin-top: 8px;"><b>Social Impact</b><br>"You prevented a stroke"<br>Your donation matters</li>
+          </ul>
+          <p class="benefit-label" style="margin-top: 12px;">Result: 90% return rate</p>
+        </div>
+      </div>
+
+      <!-- Feedback Loops Column -->
+      <div>
+        <h3 style="color: var(--accent-deep); margin-bottom: 14px;">↔ FLYWHEEL</h3>
+        <div class="card" style="background: #e8f3ff; border: 2px solid var(--accent);">
+          <h4 style="color: var(--accent-deep); margin-bottom: 8px;">The Loop:</h4>
+          <ul style="margin: 0; padding-left: 16px; font-size: 13px;">
+            <li><b>Donate</b><br>Get health data</li>
+            <li style="margin-top: 8px;"><b>Know</b><br>Understand why it matters</li>
+            <li style="margin-top: 8px;"><b>Care</b><br>Free care + follow-up</li>
+            <li style="margin-top: 8px;"><b>Return</b><br>Every 3 months<br>(habit formed)</li>
+          </ul>
+          <p class="benefit-label" style="margin-top: 12px;">Result: Sustainable supply</p>
+        </div>
+      </div>
+
+      <!-- Institutional Benefits Column -->
+      <div>
+        <h3 style="color: var(--accent-deep); margin-bottom: 14px;">↑ INSTITUTIONAL BENEFITS</h3>
+        <div class="card" style="background: #f7f6f3; border: 2px solid #52514e;">
+          <h4 style="color: #52514e; margin-bottom: 8px;">They Get:</h4>
+          <ul style="margin: 0; padding-left: 16px; font-size: 13px;">
+            <li><b>Blood Centres:</b><br>90% of findings reached<br>Donors keep returning</li>
+            <li style="margin-top: 8px;"><b>Employers:</b><br>Wellness ROI<br>Healthy workforce</li>
+            <li style="margin-top: 8px;"><b>Gov/NHM:</b><br>Prevention data<br>NCD outcomes</li>
+          </ul>
+          <p class="benefit-label" style="margin-top: 12px;">Result: All win when donor wins</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p class="muted small" style="margin-top: 16px; text-align: center;">
+    <b>Key insight:</b> Donors are not objects of institutional duty. They are the CENTER. When their experience is exceptional,
+    institutional benefits cascade naturally. That's why it scales.
+  </p>
+
+  <div class="foot"><span>TraceDrop · AI Builder Cup 2026</span><span>2B</span></div>
+</section>
+
 <!-- 3. The system loses them -->
 <section class="slide">
-  <div class="eyebrow">The problem</div>
-  <h2>Blood donation finds disease in healthy adults, then loses them</h2>
-  <p class="lede" style="margin-bottom:18px;">India's <b>1.57 crore</b> donations a year make up its largest routine health check of working-age adults. Every donor's BP and haemoglobin are measured, and every unit is screened for infections.</p>
+  <div class="eyebrow">The consumer problem</div>
+  <h2>Urban workers are blind to their health. Blood donation is their only free check—then wasted.</h2>
+  <p class="lede" style="margin-bottom:18px;">India's <b>1.57 crore</b> donations a year = 1.57 crore health measurements. Urban workers never see a doctor. Blood donation is their largest access point to health data. Yet they leave with <b>zero insight</b>, <b>zero explanation</b>, and <b>zero action</b>.</p>
   <div class="grid g2 fill" style="grid-template-columns: 1.3fr 1fr;">
     <div>
       <h3 style="margin-bottom:12px;">What happens after a finding</h3>
@@ -236,8 +315,8 @@
 
 <!-- 5. Solution -->
 <section class="slide">
-  <div class="eyebrow">TraceDrop</div>
-  <h2>A navigator for every donor, with the blood centre in charge</h2>
+  <div class="eyebrow">TraceDrop: Consumer Platform</div>
+  <h2>The donor's health platform. They own it, understand it, and can't stop using it.</h2>
   <div class="grid g4" style="margin-top:6px;">
     <div class="card"><span class="tag">Gemini · multimodal</span><h3 style="margin-top:8px;">1. Capture</h3><p>Reads a register page, a lab-report photo or a PDF from any lab and writes one standard FHIR record. No integration needed.</p></div>
     <div class="card"><span class="tag">Gemini · long context</span><h3 style="margin-top:8px;">2. Understand</h3><p>Reasons over the donor's whole history using ICMR protocols. Safety thresholds stay as fixed rules.</p></div>
@@ -336,33 +415,37 @@
 
 <!-- 9. Impact & scale -->
 <section class="slide">
-  <div class="eyebrow">Impact and scale</div>
-  <h2>It routes to care the state already pays for. No new tests, no new budget.</h2>
+  <div class="eyebrow">Impact and scale: Donor-driven</div>
+  <h2>Donors adopt because they get value. Institutions fund because donors return. No new budget.</h2>
   <div class="grid g3" style="margin-top:4px;">
-    <div class="card">
-      <h3>Who benefits</h3>
-      <ul>
-        <li><b>Donors:</b> silent conditions found and followed up</li>
-        <li><b>Women:</b> 57% are anaemic, and they're the most often deferred</li>
-        <li><b>People with hepatitis:</b> curable, free treatment under NVHCP</li>
-        <li><b>Blood centres:</b> they meet their counselling duties, and cleared donors come back</li>
-        <li><b>Patients:</b> more regular donors</li>
+    <div class="card" style="background: #e1f5e1; border-left: 4px solid var(--good);">
+      <h3 style="color: var(--good);">Donors Win</h3>
+      <ul style="font-size: 14px;">
+        <li><b>Health visibility</b> they've never had</li>
+        <li><b>Silent conditions found:</b> high BP, anaemia, hepatitis (curable)</li>
+        <li><b>Free care booked</b> same-day, no friction</li>
+        <li><b>Followed up</b> until it's done</li>
+        <li><b>Impact badge:</b> "You prevented a stroke"</li>
       </ul>
     </div>
-    <div class="card">
-      <h3>Who pays (donors never do)</h3>
-      <ul>
-        <li><b>Blood centres and SBTCs:</b> counselling and NVHCP linkage duties</li>
-        <li><b>Employers:</b> annual check-ups under the OSH Code (in force Nov 2025)</li>
-        <li><b>Insurers:</b> wellness programmes allowed by IRDAI, with consent</li>
+    <div class="card" style="background: #e8f3ff; border-left: 4px solid var(--accent);">
+      <h3 style="color: var(--accent-deep);">Institutions Win</h3>
+      <ul style="font-size: 14px;">
+        <li><b>Blood centres:</b> 90% findings reached, donors return</li>
+        <li><b>Employers:</b> wellness ROI, healthy workforce</li>
+        <li><b>Government (NHM, NVHCP):</b> prevention data, NCD outcomes</li>
+        <li><b>Patients:</b> more regular, reliable blood supply</li>
+        <li style="margin-top: 8px;"><b>They pay:</b> existing counselling + wellness budgets</li>
       </ul>
     </div>
-    <div class="card">
-      <h3>Path to scale</h3>
-      <ul>
-        <li>3 Bengaluru centres → every finding type → every donor</li>
-        <li>SBTCs and NHM; ABHA and eSanjeevani connection</li>
-        <li>JAPAC: Japan returns results and Taiwan screens, but neither navigates donors to care</li>
+    <div class="card" style="background: #f7f6f3;">
+      <h3>Why it scales</h3>
+      <ul style="font-size: 14px;">
+        <li><b>Donor-driven:</b> Adoption is organic (they see value)</li>
+        <li><b>Self-sustaining:</b> Every 3 months a check-in (habit)</li>
+        <li><b>Geographic:</b> 3 centres → SBTCs → NHM → national</li>
+        <li><b>Regional:</b> Japan, Taiwan, Singapore (all donate regularly, none navigate)</li>
+        <li><b>No integration needed:</b> Works with any blood centre infrastructure</li>
       </ul>
     </div>
   </div>
@@ -377,8 +460,8 @@
 <section class="slide title-slide">
   <div class="fill" style="display:flex;flex-direction:column;justify-content:center;">
     <div class="drop" aria-hidden="true"></div>
-    <h1 style="font-size:50px;">Every donation is a health check.<br>TraceDrop makes sure it counts.</h1>
-    <p class="lede" style="margin-top:18px;font-size:19px;max-width:10in;">Today, India's blood centres promise donors a health check every time they give, about 1.5 crore times a year. What the check finds is rarely followed up. With Gemini, we remove that limit and deliver the same promise 10x better.</p>
+    <h1 style="font-size:50px;">Your Blood.<br>Your Health.<br>Your Data.</h1>
+    <p class="lede" style="margin-top:18px;font-size:19px;max-width:10in;">When donors own their health and get care navigation, they return. When donors return, blood supply is predictable. When blood supply is predictable, institutions fund it sustainably. That's the 10x.</p>
   </div>
   <div class="foot"><span>Team [name] · [contact]</span><span>[deployed link] · [GitHub link] · [video link]</span></div>
 </section>
