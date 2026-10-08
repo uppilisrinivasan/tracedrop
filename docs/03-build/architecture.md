@@ -2,71 +2,121 @@
 
 ## Design principles
 
-1. **Gen AI does the navigator's work. Ordinary code does the safety work.** Thresholds, eligibility, red flags and scheduling are deterministic. Gemini reads, reasons, explains and acts, inside those rails.
-2. **Humans approve at defined points.** The doctor approves before `book_slot`, using ADK tool confirmation. The counsellor owns every disclosure. Red flags bypass the AI entirely.
-3. **No integration needed to start.** Records can come from any register photo, PDF or image and are written as FHIR. That makes them ready for ABHA later.
-4. **No infection result ever reaches a model prompt that writes to the donor.** Reactive flags live in a separate, counsellor-only collection. The navigator only knows "counselling required: yes/no".
+1. **The consumer is the center, not the margin.** Every component is designed for the donor's experience first. The app shows health visibility and care navigation. Institutional consoles are secondary surfaces. Donors own and control their data.
+
+2. **Gen AI does the navigator's work. Ordinary code does the safety work.** Thresholds, eligibility, red flags and scheduling are deterministic. Gemini reads, reasons, explains and acts, inside those rails. The AI makes the donor experience delightful; safety and privacy are hard rules.
+
+3. **Humans approve at defined points.** The doctor approves before `book_slot`, using ADK tool confirmation. The counsellor owns every disclosure. Red flags bypass the AI entirely. Humans stay visible to the donor (not hidden background processes).
+
+4. **No integration needed to start.** Records can come from any register photo, PDF or image and are written as FHIR. That makes them ready for ABHA later. Donors can upload their own reports.
+
+5. **No infection result ever reaches a model prompt that writes to the donor.** Reactive flags live in a separate, counsellor-only collection. The navigator only knows "counselling required: yes/no". Privacy by design, not afterthought.
 
 ## System diagram
 
+### From the donor's perspective (consumer platform):
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                        DONOR'S JOURNEY                           │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  1. DONATION → Measurement (BP/Hb)                             │
+│       ↓                                                          │
+│  2. FINDING → WhatsApp in my language, with my trend            │
+│       ↓                                                          │
+│  3. UNDERSTANDING → "Why it matters" + next step               │
+│       ↓                                                          │
+│  4. CARE BOOKED → Saturday 10am, free, nearby                  │
+│       ↓                                                          │
+│  5. APP HOME → Trend visible, impact badge                     │
+│       ↓                                                          │
+│  6. CARE COMPLETED → "You caught this in time"                 │
+│       ↓                                                          │
+│  7. RETURN TO DONATION → Every 3 months (habit)                │
+│                                                                  │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### Technical architecture:
+
 ```mermaid
 flowchart LR
-  subgraph Donor["Donor (WhatsApp / web)"]
-    D1[Message, photo, voice]
+  subgraph Consumer["Consumer App (Donor-First)"]
+    A1["🏠 Home Screen<br/>Next donation, health status, impact"]
+    A2["📊 Health Dashboard<br/>Trends, care status, doctor summary"]
+    A3["💬 WhatsApp/Web<br/>Finding notification + care navigation"]
   end
-  subgraph CloudRun["Cloud Run: TraceDrop agent service (ADK)"]
-    O[Orchestrator agent]
-    RB[Record builder<br/>Gemini 3.8 Flash, multimodal]
-    TR[Finding triage<br/>deterministic rules]
-    NV[Navigator agent<br/>Gemini 3.8 Flash]
-    T1[[tool: read_record]]
-    T2[[tool: find_facility<br/>Maps Places]]
-    T3[[tool: book_slot<br/>requires doctor approval]]
-    T4[[tool: schedule_followup]]
-    T5[[tool: request_counselling<br/>no result disclosed]]
-    T6[[tool: share_summary<br/>mock ABHA]]
+  
+  subgraph Orchestration["Cloud Run: TraceDrop agent service (ADK)"]
+    O["Orchestrator agent<br/>(routes messages)"]
+    RB["Record builder<br/>Gemini 3.8 Flash, multimodal<br/>(reads registers, reports, voice)"]
+    TR["Finding triage<br/>deterministic rules<br/>(what to do next)"]
+    NV["Navigator agent<br/>Gemini 3.8 Flash + ADK<br/>(explains, books, follows up)"]
   end
-  subgraph Data["Google Cloud data"]
-    F[(Healthcare API<br/>FHIR store)]
-    FS[(Firestore<br/>conversations, plans, audit)]
-    CQ[(Firestore<br/>counsellor-only flags)]
-    BQ[(BigQuery<br/>funnel and evaluation)]
+  
+  subgraph Tools["AI Actions (with human approval)"]
+    T1["read_record"]
+    T2["find_facility (Maps)"]
+    T3["book_slot (needs doctor ✓)"]
+    T4["schedule_followup"]
+    T5["request_counselling (no result)"]
+    T6["share_to_ABHA"]
   end
-  subgraph Consoles["Firebase Hosting"]
-    DC[Doctor console<br/>approve, edit, reject]
-    CC[Counsellor console<br/>disclosure queue]
-    FN[Funnel dashboard]
+  
+  subgraph Data["Google Cloud Data"]
+    F["FHIR Store<br/>(donor records)"]
+    FS["Firestore<br/>(conversations, plans)"]
+    CQ["Firestore<br/>(counsellor flags only)"]
+    BQ["BigQuery<br/>(funnel, metrics)"]
   end
-  D1 --> O
+  
+  subgraph Institutional["Institutional Consoles (Supporting)"]
+    DC["🏥 Doctor Console<br/>Approve plans"]
+    CC["📞 Counsellor Console<br/>Disclosure queue"]
+    FN["📈 Funnel Dashboard<br/>Outcomes"]
+  end
+  
+  A3 --> O
   O --> RB --> F
   O --> TR
-  TR -- "red flag" --> RF[Urgent template<br/>no AI]
+  TR -- "red flag" --> RF["⚠️ Urgent (no AI)<br/>Same-day referral"]
   TR -- "finding" --> NV
   NV --> T1 & T2 & T3 & T4 & T5 & T6
   T1 --> F
-  T3 -. "pending" .-> DC
-  DC -- "approve" --> T3
-  T5 --> CQ --> CC
+  T3 -.-> DC
+  DC --> T3
+  T5 --> CQ
+  CQ --> CC
   NV --> FS
+  FS --> A2
   FS --> BQ --> FN
+  
+  style A1 fill:#e1f5e1
+  style A2 fill:#e1f5e1
+  style A3 fill:#e1f5e1
+  style DC fill:#f0f0f0
+  style CC fill:#f0f0f0
+  style FN fill:#f0f0f0
 ```
 
 ## Components
 
-| Component | Responsibility | Google tech | Notes |
+| Component | Responsibility | Google tech | Consumer-First Notes |
 |---|---|---|---|
-| **Channel adapter** | Receives and sends WhatsApp and web messages; handles images and audio | Cloud Run endpoint; WhatsApp Cloud API webhook | The web chat is the fallback and the replay surface |
-| **Orchestrator agent** | Routes each message: a new record, a question, or the reply to a follow-up | ADK `LlmAgent` with sub-agents | The session holds donor ID, language and the active plan |
-| **Record builder** | Turns an image or PDF into structured readings: value, unit, reference range, date, lab and a confidence for each field | Gemini 3.8 Flash, structured output (JSON schema) | Normalises units. Questions fields below 0.8 confidence. Writes FHIR Observations and a DiagnosticReport. |
-| **Finding triage** | Applies the [protocol rules](protocol-rules.md) and outputs finding type, urgency and protocol ID | Python (pure functions, unit-tested) | Red flags short-circuit to fixed templates, with no Gemini call |
-| **Navigator agent** | Explains in the donor's language using their trend and history; drafts the plan and the doctor's summary; acts through tools; follows up | ADK `LlmAgent` on Gemini 3.8 Flash; Gemini 3.8 Live as a stretch goal | The system prompt carries the protocol text, the "never" list and a style guide |
-| **`book_slot`** | Books the AAM, eSanjeevani or centre recheck slot | ADK `FunctionTool(book_slot, require_confirmation=needs_doctor)` | Confirmation is answered from the doctor console through the ADK API's `adk_request_confirmation` |
-| **`find_facility`** | Finds the nearest AAM or Namma Clinic, eSanjeevani, or NVHCP treatment centre | Maps Places API (real locations) plus a mock slot schedule | Real facility types and locations, mock availability |
-| **`request_counselling`** | Asks the donor to book "a confidential conversation about your donation" | Firestore (counsellor queue) | The navigator never sees the reason, only a flag |
-| **Doctor console** | Plan cards with evidence and the protocol cited; approve, edit or reject; batch approval | Firebase Hosting with Firebase Auth | Each decision is logged with the doctor's ID |
-| **Counsellor console** | Disclosure queue, agent contact status, "mark done" | Firebase Hosting with Auth (separate role) | Only role with access to the flags |
-| **FHIR store** | Donor records: Patient, Observation (BP, Hb, HbA1c, …), DiagnosticReport | Cloud Healthcare API (FHIR R4) | Uses ABDM-style resource shapes so ABHA works later |
-| **Funnel and evaluation** | Event stream: finding → explained → approved → booked → completed → cleared → donated again | Firestore → BigQuery (scheduled export or streaming) | Feeds the dashboard and the deck numbers |
+| **Channel adapter** | Receives and sends WhatsApp and web messages; handles images and audio | Cloud Run endpoint; WhatsApp Cloud API webhook | **Donor experience first:** Response time <5 sec. Fallback to web is transparent. Voice is optional but impressive. |
+| **Orchestrator agent** | Routes each message: a new record, a question, or the reply to a follow-up | ADK `LlmAgent` with sub-agents | The session holds donor ID, language and the active plan. Remembers donor across sessions. |
+| **Record builder** | Turns an image or PDF into structured readings: value, unit, reference range, date, lab and a confidence for each field | Gemini 3.8 Flash, structured output (JSON schema) | **Donor uploads their own reports** (or blood centre photos). Normalises units. Questions fields below 0.8 confidence. Writes FHIR Observations and a DiagnosticReport. |
+| **Finding triage** | Applies the [protocol rules](protocol-rules.md) and outputs finding type, urgency and protocol ID | Python (pure functions, unit-tested) | Red flags short-circuit to fixed templates, with no Gemini call. No diagnostic language reaches the donor. |
+| **Navigator agent** | Explains in the donor's language using their trend and history; drafts the plan and the doctor's summary; acts through tools; follows up | ADK `LlmAgent` on Gemini 3.8 Flash; Gemini 3.8 Live as a stretch goal | **Donor is the conversational partner.** Explains "why it matters to YOU" using their own trend, family history, and language. Every message sounds like a friend, not a doctor. |
+| **`book_slot`** | Books the AAM, eSanjeevani or centre recheck slot | ADK `FunctionTool(book_slot, require_confirmation=needs_doctor)` | **Donor sees booking confirmed same-day.** Confirmation is answered from the doctor console through the ADK API's `adk_request_confirmation`. Donor gets a calendar entry. |
+| **`find_facility`** | Finds the nearest AAM or Namma Clinic, eSanjeevani, or NVHCP treatment centre | Maps Places API (real locations) plus a mock slot schedule | **Donor sees distance and travel time.** Real facility types and locations, mock availability. Shows "2km from your home, 15 min by auto". |
+| **`request_counselling`** | Books "a confidential conversation about your donation" without revealing the result | Firestore (counsellor queue) | **Donor never sees what the counsellor will discuss.** The navigator never sees the reason, only a flag. Counsellor handles sensitive conversation. |
+| **Donor App Home Screen** | Shows next donation date, current health status, trends, impact badge, care status | Firebase Hosting | **This is the hero surface for donors.** Everything is visible, owned, and actionable. Not a dashboard—a personal health mirror. |
+| **Doctor console** | Plan cards with evidence and the protocol cited; approve, edit or reject; batch approval | Firebase Hosting with Firebase Auth | Each decision is logged with the doctor's ID. Doctor sees what the donor will see. |
+| **Counsellor console** | Disclosure queue, agent contact status, "mark done" | Firebase Hosting with Auth (separate role) | Only role with access to the flags. Shows agent's progress per donor. |
+| **FHIR store** | Donor records: Patient, Observation (BP, Hb, HbA1c, …), DiagnosticReport | Cloud Healthcare API (FHIR R4) | **Donor owns their FHIR record.** Uses ABDM-style resource shapes so ABHA works later. Donor controls what's shared. |
+| **Funnel and evaluation** | Event stream: finding → explained → approved → booked → completed → cleared → donated again | Firestore → BigQuery (scheduled export or streaming) | **Donor-centric metrics:** Day-1 app return rate, care pathway completion, donor retention at 6 months, health behavior change. |
 
 ## Models
 

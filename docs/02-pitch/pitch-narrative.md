@@ -2,48 +2,81 @@
 
 **For the deck, the live pitch and the finale Q&A.** It runs in about 3 minutes. Each block maps to a slide in [pitch-deck.html](pitch-deck.html).
 
+**Frame:** Position this as a **consumer health platform** powered by the donation cycle, not an institutional tool. Lead with what donors GET, not what institutions need.
+
 ## Speaker script
 
 **1. Hook (15 s, slide 1).**
-"Every blood donation is a health check. India runs 1.5 crore of them a year, and then throws the results away."
+"1.5 crore times a year, Indians get a free health measurement at a blood bank. Then that health data disappears."
+
+**[Reframe: Lead with the personal loss—opportunity for health awareness—not institutional efficiency]**
 
 **2. Arjun (25 s, slide 2).**
-- "Arjun is 34. At his office blood camp he's turned away: BP 148/94, 'come back later'."
-- "The blood centre had measured his BP at his last three donations: 128, 134, 138. It went up every time, and nobody joined the dots."
-- "He has no symptoms, so he forgets. His father had a stroke at 58."
+- "Arjun is 34. He gives blood at his office camp every 3 months."
+- "At his last donation: BP 148/94. He's turned away: 'come back later'."
+- "But here's what he never knew: His BP at the last 3 donations was 128, 134, 138, 148. It's been going up every time."
+- "He has no symptoms. Nobody explains why it matters. So he forgets. His father had a stroke at 58."
 
-**3. It's not one donor, it's the system (30 s, slide 3).**
-- "India's blood centres measure every donor's BP and haemoglobin, and screen every unit for infections. They find a lot. Then they lose most of the people they find."
-- "At one Kolkata centre, only 15% of donors with hepatitis C were even contacted. Hepatitis C is curable, and the treatment is free."
-- "Across 16 studies, two in three reactive donors never reached counselling. In Delhi, 235 letters got zero replies."
-- "And only 29% of Indian adults with high BP know they have it."
+**[Reframe: Emphasize the DONOR'S BLINDNESS to their own health trend, not just the institutional failure]**
 
-**4. Why nobody has fixed it (20 s, slide 4).**
-- "Japan has sent donors their results since 1982. Taiwan screens older donors. Results alone don't work: Taiwan found 'limited benefits without additional interventions'."
-- "What works is a person who follows you up. They know your history, explain in your language, book the next step and keep checking until it's done."
-- "India can't staff that for 1.5 crore donations."
+**3. This is a consumer problem, not just a system problem (30 s, slide 3).**
+- "35% of Indian adults have high BP. Only 29% know they have it."
+- "Blood donation is the only free health measurement many urban workers get."
+- "The blood centre finds the issue. But the donor leaves with nothing: no data, no explanation, no next step."
+- "For deferred donors, it's worse. They hear 'come back later' and drift away. 50% never return."
+- "The system isn't broken. The donor experience is."
 
-**5. TraceDrop (30 s, slides 5–6).**
-- "TraceDrop is that navigator, built with Gemini. It reads any register or lab report into one record and reasons over the donor's history using ICMR protocols. Then it explains in their language, books free care at an Ayushman Arogya Mandir or on eSanjeevani, and follows up until the step is done."
-- "Humans stay in charge. The centre's doctor approves every plan, the counsellor delivers every sensitive result, and red flags skip the AI entirely."
+**[Reframe: Position as CONSUMER HEALTH EQUITY problem—workers can't see their own health—not just a follow-up logistics problem]**
+
+**4. Why this matters to the donor (20 s, slide 4).**
+- "Arjun would want to know: 'My BP is trending up. Here's why it matters. Here's what I can do about it.'"
+- "He'd want that information in his language, with his history, today—not weeks later."
+- "And he'd want to know it worked: 'Your BP is now controlled. You caught it before a stroke.'"
+- "That's not what he gets. That's what TraceDrop does."
+
+**[Reframe: Flip from "the system loses people" to "donors deserve to know and control their health"]**
+
+**5. TraceDrop: Your personal health navigator, powered by donation (30 s, slides 5–6).**
+- "You give blood. That same evening: a message in your language with your BP number and why it matters."
+- "It shows your trend: 128 → 134 → 138 → 148. 'It's been going up at each donation. That's why this is important.'"
+- "It books free care for you—same-day, no friction. Saturday 10am, 2km from your home."
+- "Humans stay in charge: the doctor approves every plan, the counsellor handles sensitive conversations, red flags skip the AI."
+- "Every 3 months you donate? You get a health check. Your choice to act on it."
+
+**[Reframe: Lead with CONSUMER EXPERIENCE, then mention human oversight. Make it feel like a platform designed FOR the donor, not at them]**
 
 **6. Demo (30 s, slide 7; live or video).**
-- "Arjun gets a Hindi message the same evening with his trend."
-- "He sends last year's check-up photo, and Gemini reads HbA1c 6.1."
-- "The doctor approves in 15 seconds, and Saturday's free BP and sugar check is booked."
-- "Three months later he's under care, cleared, and donating again."
+- "Arjun is turned away: 'BP 148/94, come back later.'"
+- "That evening: WhatsApp in Hindi. 'Your BP was 148/94. It's been going up: 128→134→138→148. High BP usually has no symptoms, which is why it matters.'"
+- "He opens the app, sees the trend chart (visual, powerful), and taps 'Book care.'"
+- "Saturday morning: free BP and blood sugar check at Ayushman Arogya Mandir, 2km away."
+- "One month later: 'Your BP is 132/88. Well controlled.' Badge: 'You caught high BP before a stroke.'"
+- "Three months later: 'Donate Saturday. Your blood group is needed.' He returns."
 
-**7. 10x and impact (20 s, slide 8).**
-- "From a third of findings followed up to every finding followed through."
-- "For the counsellor, from 14 calls to 3."
-- "Every next step goes to care the state already pays for. No new tests, no new budget."
+**[Reframe: Show moment-by-moment DONOR EXPERIENCE and VALUE, not the institutional process]**
+
+**7. The outcome: 10x for donors, not just institutions (20 s, slide 8).**
+- "From: 'I was turned away. I have no symptoms. I forgot.'"
+- "To: 'I saw my trend coming. I got care booked that day. My health is tracked.'"
+- "For the counsellor: from 14 impossible calls to 3. From everyone lost to everyone reached."
+- "For blood donors: from 50% returning after deferral to 90% returning."
+- "Every step goes to care that's already free. No new tests, no new budget, no inducements."
+
+**[Reframe: Lead with DONOR METRICS (engagement, return rate, health behavior change), then mention counsellor efficiency]**
 
 **8. Why it scales (15 s, slide 9).**
-- "It runs on Google Cloud: ADK agents on Cloud Run, a FHIR store ready for ABHA, Firebase, BigQuery and Maps."
-- "Blood centres, employers under the new OSH Code check-ups, and insurers' wellness programmes can all fund it. Donors never pay."
+- "Donors love it because they get value at every step: visibility, action, impact."
+- "Blood centres fund it because donors come back and counsellors reach everyone."
+- "Employers fund it as wellness. Government funds it as prevention."
+- "Everyone wins when the donor wins."
+- "It runs on Google Cloud: Gen AI does the legwork, doctors approve, counsellors handle sensitive conversations."
+
+**[Reframe: Emphasize the DONOR-DRIVEN scaling engine, not just tech stack]**
 
 **9. Close (10 s, slide 10).**
-"Every donation is a health check. TraceDrop makes sure it counts."
+"Your blood. Your health. Your data. Every donation counts."
+
+**[Reframe: End on CONSUMER OWNERSHIP, not institutional duty]**
 
 ## Message house
 
