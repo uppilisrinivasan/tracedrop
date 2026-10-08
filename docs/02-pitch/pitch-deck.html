@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TraceDrop Pitch Deck</title>
+<style>
+  :root {
+    --surface: #fcfcfb;
+    --plane: #f2f1ec;
+    --panel: #f4f7fb;
+    --panel-warm: #f7f6f3;
+    --border: #e1e0d9;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --muted: #898781;
+    --accent: #2a78d6;
+    --accent-deep: #184f95;
+    --accent-soft: #cde2fb;
+    --lost: #eb6834;
+    --lost-soft: #fbe3d8;
+    --good: #006300;
+    --critical: #d03b3b;
+  }
+  @page { size: 13.333in 7.5in; margin: 0; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--plane); color: var(--text-primary);
+    font: 15px/1.38 system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .slide { width: 13.333in; height: 7.5in; background: var(--surface); position: relative;
+    padding: 0.5in 0.62in 0.45in; overflow: hidden; break-after: page; display: flex; flex-direction: column; }
+  @media screen { .slide { margin: 18px auto; box-shadow: 0 1px 3px rgba(0,0,0,.08), 0 6px 24px rgba(0,0,0,.06); border-radius: 6px; } }
+  .eyebrow { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent-deep); font-weight: 650; margin-bottom: 8px; }
+  h1 { font-size: 40px; line-height: 1.08; margin: 0 0 10px; letter-spacing: -0.015em; font-weight: 720; }
+  h2 { font-size: 30px; line-height: 1.12; margin: 0 0 14px; letter-spacing: -0.01em; font-weight: 700; }
+  h3 { font-size: 17px; margin: 0 0 6px; font-weight: 680; }
+  p { margin: 0 0 8px; }
+  .lede { font-size: 19px; color: var(--text-secondary); max-width: 10.5in; }
+  .muted { color: var(--text-secondary); }
+  .small { font-size: 12.5px; }
+  .foot { position: absolute; left: 0.62in; right: 0.62in; bottom: 0.2in; display: flex; justify-content: space-between;
+    font-size: 10.5px; color: var(--muted); border-top: 1px solid var(--border); padding-top: 6px; }
+  .grid { display: grid; gap: 18px; }
+  .g2 { grid-template-columns: 1fr 1fr; }
+  .g3 { grid-template-columns: repeat(3, 1fr); }
+  .g4 { grid-template-columns: repeat(4, 1fr); }
+  .card { background: var(--panel); border-radius: 8px; padding: 16px 18px; }
+  .card.warm { background: var(--panel-warm); }
+  .card.lost { background: var(--lost-soft); }
+  .stat { font-size: 46px; font-weight: 740; line-height: 1; letter-spacing: -0.02em; margin-bottom: 6px; }
+  .stat.lost { color: #b54a1f; }
+  .stat.blue { color: var(--accent-deep); }
+  ul { margin: 0; padding-left: 18px; } li { margin: 0 0 6px; }
+  .tag { display: inline-block; font-size: 11.5px; font-weight: 650; padding: 3px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-deep); margin-right: 6px; }
+  .tag.lost { background: var(--lost-soft); color: #9a3d17; }
+  .src { font-size: 10.5px; color: var(--muted); margin-top: 6px; }
+  .fill { flex: 1; min-height: 0; }
+
+  /* Title slide */
+  .title-slide { background: linear-gradient(135deg, #0d366b 0%, #184f95 55%, #2a78d6 100%); color: #fff; }
+  .title-slide .eyebrow { color: #cde2fb; }
+  .title-slide .lede { color: #e6eefb; }
+  .title-slide .foot { color: #b7d3f6; border-top-color: rgba(255,255,255,.25); }
+  .drop { width: 52px; height: 52px; border-radius: 0 50% 50% 50%; transform: rotate(45deg); background: #e34948; border: 3px solid #fff; margin: 14px 0 28px 8px; }
+
+  /* Journey (slide 2) */
+  .bp-chart { width: 100%; height: auto; }
+  .bp-chart text { font-family: inherit; }
+  .chat { background: #e8f3e8; border-radius: 10px; padding: 12px 14px; font-size: 14px; }
+  .chat .who { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+
+  /* Pipeline (slide 3) */
+  .funnel-row { display: grid; grid-template-columns: 1.7in 1fr 0.9in; align-items: center; gap: 12px; margin-bottom: 10px; }
+  .bar-track { height: 26px; background: #f0efec; border-radius: 4px; position: relative; overflow: hidden; }
+  .bar { height: 100%; border-radius: 0 4px 4px 0; background: var(--accent); }
+  .bar.lost { background: var(--lost); }
+  .pct { font-weight: 700; font-size: 18px; }
+
+  /* Architecture (slide 6) */
+  .arch { display: grid; grid-template-columns: 1fr 1.25fr 1fr; gap: 14px; align-items: stretch; }
+  .lane { background: var(--panel); border-radius: 8px; padding: 12px 14px; }
+  .lane h3 { font-size: 14px; color: var(--accent-deep); text-transform: uppercase; letter-spacing: .05em; }
+  .box { background: #fff; border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; font-size: 13.5px; }
+  .box b { display: block; font-size: 13.5px; }
+  .box .muted { font-size: 12px; }
+  .box.human { border-left: 4px solid var(--good); }
+  .box.fixed { border-left: 4px solid var(--critical); }
+  .box.ai { border-left: 4px solid var(--accent); }
+
+  /* Demo strip (slide 7) */
+  .steps { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+  .step { background: var(--panel); border-radius: 8px; padding: 12px; font-size: 13.5px; position: relative; }
+  .step .n { font-size: 12px; font-weight: 700; color: var(--accent-deep); margin-bottom: 4px; }
+  .step.human { background: #e9f4e9; }
+
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--text-secondary); font-weight: 650; }
+  .num { font-variant-numeric: tabular-nums; }
+  .ok { color: var(--good); font-weight: 650; }
+</style>
+</head>
+<body>
+
+<!-- 1. Title -->
+<section class="slide title-slide">
+  <div class="fill" style="display:flex;flex-direction:column;justify-content:center;">
+    <div class="drop" aria-hidden="true"></div>
+    <div class="eyebrow">AI Builder Cup 2026 · Sustainability &amp; Social Impact</div>
+    <h1 style="font-size:58px;">TraceDrop</h1>
+    <p class="lede" style="font-size:26px;max-width:9.5in;">Every blood donation is a health check.<br>TraceDrop makes sure it counts.</p>
+    <p class="lede" style="margin-top:18px;font-size:17px;max-width:9.8in;">A Gemini-powered navigator that follows every finding from a blood donation through to care, with the blood centre's doctor and counsellor in charge.</p>
+  </div>
+  <div class="foot"><span>Team [name] · [members]</span><span>Prototype: [deployed link] · Repo: [GitHub link]</span></div>
+</section>
+
+<!-- 2. Arjun -->
+<section class="slide">
+  <div class="eyebrow">The moment</div>
+  <h2>"BP 148/94. You can't donate today. Come back later."</h2>
+  <div class="grid g2 fill" style="grid-template-columns: 1.15fr 1fr; align-items:start;">
+    <div>
+      <svg class="bp-chart" viewBox="0 0 620 330" role="img" aria-label="Arjun's systolic blood pressure at four donations: 128, 134, 138, then 148, crossing the 140 donor limit">
+        <title>Arjun's systolic BP at each donation</title>
+        <rect x="0" y="0" width="620" height="330" fill="#fcfcfb"/>
+        <!-- scale: y = 280 - (v - 115) * 6, so 150→70, 140→130, 130→190, 120→250 -->
+        <g stroke="#e1e0d9" stroke-width="1">
+          <line x1="60" y1="70" x2="600" y2="70"/><line x1="60" y1="190" x2="600" y2="190"/>
+          <line x1="60" y1="250" x2="600" y2="250"/>
+        </g>
+        <line x1="60" y1="280" x2="600" y2="280" stroke="#c3c2b7" stroke-width="1"/>
+        <g font-size="12" fill="#898781" text-anchor="end">
+          <text x="50" y="74">150</text><text x="50" y="134">140</text><text x="50" y="194">130</text><text x="50" y="254">120</text>
+        </g>
+        <!-- donor limit 140 -->
+        <line x1="60" y1="130" x2="600" y2="130" stroke="#d03b3b" stroke-width="1.5" stroke-dasharray="5 4"/>
+        <text x="66" y="123" font-size="12" fill="#52514e">Donor limit: systolic 140 (CDSCO)</text>
+        <polyline points="120,202 270,166 420,142 560,82" fill="none" stroke="#2a78d6" stroke-width="2.5" stroke-linejoin="round"/>
+        <g fill="#2a78d6" stroke="#fcfcfb" stroke-width="2">
+          <circle cx="120" cy="202" r="6"/><circle cx="270" cy="166" r="6"/><circle cx="420" cy="142" r="6"/>
+        </g>
+        <circle cx="560" cy="82" r="7.5" fill="#d03b3b" stroke="#fcfcfb" stroke-width="2"/>
+        <g font-size="13" fill="#0b0b0b" text-anchor="middle" font-weight="650">
+          <text x="120" y="224">128/82</text><text x="270" y="186">134/86</text><text x="420" y="163">138/88</text><text x="560" y="62">148/94</text>
+        </g>
+        <g font-size="12" fill="#52514e" text-anchor="middle">
+          <text x="120" y="302">Donation 1</text><text x="270" y="302">Donation 2</text><text x="420" y="302">Donation 3</text><text x="560" y="302">Today · deferred</text>
+        </g>
+        <text x="60" y="322" font-size="11" fill="#898781">Systolic BP, mm Hg (synthetic persona)</text>
+      </svg>
+    </div>
+    <div>
+      <div class="card warm">
+        <h3>Arjun, 34 · software engineer, Bengaluru</h3>
+        <ul>
+          <li>Gives blood at office camps. Never sees a doctor.</li>
+          <li>The centre measured his BP at <b>every donation</b>. It rose each time, and <b>nobody joined the dots</b>.</li>
+          <li>No symptoms, so he forgets. His father had a stroke at 58.</li>
+        </ul>
+      </div>
+      <div class="card" style="margin-top:14px;">
+        <div class="stat blue">29%</div>
+        <p>of Indian adults aged 30–69 with raised BP <b>know they have it</b>.</p>
+        <div class="src">ICMR-NCDIR National NCD Monitoring Survey</div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>TraceDrop · AI Builder Cup 2026</span><span>2</span></div>
+</section>
+
+<!-- 3. The system loses them -->
+<section class="slide">
+  <div class="eyebrow">The problem</div>
+  <h2>Blood donation finds disease in healthy adults, then loses them</h2>
+  <p class="lede" style="margin-bottom:18px;">India's <b>1.57 crore</b> donations a year make up its largest routine health check of working-age adults. Every donor's BP and haemoglobin are measured, and every unit is screened for infections.</p>
+  <div class="grid g2 fill" style="grid-template-columns: 1.3fr 1fr;">
+    <div>
+      <h3 style="margin-bottom:12px;">What happens after a finding</h3>
+      <div class="funnel-row"><div class="small">Reactive donors <b>notified</b><br><span class="muted">16 Indian studies</span></div><div class="bar-track"><div class="bar" style="width:71.2%"></div></div><div class="pct num">71%</div></div>
+      <div class="funnel-row"><div class="small">Reactive donors <b>counselled</b><br><span class="muted">16 Indian studies</span></div><div class="bar-track"><div class="bar lost" style="width:33.3%"></div></div><div class="pct num">33%</div></div>
+      <div class="funnel-row"><div class="small">Hepatitis B donors <b>reached care</b><br><span class="muted">Kolkata, 2021–22</span></div><div class="bar-track"><div class="bar lost" style="width:27.7%"></div></div><div class="pct num">28%</div></div>
+      <div class="funnel-row"><div class="small">Hepatitis C donors <b>even contacted</b><br><span class="muted">Kolkata, 2021–22</span></div><div class="bar-track"><div class="bar lost" style="width:15%"></div></div><div class="pct num">15%</div></div>
+      <div class="funnel-row"><div class="small">Deferred for high BP or low Hb: <b>care pathway</b></div><div class="bar-track"><div class="bar lost" style="width:0.6%"></div></div><div class="pct num">none</div></div>
+      <div class="src">Vox Sang 2024 (review of 16 studies); Kolkata blood centre study 2024. Hepatitis C is curable, and treatment is free under NVHCP.</div>
+    </div>
+    <div class="grid" style="gap:14px;">
+      <div class="card lost"><div class="stat lost">0 / 235</div><p>letters to reactive donors in Delhi got a reply.</p><div class="src">AJTS 2015</div></div>
+      <div class="card"><div class="stat blue">3.9 lakh</div><p>units discarded as reactive in 2025. Each is a person someone needs to reach.</p><div class="src">Rajya Sabha Q1882 annex, our sum</div></div>
+      <div class="card warm"><div class="stat" style="color:#52514e;">35.5%</div><p>of Indian adults have hypertension (ICMR-INDIAB). Donors come from this population.</p></div>
+    </div>
+  </div>
+  <div class="foot"><span>TraceDrop · AI Builder Cup 2026</span><span>3</span></div>
+</section>
+
+<!-- 4. Why not solved -->
+<section class="slide">
+  <div class="eyebrow">Why nobody has fixed it</div>
+  <h2>Results alone don't work. Follow-up does, and it needs a person.</h2>
+  <div class="grid g3 fill" style="align-items:start;">
+    <div class="card">
+      <span class="tag">Japan, since 1982</span>
+      <h3 style="margin-top:8px;">Results returned</h3>
+      <p>The Red Cross sends donors 15 blood values through the Love Blood app.</p>
+      <p class="muted small">Reference ranges are "not normal/abnormal judgements", and there's no next step.</p>
+    </div>
+    <div class="card">
+      <span class="tag">Taiwan, 2025</span>
+      <h3 style="margin-top:8px;">Screening added</h3>
+      <p>HbA1c and cholesterol tests for donors over 40.</p>
+      <p class="muted small">42.7% didn't know they'd been screened. The study found "limited benefits… without additional interventions".</p>
+    </div>
+    <div class="card">
+      <span class="tag">India, 2026</span>
+      <h3 style="margin-top:8px;">AI explainers exist</h3>
+      <p>Aarogya Setu 2.0 "Smart Reports", AI trends, 92 crore ABHA IDs.</p>
+      <p class="muted small">Plenty of records and trends, but nobody acts on them. Only 491 labs are connected to ABDM, against 27,283 hospitals.</p>
+    </div>
+  </div>
+  <div class="grid g2" style="margin-top:16px; grid-template-columns: 1.5fr 1fr; align-items:stretch;">
+    <div class="card warm">
+      <h3>The missing link is a navigator.</h3>
+      <p style="font-size:17px;">It has to know your history, explain why a finding matters to <b>you</b> in your language, book the next step and keep following up until it's done. That's what executives get from a physician and a care coordinator.</p>
+      <p style="font-size:17px;">Every other piece already exists and much of it is free: Ayushman Arogya Mandir health centres, <b>eSanjeevani</b> (50 crore teleconsultations), free hepatitis treatment under <b>NVHCP</b>, and ABHA records. Nothing carries the donor to them.</p>
+    </div>
+    <div class="card">
+      <h3>Following every finding up by hand</h3>
+      <div class="stat lost" style="margin-top:6px;">~2,000</div>
+      <p>full-time staff a year (about 40 lakh hours)</p>
+      <div class="stat blue" style="margin-top:10px;">~160</div>
+      <p>with a navigator doing the legwork, where people only disclose and approve</p>
+      <div class="src">Estimate: 3.9 lakh reactive screens × 2 h, 12 lakh deferrals × 30 min, and a 10-minute review of every donation. Full assumptions are in the brief.</div>
+    </div>
+  </div>
+  <div class="foot"><span>TraceDrop · AI Builder Cup 2026</span><span>4</span></div>
+</section>
+
+<!-- 5. Solution -->
+<section class="slide">
+  <div class="eyebrow">TraceDrop</div>
+  <h2>A navigator for every donor, with the blood centre in charge</h2>
+  <div class="grid g4" style="margin-top:6px;">
+    <div class="card"><span class="tag">Gemini · multimodal</span><h3 style="margin-top:8px;">1. Capture</h3><p>Reads a register page, a lab-report photo or a PDF from any lab and writes one standard FHIR record. No integration needed.</p></div>
+    <div class="card"><span class="tag">Gemini · long context</span><h3 style="margin-top:8px;">2. Understand</h3><p>Reasons over the donor's whole history using ICMR protocols. Safety thresholds stay as fixed rules.</p></div>
+    <div class="card"><span class="tag">Gemini · Indian languages</span><h3 style="margin-top:8px;">3. Explain</h3><p>Explains why it matters to <i>them</i>, in their language, and answers "but I have no symptoms" with their own trend.</p></div>
+    <div class="card"><span class="tag">ADK agent · tools</span><h3 style="margin-top:8px;">4. Act</h3><p>Books free care at an Ayushman Arogya Mandir, on eSanjeevani or for a recheck, then follows up until it's done.</p></div>
+  </div>
+  <div class="grid g3" style="margin-top:16px;">
+    <div class="card warm"><h3 style="color:var(--good);">Doctor approves</h3><p>Every plan that changes care waits for the centre's doctor, using ADK tool confirmation. Approvals can be done in batches, in seconds.</p></div>
+    <div class="card warm"><h3 style="color:var(--good);">Counsellor discloses</h3><p>Infection results never appear in any agent message. The agent only books "a confidential conversation", and follows up afterwards.</p></div>
+    <div class="card warm"><h3 style="color:var(--critical);">Red flags skip the AI</h3><p>BP ≥180/120, or symptoms such as chest pain or breathlessness, trigger fixed urgent templates (ICMR 2026). No model judgement is involved.</p></div>
+  </div>
+  <p class="muted small" style="margin-top:12px;">It never diagnoses or prescribes (Telemedicine Practice Guidelines §5.4). It never offers anything for donating (D&amp;C Rule 122EA). Care never depends on donating.</p>
+  <div class="foot"><span>TraceDrop · AI Builder Cup 2026</span><span>5</span></div>
+</section>
+
+<!-- 6. Architecture -->
+<section class="slide">
+  <div class="eyebrow">How it's built</div>
+  <h2>Gen AI does the navigator's work. Ordinary code does the safety work.</h2>
+  <div class="arch fill">
+    <div class="lane">
+      <h3>Inputs</h3>
+      <div class="box"><b>Donor on WhatsApp or web</b><span class="muted">text, photo, voice (Hindi, Kannada, English)</span></div>
+      <div class="box"><b>Blood-centre register</b><span class="muted">photo or export of each donation's readings</span></div>
+      <div class="box"><b>The donor's own reports</b><span class="muted">company or insurer check-up, any lab format</span></div>
+      <h3 style="margin-top:12px;">People in charge</h3>
+      <div class="box human"><b>Doctor console</b><span class="muted">approve, edit or reject plans, in batches</span></div>
+      <div class="box human"><b>Counsellor console</b><span class="muted">disclosure queue; the only role that sees flags</span></div>
+    </div>
+    <div class="lane">
+      <h3>Cloud Run · ADK agents</h3>
+      <div class="box ai"><b>Record builder · Gemini 3.8 Flash</b><span class="muted">image or PDF → readings with a confidence per field → FHIR</span></div>
+      <div class="box fixed"><b>Finding triage · fixed rules</b><span class="muted">ICMR hypertension and diabetes workflows, haemoglobin; red flags go to templates</span></div>
+      <div class="box ai"><b>Navigator · Gemini 3.8 Flash (Live for voice)</b><span class="muted">explains, plans, drafts the doctor's summary, follows up, checks back at the next donation</span></div>
+      <div class="box"><b>Tools</b><span class="muted">read_record · find_facility (Maps) · <b>book_slot</b> (needs the doctor's confirmation) · schedule_followup · request_counselling · share_summary</span></div>
+    </div>
+    <div class="lane">
+      <h3>Data and analytics</h3>
+      <div class="box"><b>Cloud Healthcare API · FHIR store</b><span class="muted">Observations, DiagnosticReports, ready for ABHA</span></div>
+      <div class="box"><b>Firestore</b><span class="muted">conversations, plans, audit; counsellor flags in a restricted collection</span></div>
+      <div class="box"><b>BigQuery</b><span class="muted">findings-to-care funnel and evaluation</span></div>
+      <h3 style="margin-top:12px;">Routes to existing care</h3>
+      <div class="box"><b>Ayushman Arogya Mandir · eSanjeevani · NVHCP · ABHA</b><span class="muted">free public care and records the state already pays for</span></div>
+    </div>
+  </div>
+  <div class="foot"><span>Google stack: Gemini 3.8 Flash / Live · ADK · Cloud Run · Cloud Healthcare API · Firebase · BigQuery · Maps Platform</span><span>6</span></div>
+</section>
+
+<!-- 7. Demo -->
+<section class="slide">
+  <div class="eyebrow">Demo · Arjun's journey</div>
+  <h2>From a dead-end deferral to care, then back to donating</h2>
+  <div class="steps" style="margin-top:6px;">
+    <div class="step"><div class="n">Evening · Hindi</div>"Your BP was 148/94 today. It has gone up at each of your last 4 donations. High BP usually has no symptoms, which is why it matters."</div>
+    <div class="step"><div class="n">He sends a photo</div>Last year's company check-up. Gemini reads <b>HbA1c 6.1%</b> (prediabetes range, ICMR) and adds his father's history.</div>
+    <div class="step human"><div class="n">Doctor · 15 s</div>Dr Rao sees the trend, the report extract and the cited protocol, and approves the plan.</div>
+    <div class="step"><div class="n">Booked</div>A free BP and sugar check at the Ayushman Arogya Mandir near his home, Saturday 10 am. The summary is shared to his records.</div>
+    <div class="step"><div class="n">3 months later</div>He's under care, the doctor clears him, and he's welcomed back. <b>He donates again.</b></div>
+  </div>
+  <div class="grid g2" style="margin-top:18px;">
+    <div class="card warm">
+      <h3>Counsellor console</h3>
+      <p style="font-size:18px;">"14 donors need a confidential conversation. The agent has reached 11 and booked them in. <b>You have 3 left to call.</b>"</p>
+      <p class="muted small">The agent never states a result. It books the conversation and follows up afterwards (synthetic data).</p>
+    </div>
+    <div class="card">
+      <h3>Red flag, no AI</h3>
+      <p style="font-size:16px;">Donor D-017 has BP 184/118: an urgent template goes out in under 1 second, and the doctor is alerted. If symptoms are mentioned, the template points to emergency care (112).</p>
+    </div>
+  </div>
+  <div class="foot"><span>Live: [deployed link] · "Play Arjun's journey"</span><span>7</span></div>
+</section>
+
+<!-- 8. 10x and evidence -->
+<section class="slide">
+  <div class="eyebrow">The 10x</div>
+  <h2>From a third of findings followed up to every finding followed through</h2>
+  <table style="margin-top:4px;">
+    <thead><tr><th>Measure</th><th>Today</th><th>With TraceDrop</th><th>Shown in</th></tr></thead>
+    <tbody>
+      <tr><td>Findings with a completed next step</td><td>~1 in 3 (reactive); ~0 (deferrals)</td><td><b>Target ≥2 in 3</b></td><td>Pilot</td></tr>
+      <tr><td>Time from finding to a booked next step</td><td>Weeks, or never</td><td><b>Same day</b></td><td>Prototype</td></tr>
+      <tr><td>Calls left for one counsellor (synthetic queue of 14)</td><td>14</td><td><b>3</b></td><td>Prototype</td></tr>
+      <tr><td>Donors who leave knowing what their numbers mean and what to do</td><td>~None</td><td><b>All</b></td><td>Prototype</td></tr>
+    </tbody>
+  </table>
+  <h3 style="margin-top:20px;">Prototype evaluation <span class="muted small">(fill in on 15 Oct from eval/results.json)</span></h3>
+  <div class="grid g4" style="margin-top:6px;">
+    <div class="card"><div class="stat blue">[__]%</div><p>field accuracy on <b>[N] real Indian lab reports</b> (the team's own, with consent)</p></div>
+    <div class="card"><div class="stat blue">0 / 50</div><p class="small">target: infection-result leaks in adversarial tests</p></div>
+    <div class="card"><div class="stat blue">100%</div><p class="small">target: red flags handled by fixed rules with no AI, as unit-tested</p></div>
+    <div class="card"><div class="stat blue">[__]/5</div><p class="small">Hindi and Kannada quality, rated by native speakers</p></div>
+  </div>
+  <div class="foot"><span>TraceDrop · AI Builder Cup 2026</span><span>8</span></div>
+</section>
+
+<!-- 9. Impact & scale -->
+<section class="slide">
+  <div class="eyebrow">Impact and scale</div>
+  <h2>It routes to care the state already pays for. No new tests, no new budget.</h2>
+  <div class="grid g3" style="margin-top:4px;">
+    <div class="card">
+      <h3>Who benefits</h3>
+      <ul>
+        <li><b>Donors:</b> silent conditions found and followed up</li>
+        <li><b>Women:</b> 57% are anaemic, and they're the most often deferred</li>
+        <li><b>People with hepatitis:</b> curable, free treatment under NVHCP</li>
+        <li><b>Blood centres:</b> they meet their counselling duties, and cleared donors come back</li>
+        <li><b>Patients:</b> more regular donors</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Who pays (donors never do)</h3>
+      <ul>
+        <li><b>Blood centres and SBTCs:</b> counselling and NVHCP linkage duties</li>
+        <li><b>Employers:</b> annual check-ups under the OSH Code (in force Nov 2025)</li>
+        <li><b>Insurers:</b> wellness programmes allowed by IRDAI, with consent</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Path to scale</h3>
+      <ul>
+        <li>3 Bengaluru centres → every finding type → every donor</li>
+        <li>SBTCs and NHM; ABHA and eSanjeevani connection</li>
+        <li>JAPAC: Japan returns results and Taiwan screens, but neither navigates donors to care</li>
+      </ul>
+    </div>
+  </div>
+  <div class="card warm" style="margin-top:16px;">
+    <h3>Built to be trusted</h3>
+    <p>Synthetic data in the prototype · thresholds from ICMR 2026 and WHO · the doctor approves and the counsellor discloses · DPDP consent, and employers see aggregates only · a deployment would register as CDSCO medical device software and follow ICMR's 2023 AI ethics guidelines.</p>
+  </div>
+  <div class="foot"><span>Roadmap: request engine for urgent needs · verified personal impact statement · company camps</span><span>9</span></div>
+</section>
+
+<!-- 10. Close -->
+<section class="slide title-slide">
+  <div class="fill" style="display:flex;flex-direction:column;justify-content:center;">
+    <div class="drop" aria-hidden="true"></div>
+    <h1 style="font-size:50px;">Every donation is a health check.<br>TraceDrop makes sure it counts.</h1>
+    <p class="lede" style="margin-top:18px;font-size:19px;max-width:10in;">Today, India's blood centres promise donors a health check every time they give, about 1.5 crore times a year. What the check finds is rarely followed up. With Gemini, we remove that limit and deliver the same promise 10x better.</p>
+  </div>
+  <div class="foot"><span>Team [name] · [contact]</span><span>[deployed link] · [GitHub link] · [video link]</span></div>
+</section>
+
+</body>
+</html>
