@@ -1,0 +1,74 @@
+[
+  {
+    "id": "FIND-D-001-BP-G1",
+    "donor_id": "D-001",
+    "type": "BP_GRADE1",
+    "urgency": "Within 2-4 weeks",
+    "description": "Blood pressure Grade 1: Systolic 140-159 or Diastolic 90-99",
+    "protocol_rule": "BP-G1"
+  },
+  {
+    "id": "FIND-D-002-HB-DEF",
+    "donor_id": "D-002",
+    "type": "HB_BELOW_DONOR",
+    "urgency": "Within 2-4 weeks",
+    "description": "Hemoglobin below donor threshold (11.8 g/dL < 12.5 g/dL)",
+    "protocol_rule": "HB-DEF"
+  },
+  {
+    "id": "FIND-D-017-BP-URGENCY",
+    "donor_id": "D-017",
+    "type": "BP_URGENCY",
+    "urgency": "Same day",
+    "description": "Blood pressure reading of 184/118 detected",
+    "protocol_rule": "RF-BP-2"
+  },
+  {
+    "id": "FIND-D-017-BP-HYPER",
+    "donor_id": "D-017",
+    "type": "BP_URGENCY",
+    "urgency": "Same day",
+    "description": "Hypertensive urgency: 184/118",
+    "protocol_rule": "RF-BP-2"
+  },
+  {
+    "id": "FIND-D-017-BP-G2",
+    "donor_id": "D-017",
+    "type": "BP_GRADE2",
+    "urgency": "Within 1 week",
+    "description": "Blood pressure Grade 2: 184/118",
+    "protocol_rule": "BP-G2"
+  },
+  {
+    "id": "FIND-D-033-TTI-FLAG",
+    "donor_id": "D-033",
+    "type": "COUNSELLING_REQUIRED",
+    "urgency": "Within 1 week",
+    "description": "Counselling required",
+    "protocol_rule": "TTI-FLAG"
+  },
+  {
+    "id": "FIND-D-050-BP-TREND",
+    "donor_id": "D-050",
+    "type": "BP_RISING",
+    "urgency": "Routine",
+    "description": "Rising blood pressure trend detected (3+ readings)",
+    "protocol_rule": "BP-TREND"
+  },
+  {
+    "id": "FIND-D-122-BP-G2",
+    "donor_id": "D-122",
+    "type": "BP_GRADE2",
+    "urgency": "Within 1 week",
+    "description": "Blood pressure Grade 2: 162/81",
+    "protocol_rule": "BP-G2"
+  },
+  {
+    "id": "FIND-D-264-BP-G2",
+    "donor_id": "D-264",
+    "type": "BP_GRADE2",
+    "urgency": "Within 1 week",
+    "description": "Blood pressure Grade 2: 160/81",
+    "protocol_rule": "BP-G2"
+  }
+]

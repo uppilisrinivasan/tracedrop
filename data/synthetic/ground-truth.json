@@ -1,0 +1,84 @@
+{
+  "metadata": {
+    "seed": 42,
+    "generated_at": "2026-10-08T19:31:57.223851",
+    "total_donors": 300,
+    "total_donations": 900,
+    "total_observations": 2700,
+    "total_findings": 9,
+    "total_lab_reports": 20
+  },
+  "personas": {
+    "D-001": {
+      "name": "Arjun",
+      "gender": "M",
+      "age": 35,
+      "language": "Kannada",
+      "bp_trend": "rising"
+    },
+    "D-002": {
+      "name": "Meera",
+      "gender": "F",
+      "age": 28,
+      "language": "Tamil",
+      "hb_low": 11.8
+    },
+    "D-017": {
+      "name": "Urgent Case",
+      "gender": "M",
+      "age": 42,
+      "language": "Kannada",
+      "bp_emergency": true
+    },
+    "D-033": {
+      "name": "Reactive Flag",
+      "gender": "M",
+      "age": 30,
+      "language": "Hindi",
+      "tti_reactive": true
+    },
+    "D-050": {
+      "name": "Informational",
+      "gender": "M",
+      "age": 38,
+      "language": "English",
+      "bp_rising_trend": true
+    }
+  },
+  "expected_patterns": {
+    "D-001": {
+      "pattern": "BP trending up",
+      "expected_finding": "BP_GRADE1"
+    },
+    "D-002": {
+      "pattern": "Low Hb female",
+      "expected_finding": "HB_BELOW_DONOR"
+    },
+    "D-017": {
+      "pattern": "BP urgent",
+      "expected_finding": "BP_URGENCY"
+    },
+    "D-033": {
+      "pattern": "TTI reactive",
+      "expected_finding": "COUNSELLING_REQUIRED"
+    },
+    "D-050": {
+      "pattern": "BP rising but passed",
+      "expected_finding": "BP_RISING"
+    }
+  },
+  "statistics": {
+    "female_donors": 0,
+    "male_donors": 0,
+    "deferred_donations": 135,
+    "completed_donations": 765,
+    "findings_by_type": {
+      "BP_GRADE1": 1,
+      "HB_BELOW_DONOR": 1,
+      "BP_URGENCY": 2,
+      "BP_GRADE2": 3,
+      "COUNSELLING_REQUIRED": 1,
+      "BP_RISING": 1
+    }
+  }
+}
