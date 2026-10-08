@@ -1,0 +1,773 @@
+/* Deferral Flow Styles */
+
+.deferral-flow-container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 24px 16px;
+  min-height: calc(100vh - 60px);
+  background-color: #f9fafb;
+}
+
+.loading-state,
+.error-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  font-size: 16px;
+  color: #6b7280;
+  text-align: center;
+}
+
+.error-state {
+  color: #ef4444;
+}
+
+/* Header with Progress */
+.flow-header {
+  margin-bottom: 32px;
+}
+
+.progress-indicator {
+  display: flex;
+  justify-content: center;
+}
+
+.progress-steps {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.progress-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.step-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: #e5e7eb;
+  color: #6b7280;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.progress-step.active .step-number {
+  background-color: #3b82f6;
+  color: white;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.progress-step.completed .step-number {
+  background-color: #10b981;
+  color: white;
+}
+
+.step-label {
+  font-size: 11px;
+  color: #6b7280;
+  font-weight: 500;
+  text-align: center;
+  min-width: 50px;
+}
+
+.progress-step.active .step-label {
+  color: #3b82f6;
+  font-weight: 600;
+}
+
+.progress-step.completed .step-label {
+  color: #10b981;
+}
+
+/* Flow Content */
+.flow-content {
+  background-color: white;
+  border-radius: 12px;
+  padding: 32px 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  min-height: 400px;
+  margin-bottom: 24px;
+}
+
+.flow-step {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.step-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.flow-step h2 {
+  margin: 0 0 12px 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: #1f2937;
+  text-align: center;
+}
+
+.step-description {
+  margin: 0 0 24px 0;
+  font-size: 16px;
+  color: #4b5563;
+  line-height: 1.6;
+  text-align: center;
+}
+
+/* Step 1 Content */
+.reason-details,
+.action-recommendations {
+  margin-bottom: 24px;
+  padding: 16px;
+  background-color: #f3f4f6;
+  border-radius: 8px;
+}
+
+.reason-details h3,
+.action-recommendations h3 {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.reason-details p {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  color: #4b5563;
+  line-height: 1.6;
+}
+
+.reason-details p:last-child {
+  margin-bottom: 0;
+}
+
+.action-recommendations ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.action-recommendations li {
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: #4b5563;
+  line-height: 1.6;
+}
+
+/* Step 2 Content */
+.feeling-scale {
+  margin-bottom: 24px;
+}
+
+.feeling-scale h3 {
+  margin: 0 0 16px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2937;
+  text-align: center;
+}
+
+.scale-buttons {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.scale-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex: 1;
+  padding: 12px 8px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  background-color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.scale-button:hover {
+  border-color: #3b82f6;
+  background-color: #eff6ff;
+}
+
+.scale-button.selected {
+  border-color: #3b82f6;
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.button-number {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.button-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.symptoms-section,
+.duration-section {
+  margin-bottom: 24px;
+}
+
+.symptoms-section h3,
+.duration-section h3 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.symptoms-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.symptom-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+}
+
+.symptom-checkbox:hover {
+  border-color: #3b82f6;
+  background-color: #eff6ff;
+}
+
+.symptom-checkbox input {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.duration-select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #1f2937;
+  background-color: white;
+  cursor: pointer;
+}
+
+.duration-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Step 3 Content */
+.countdown-card {
+  background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+  border-radius: 12px;
+  padding: 32px 24px;
+  text-align: center;
+  color: white;
+  margin-bottom: 24px;
+}
+
+.countdown-header {
+  font-size: 14px;
+  font-weight: 600;
+  opacity: 0.9;
+  margin-bottom: 12px;
+}
+
+.countdown-display {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+}
+
+.countdown-days {
+  font-size: 48px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.countdown-label {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.countdown-date {
+  font-size: 12px;
+  opacity: 0.8;
+  margin-left: 8px;
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.educational-content {
+  background-color: #f0fdf4;
+  border-left: 4px solid #10b981;
+  padding: 16px;
+  border-radius: 6px;
+  margin-bottom: 24px;
+}
+
+.educational-content h3 {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #065f46;
+}
+
+.educational-content p {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  color: #047857;
+  line-height: 1.6;
+}
+
+.educational-content ul {
+  margin: 8px 0 0 0;
+  padding-left: 20px;
+}
+
+.educational-content li {
+  font-size: 14px;
+  color: #047857;
+  line-height: 1.6;
+  margin-bottom: 4px;
+}
+
+.care-recommendations {
+  margin-bottom: 0;
+}
+
+.care-recommendations h3 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.recommendation-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.rec-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  background-color: #f9fafb;
+  border-radius: 8px;
+  text-align: center;
+  border: 1px solid #e5e7eb;
+}
+
+.rec-icon {
+  font-size: 32px;
+}
+
+.rec-card h4 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.rec-card p {
+  margin: 0;
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1.4;
+}
+
+/* Step 4 Content */
+.follow-up-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.follow-up-btn {
+  padding: 14px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.follow-up-primary {
+  background-color: #3b82f6;
+  color: white;
+}
+
+.follow-up-primary:hover {
+  background-color: #2563eb;
+  transform: translateY(-2px);
+}
+
+.follow-up-secondary {
+  background-color: white;
+  color: #3b82f6;
+  border: 2px solid #3b82f6;
+}
+
+.follow-up-secondary:hover {
+  background-color: #eff6ff;
+}
+
+.follow-up-info {
+  margin-bottom: 24px;
+}
+
+.follow-up-info h3 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.info-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.timeline-item {
+  display: flex;
+  gap: 12px;
+}
+
+.timeline-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  border-radius: 50%;
+  background-color: #d1fae5;
+  color: #065f46;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.timeline-content {
+  flex: 1;
+}
+
+.timeline-content h4 {
+  margin: 0 0 4px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.timeline-content p {
+  margin: 0;
+  font-size: 13px;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+.back-to-home-btn {
+  width: 100%;
+  padding: 12px 16px;
+  background-color: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2937;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.back-to-home-btn:hover {
+  background-color: #e5e7eb;
+}
+
+/* Navigation Buttons */
+.flow-navigation {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.nav-btn {
+  flex: 1;
+  padding: 12px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2937;
+  background-color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.nav-btn:hover:not(:disabled) {
+  background-color: #f3f4f6;
+  border-color: #3b82f6;
+  color: #3b82f6;
+}
+
+.nav-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.nav-next {
+  background-color: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+}
+
+.nav-next:hover:not(:disabled) {
+  background-color: #2563eb;
+  border-color: #2563eb;
+  color: white;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .deferral-flow-container {
+    background-color: #111827;
+  }
+
+  .flow-content {
+    background-color: #1f2937;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  }
+
+  .flow-step h2 {
+    color: #f3f4f6;
+  }
+
+  .step-description {
+    color: #d1d5db;
+  }
+
+  .reason-details,
+  .action-recommendations {
+    background-color: #111827;
+    border: 1px solid #374151;
+  }
+
+  .reason-details h3,
+  .action-recommendations h3 {
+    color: #f3f4f6;
+  }
+
+  .reason-details p {
+    color: #d1d5db;
+  }
+
+  .action-recommendations li {
+    color: #d1d5db;
+  }
+
+  .feeling-scale h3,
+  .symptoms-section h3,
+  .duration-section h3 {
+    color: #f3f4f6;
+  }
+
+  .scale-button {
+    background-color: #374151;
+    border-color: #4b5563;
+    color: #f3f4f6;
+  }
+
+  .scale-button:hover {
+    border-color: #3b82f6;
+    background-color: #1e3a8a;
+  }
+
+  .scale-button.selected {
+    border-color: #3b82f6;
+    background-color: #1e40af;
+    color: #dbeafe;
+  }
+
+  .symptom-checkbox {
+    background-color: #374151;
+    border-color: #4b5563;
+    color: #f3f4f6;
+  }
+
+  .symptom-checkbox:hover {
+    border-color: #3b82f6;
+    background-color: #1e3a8a;
+  }
+
+  .duration-select {
+    background-color: #374151;
+    color: #f3f4f6;
+    border-color: #4b5563;
+  }
+
+  .educational-content {
+    background-color: #064e3b;
+    border-left-color: #10b981;
+  }
+
+  .educational-content h3 {
+    color: #d1fae5;
+  }
+
+  .educational-content p,
+  .educational-content li {
+    color: #a7f3d0;
+  }
+
+  .care-recommendations h3 {
+    color: #f3f4f6;
+  }
+
+  .rec-card {
+    background-color: #374151;
+    border-color: #4b5563;
+  }
+
+  .rec-card h4 {
+    color: #f3f4f6;
+  }
+
+  .rec-card p {
+    color: #d1d5db;
+  }
+
+  .follow-up-info h3 {
+    color: #f3f4f6;
+  }
+
+  .timeline-marker {
+    background-color: #065f46;
+    color: #d1fae5;
+  }
+
+  .timeline-content h4 {
+    color: #f3f4f6;
+  }
+
+  .timeline-content p {
+    color: #d1d5db;
+  }
+
+  .back-to-home-btn {
+    background-color: #374151;
+    border-color: #4b5563;
+    color: #f3f4f6;
+  }
+
+  .back-to-home-btn:hover {
+    background-color: #4b5563;
+  }
+
+  .nav-btn {
+    background-color: #374151;
+    border-color: #4b5563;
+    color: #f3f4f6;
+  }
+
+  .nav-btn:hover:not(:disabled) {
+    background-color: #4b5563;
+  }
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .deferral-flow-container {
+    padding: 16px;
+  }
+
+  .flow-content {
+    padding: 24px 16px;
+  }
+
+  .flow-step h2 {
+    font-size: 20px;
+  }
+
+  .step-icon {
+    font-size: 40px;
+  }
+
+  .countdown-days {
+    font-size: 36px;
+  }
+
+  .countdown-label {
+    font-size: 16px;
+  }
+
+  .scale-buttons {
+    gap: 4px;
+  }
+
+  .scale-button {
+    padding: 10px 4px;
+  }
+
+  .button-number {
+    font-size: 16px;
+  }
+
+  .button-label {
+    font-size: 10px;
+  }
+
+  .symptoms-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .recommendation-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .nav-btn {
+    font-size: 13px;
+    padding: 10px 12px;
+  }
+}

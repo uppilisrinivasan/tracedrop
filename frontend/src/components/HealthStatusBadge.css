@@ -1,0 +1,119 @@
+/* Health Status Badge Styles */
+
+.health-status-badge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 8px;
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+  min-width: 200px;
+}
+
+.health-status-badge.health-status-healthy {
+  background-color: #f0fdf4;
+  border-color: #d1fae5;
+}
+
+.health-status-badge.health-status-warning {
+  background-color: #fffbeb;
+  border-color: #fcd34d;
+}
+
+.health-status-badge.health-status-urgent {
+  background-color: #fef2f2;
+  border-color: #fecaca;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-icon {
+  color: white;
+  font-size: 24px;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.status-content {
+  flex: 1;
+}
+
+.status-text {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+  line-height: 1.5;
+}
+
+.status-description {
+  margin: 4px 0 0 0;
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1.4;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .health-status-badge {
+    background-color: #1f2937;
+    border-color: #374151;
+  }
+
+  .health-status-badge.health-status-healthy {
+    background-color: #064e3b;
+    border-color: #10b981;
+  }
+
+  .health-status-badge.health-status-warning {
+    background-color: #78350f;
+    border-color: #f59e0b;
+  }
+
+  .health-status-badge.health-status-urgent {
+    background-color: #7f1d1d;
+    border-color: #ef4444;
+  }
+
+  .status-text {
+    color: #f3f4f6;
+  }
+
+  .status-description {
+    color: #d1d5db;
+  }
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .health-status-badge {
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .status-indicator {
+    width: 40px;
+    height: 40px;
+  }
+
+  .status-icon {
+    font-size: 20px;
+  }
+
+  .status-text {
+    font-size: 14px;
+  }
+
+  .status-description {
+    font-size: 11px;
+  }
+}

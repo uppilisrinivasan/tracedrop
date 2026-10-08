@@ -1,0 +1,186 @@
+/* Trend Chart Styles */
+
+.trend-chart-container {
+  background-color: white;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+.chart-header {
+  margin-bottom: 16px;
+}
+
+.chart-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f2937;
+  line-height: 1.4;
+}
+
+.chart-subtitle {
+  margin: 4px 0 0 0;
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1.4;
+}
+
+.chart-wrapper {
+  width: 100%;
+  height: 300px;
+  margin-bottom: 12px;
+}
+
+/* Tooltip Styles */
+.tooltip-content {
+  background-color: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 8px 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+}
+
+.tooltip-date {
+  margin: 0 0 4px 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.tooltip-value {
+  margin: 0 0 4px 0;
+  font-size: 14px;
+  color: #374151;
+}
+
+.tooltip-reading {
+  margin: 0 0 4px 0;
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.tooltip-grade {
+  margin: 0;
+  font-size: 11px;
+}
+
+.grade-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 3px;
+  color: white;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.chart-legend {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  flex-wrap: wrap;
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.legend-color {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .trend-chart-container {
+    background-color: #1f2937;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  }
+
+  .chart-title {
+    color: #f3f4f6;
+  }
+
+  .chart-subtitle {
+    color: #9ca3af;
+  }
+
+  .tooltip-content {
+    background-color: #111827;
+    border-color: #374151;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  }
+
+  .tooltip-date {
+    color: #f3f4f6;
+  }
+
+  .tooltip-value {
+    color: #d1d5db;
+  }
+
+  .tooltip-reading {
+    color: #9ca3af;
+  }
+
+  .chart-legend {
+    border-top-color: #374151;
+  }
+
+  .legend-item {
+    color: #9ca3af;
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .trend-chart-container {
+    padding: 12px;
+  }
+
+  .chart-title {
+    font-size: 16px;
+  }
+
+  .chart-wrapper {
+    height: 250px;
+  }
+
+  .chart-legend {
+    gap: 12px;
+  }
+}
+
+@media (max-width: 640px) {
+  .trend-chart-container {
+    padding: 10px;
+  }
+
+  .chart-title {
+    font-size: 14px;
+  }
+
+  .chart-wrapper {
+    height: 200px;
+  }
+
+  .chart-legend {
+    gap: 10px;
+    font-size: 11px;
+  }
+
+  .legend-color {
+    width: 10px;
+    height: 10px;
+  }
+}
