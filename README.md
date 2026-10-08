@@ -50,75 +50,56 @@ npm run dev
 
 ## 📁 Project Structure
 
+See [FOLDER_STRUCTURE.md](FOLDER_STRUCTURE.md) for complete folder layout.
+
+**Quick Overview:**
 ```
 tracedrop/
-├── backend/                 # Node.js/Express + Anthropic ADK
-│   ├── src/
-│   │   ├── agents/         # AI agent implementations
-│   │   ├── database/       # Firestore & knowledge graph
-│   │   ├── llm/            # LLM client & rate limiting
-│   │   ├── services/       # Business logic
-│   │   ├── routes/         # API endpoints
-│   │   ├── middleware/     # Express middleware
-│   │   └── server.js       # Entry point
-│   ├── package.json
-│   └── tsconfig.json
+├── README.md                  ← You are here
+├── BUILD_START.md             ← Team orientation
+├── FOLDER_STRUCTURE.md        ← Detailed folder map
 │
-├── frontend/                # React 19 + Vite
-│   ├── src/
-│   │   ├── pages/          # Route pages
-│   │   ├── components/     # Reusable UI components
-│   │   ├── hooks/          # React hooks
-│   │   ├── services/       # API client
-│   │   ├── types/          # TypeScript types
-│   │   └── App.tsx
-│   ├── package.json
-│   ├── vite.config.ts
-│   └── tsconfig.json
+├── backend/                   # Node.js/Express + Anthropic ADK
+├── frontend/                  # React 19 + Vite
+├── data/                      # FHIR data + ontology
 │
-├── data/                    # Data layer
-│   ├── synthetic/          # Generated FHIR bundles
-│   ├── ontology/           # Medical ontology
-│   ├── protocols/          # Protocol rules
-│   ├── templates/          # Message templates
-│   ├── generate.py         # Data generator
-│   └── load.py             # Load to Firestore
+├── docs/                      # ALL DOCUMENTATION (organized by purpose)
+│   ├── README.md              ← Master navigation guide
+│   ├── 00-project-status/     ← Project overview
+│   ├── 01-foundation/         ← Setup guides
+│   ├── 01-team-perspectives/  ← 5 team leads
+│   ├── 02-phases/             ← 5 build phases
+│   ├── 02-user-perspectives/  ← 5 stakeholders
+│   ├── 03-build/              ← Architecture
+│   ├── 04-guide/              ← Judge & deployment
+│   └── 05-reference/          ← Reference materials
 │
-├── docs/                    # Project documentation
-│   ├── 00-project-status/  # Project overview
-│   ├── 01-team-perspectives/
-│   ├── 02-user-perspectives/
-│   ├── 03-build/
-│   ├── 04-components/
-│   ├── 05-features/
-│   └── PERSPECTIVES_MASTER_GUIDE.md
-│
-├── docker-compose.yml      # Multi-service compose
-├── Dockerfile              # Multi-stage build
-├── .env.example            # Environment template
-├── .gitignore
-├── BUILD_START.md          # Team orientation guide
-└── README.md               # This file
+├── docker-compose.yml         # Multi-service compose
+├── Dockerfile                 # Multi-stage build
+├── .env.example               # Environment template
+└── setup-verify.sh            # Verification script
+```
 ```
 
 ---
 
-## 📖 Documentation Structure
+## 📖 Documentation
 
-**All project documentation is organized in `/docs/`:**
+**Start with:** [docs/README.md](docs/README.md) (master navigation guide)
 
-- **[/docs/00-project-status/](docs/00-project-status/)** ← Start here for project overview
-  - Strategy status, timelines, folder organization
-  
-- **[/docs/01-problem-brief.md](docs/01-problem-brief.md)** - Problem analysis & market size
-  
-- **[/docs/02-pitch/](docs/02-pitch/)** - Pitch deck & narrative
-  - Consumer-centric slides with ecosystem diagram
-  
-- **[/docs/03-build/](docs/03-build/)** - Build specifications
-  - Prototype spec & architecture (consumer-first design)
-  
-- **[/docs/BUILD_START.md](BUILD_START.md)** - Team roles and entry points
+**For Judges:** [docs/04-guide/DEMO_SCRIPT.md](docs/04-guide/DEMO_SCRIPT.md)  
+**For Developers:** [docs/01-foundation/SETUP_GUIDE.md](docs/01-foundation/SETUP_GUIDE.md)  
+**For Team:** [BUILD_START.md](BUILD_START.md) or [docs/01-team-perspectives/](docs/01-team-perspectives/)
+
+All documentation is organized in the `/docs/` folder by purpose:
+- `00-project-status/` — Project overview
+- `01-foundation/` — Setup & infrastructure
+- `01-team-perspectives/` — 5 team leads
+- `02-phases/` — 5 build phases
+- `02-user-perspectives/` — 5 stakeholders
+- `03-build/` — Architecture & technical guides
+- `04-guide/` — **Judge demo & deployment**
+- `05-reference/` — Reference materials
 
 ---
 
