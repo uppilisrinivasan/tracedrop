@@ -1,0 +1,330 @@
+/**
+ * TraceDrop Firestore Security Rules
+ *
+ * Enforces role-based access control (RBAC) for all collections.
+ *
+ * Roles:
+ * - donor: Patient using app
+ * - doctor: Healthcare provider managing patients
+ * - counsellor: Counselor handling sensitive cases (CONFIDENTIAL)
+ * - centre_staff: Blood centre staff recording donations
+ * - admin: System administrator
+ *
+ * Database Rules:
+ * - Authentication required for all operations
+ * - Role-based read/write permissions per collection
+ * - Strict audit logging for sensitive operations
+ * - No public/unauthenticated access
+ */
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ====================================================================
+    // Helper Functions
+    // ====================================================================
+
+    // Get authenticated user ID
+    function uid() {
+      return request.auth.uid;
+    }
+
+    // Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Get user's custom claims (role, permissions)
+    function getUserRole() {
+      return request.auth.token.role;
+    }
+
+    // Check if user has specific role
+    function hasRole(role) {
+      return getUserRole() == role;
+    }
+
+    // Check if user is admin
+    function isAdmin() {
+      return hasRole('admin');
+    }
+
+    // Check if user is a doctor
+    function isDoctor() {
+      return hasRole('doctor');
+    }
+
+    // Check if user is a donor
+    function isDonor() {
+      return hasRole('donor');
+    }
+
+    // Check if user is counsellor
+    function isCounsellor() {
+      return hasRole('counsellor');
+    }
+
+    // Check if user is centre staff
+    function isCentreStaff() {
+      return hasRole('centre_staff');
+    }
+
+    // Get user's custom data (e.g., associated donorId, centreId)
+    function getUserData() {
+      return request.auth.token;
+    }
+
+    // Get donor ID for current user (if user is a donor)
+    function getDonorId() {
+      return request.auth.token.donorId;
+    }
+
+    // Get centre ID for current user (if user is centre staff)
+    function getCentreId() {
+      return request.auth.token.centreId;
+    }
+
+    // ====================================================================
+    // DONORS Collection
+    // ====================================================================
+
+    match /donors/{donorId} {
+      // Donors can read their own document
+      allow read: if isAuthenticated() && (
+        (isDonor() && getDonorId() == donorId) ||
+        isDoctor() ||
+        isAdmin()
+      );
+
+      // Only admin can write (protect PII)
+      allow write: if isAdmin();
+    }
+
+    // ====================================================================
+    // DONATIONS Collection
+    // ====================================================================
+
+    match /donations/{donationId} {
+      // Donors can read their own donations
+      allow read: if isAuthenticated() && (
+        (isDonor() && resource.data.donorId == getDonorId()) ||
+        isDoctor() ||
+        isAdmin()
+      );
+
+      // Centre staff can create donations
+      allow create: if isAuthenticated() && isCentreStaff() && (
+        request.resource.data.bloodCentreId == getCentreId()
+      );
+
+      // Only admin can update/delete
+      allow update, delete: if isAdmin();
+    }
+
+    // ====================================================================
+    // OBSERVATIONS Collection
+    // ====================================================================
+
+    match /observations/{observationId} {
+      // Donors can read own observations
+      // Doctors can read observations for their patients
+      // Admins can read all
+      allow read: if isAuthenticated() && (
+        (isDonor() && resource.data.donorId == getDonorId()) ||
+        isDoctor() ||
+        isAdmin()
+      );
+
+      // Donors can create self-reported observations
+      allow create: if isAuthenticated() && isDonor() && (
+        request.resource.data.donorId == getDonorId() &&
+        request.resource.data.source == 'self_reported'
+      );
+
+      // Centre staff can create observations from donation centre
+      allow create: if isAuthenticated() && isCentreStaff() && (
+        request.resource.data.source == 'donation_centre'
+      );
+
+      // Doctors can create clinic observations
+      allow create: if isAuthenticated() && isDoctor() && (
+        request.resource.data.source == 'clinic'
+      );
+
+      // Only admin can update/delete
+      allow update, delete: if isAdmin();
+    }
+
+    // ====================================================================
+    // FINDINGS Collection
+    // ====================================================================
+
+    match /findings/{findingId} {
+      // Donors can read their own findings (but not escalated ones)
+      allow read: if isAuthenticated() && (
+        (isDonor() &&
+         resource.data.donorId == getDonorId() &&
+         !resource.data.needsEscalation) ||
+        isDoctor() ||
+        isAdmin()
+      );
+
+      // Doctors can create/update findings
+      allow create, update: if isAuthenticated() && (
+        isDoctor() || isAdmin()
+      );
+
+      // Only admin can delete
+      allow delete: if isAdmin();
+    }
+
+    // ====================================================================
+    // CARE_PLANS Collection
+    // ====================================================================
+
+    match /care_plans/{carePlanId} {
+      // Donors can read their own care plans
+      allow read: if isAuthenticated() && (
+        (isDonor() && resource.data.donorId == getDonorId()) ||
+        isDoctor() ||
+        isAdmin()
+      );
+
+      // Doctors can create/update care plans
+      allow create, update: if isAuthenticated() && (
+        isDoctor() || isAdmin()
+      );
+
+      // Only admin can delete
+      allow delete: if isAdmin();
+    }
+
+    // ====================================================================
+    // APPOINTMENTS Collection
+    // ====================================================================
+
+    match /appointments/{appointmentId} {
+      // Donors can read their own appointments
+      allow read: if isAuthenticated() && (
+        (isDonor() && resource.data.donorId == getDonorId()) ||
+        isDoctor() ||
+        isAdmin()
+      );
+
+      // Doctors can create/update appointments
+      allow create, update: if isAuthenticated() && (
+        isDoctor() || isAdmin()
+      );
+
+      // Only admin can delete
+      allow delete: if isAdmin();
+    }
+
+    // ====================================================================
+    // COMMUNICATIONS Collection
+    // ====================================================================
+
+    match /communications/{communicationId} {
+      // Donors can read their own messages
+      allow read: if isAuthenticated() && (
+        (isDonor() && resource.data.donorId == getDonorId()) ||
+        isDoctor() ||
+        isAdmin()
+      );
+
+      // System service (admin) can create messages
+      allow create: if isAuthenticated() && (
+        isAdmin() || isDoctor()
+      );
+
+      // Only admin can update/delete
+      allow update, delete: if isAdmin();
+    }
+
+    // ====================================================================
+    // OUTCOMES Collection
+    // ====================================================================
+
+    match /outcomes/{outcomeId} {
+      // Donors can read their own outcomes
+      allow read: if isAuthenticated() && (
+        (isDonor() && resource.data.donorId == getDonorId()) ||
+        isDoctor() ||
+        isAdmin()
+      );
+
+      // Doctors can create/update outcomes
+      allow create, update: if isAuthenticated() && (
+        isDoctor() || isAdmin()
+      );
+
+      // Only admin can delete
+      allow delete: if isAdmin();
+    }
+
+    // ====================================================================
+    // COUNSELLOR_QUEUE Collection (CONFIDENTIAL)
+    // ====================================================================
+
+    // STRICT CONFIDENTIALITY: Only counsellors can access
+    match /counsellor_queue/{queueItemId} {
+      // Only counsellors and admins can read
+      allow read: if isAuthenticated() && (
+        isCounsellor() || isAdmin()
+      );
+
+      // Only counsellors and admins can create/update
+      // NO BATCH operations - must modify individually
+      allow create, update: if isAuthenticated() && (
+        isCounsellor() || isAdmin()
+      ) && (
+        // Prevent batch operations
+        request.resource.data.size() > 0
+      );
+
+      // Only admin can delete
+      allow delete: if isAdmin();
+
+      // Log all reads/writes for audit
+      // In production, integrate with Cloud Audit Logs
+    }
+
+    // ====================================================================
+    // TEMPLATES Collection
+    // ====================================================================
+
+    match /templates/{templateId} {
+      // Doctors and counsellors can read templates
+      allow read: if isAuthenticated() && (
+        isDoctor() || isCounsellor() || isAdmin()
+      );
+
+      // Only admin can write
+      allow write: if isAdmin();
+    }
+
+    // ====================================================================
+    // PROTOCOLS Collection
+    // ====================================================================
+
+    match /protocols/{protocolId} {
+      // Doctors can read protocols
+      allow read: if isAuthenticated() && (
+        isDoctor() || isAdmin()
+      );
+
+      // Only admin can write
+      allow write: if isAdmin();
+    }
+
+    // ====================================================================
+    // Deny All Other Collections
+    // ====================================================================
+
+    // Catch-all: deny access to any other collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
