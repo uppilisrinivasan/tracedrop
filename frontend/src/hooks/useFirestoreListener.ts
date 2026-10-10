@@ -158,7 +158,7 @@ export function useDonorFindings(donorId: string, limit: number = 10) {
 export function useDonorObservations(
   donorId: string,
   type?: 'BP' | 'Hb' | 'HR' | 'RR' | 'BMI',
-  days: number = 90
+  days?: number // omit for full history
 ) {
   const [observations, setObservations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -173,8 +173,10 @@ export function useDonorObservations(
     const fetchObservations = async () => {
       try {
         setLoading(true);
-        let query = `/api/donors/${donorId}/observations?days=${days}`;
-        if (type) query += `&type=${type}`;
+        const params = new URLSearchParams();
+        if (days) params.set('days', String(days));
+        if (type) params.set('type', type);
+        const query = `/api/donors/${donorId}/observations?${params}`;
 
         const response = await fetch(query);
         if (!response.ok) throw new Error('Failed to fetch observations');

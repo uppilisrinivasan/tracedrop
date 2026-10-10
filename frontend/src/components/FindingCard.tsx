@@ -7,6 +7,7 @@
 
 import React from 'react';
 import { Finding, Observation, FindingCardProps } from '../types/index';
+import { getFindingLabel } from '../utils/findingLabels';
 import './FindingCard.css';
 
 const FindingCard: React.FC<FindingCardProps> = ({
@@ -61,19 +62,6 @@ const FindingCard: React.FC<FindingCardProps> = ({
     });
   };
 
-  const getCategoryLabel = (category: string): string => {
-    const labels: Record<string, string> = {
-      BP_GRADE1: 'High Blood Pressure (Stage 1)',
-      BP_GRADE2: 'High Blood Pressure (Stage 2)',
-      Hb_LOW: 'Low Hemoglobin',
-      Hb_CRITICAL: 'Critical Hemoglobin Level',
-      HR_ELEVATED: 'Elevated Heart Rate',
-      DEFERRED: 'Deferral from Donation',
-      OTHER: 'Health Alert',
-    };
-    return labels[category] || category;
-  };
-
   const getTrendIndicator = (trend: string): React.ReactNode => {
     const indicators: Record<string, { icon: string; text: string; color: string }> = {
       improving: { icon: '↓', text: 'Improving', color: '#10B981' },
@@ -111,7 +99,7 @@ const FindingCard: React.FC<FindingCardProps> = ({
         style={{ backgroundColor: getUrgencyBgColor(finding.urgency) }}
       >
         <div className="finding-title-section">
-          <h3 className="finding-category">{getCategoryLabel(finding.category)}</h3>
+          <h3 className="finding-category">{getFindingLabel(finding.category)}</h3>
           <p className="finding-timestamp">
             {formatDate(finding.createdAt)} at {formatTime(finding.createdAt)}
           </p>
@@ -147,13 +135,7 @@ const FindingCard: React.FC<FindingCardProps> = ({
 
       <div className="finding-footer">
         {finding.recommendedAction && (
-          <p className="action-recommendation">
-            {finding.recommendedAction
-              .replace(/_/g, ' ')
-              .charAt(0)
-              .toUpperCase() +
-              finding.recommendedAction.replace(/_/g, ' ').slice(1)}
-          </p>
+          <p className="action-recommendation">{finding.recommendedAction}</p>
         )}
         <button
           className="action-button"

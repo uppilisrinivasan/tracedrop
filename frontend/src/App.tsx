@@ -14,8 +14,18 @@ import './App.css';
 import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
 import DeferralFlow from './pages/DeferralFlow';
+import FunnelDashboard from './pages/FunnelDashboard';
 
-type PageType = 'home' | 'dashboard' | 'deferral' | 'appointments' | 'finding-detail';
+type PageType = 'home' | 'dashboard' | 'deferral' | 'appointments' | 'finding-detail' | 'impact';
+
+// Synthetic demo personas (data/generate.py)
+const DEMO_DONORS = [
+  { id: 'D-001', label: 'Arjun — rising BP' },
+  { id: 'D-002', label: 'Meera — low hemoglobin' },
+  { id: 'D-017', label: 'D-017 — urgent BP' },
+  { id: 'D-050', label: 'D-050 — BP trend' },
+  { id: 'D-003', label: 'D-003 — healthy' },
+];
 
 interface PageState {
   page: PageType;
@@ -23,17 +33,28 @@ interface PageState {
 }
 
 function App() {
-  const [donorId, setDonorId] = useState<string>('D-001'); // Mock donor ID
+  const [donorId, setDonorId] = useState<string>(DEMO_DONORS[0].id);
   const [currentPage, setCurrentPage] = useState<PageState>({ page: 'home' });
 
-  // Mock authentication - in production, get from auth service
+  // Demo sign-in: remember the selected donor between visits
   useEffect(() => {
-    // Check for donor ID in URL or local storage
-    const storedDonorId = localStorage.getItem('donorId');
-    if (storedDonorId) {
-      setDonorId(storedDonorId);
+    try {
+      const storedDonorId = localStorage.getItem('donorId');
+      if (storedDonorId) setDonorId(storedDonorId);
+    } catch {
+      // Storage unavailable (private mode) — keep the default donor
     }
   }, []);
+
+  const handleDonorChange = (id: string) => {
+    setDonorId(id);
+    try {
+      localStorage.setItem('donorId', id);
+    } catch {
+      // Ignore storage failures
+    }
+    setCurrentPage({ page: 'home' });
+  };
 
   const handleNavigate = (page: string, data?: any) => {
     setCurrentPage({
@@ -45,8 +66,13 @@ function App() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('donorId');
-    localStorage.removeItem('authToken');
+    try {
+      localStorage.removeItem('donorId');
+      localStorage.removeItem('authToken');
+    } catch {
+      // Ignore storage failures
+    }
+    setDonorId(DEMO_DONORS[0].id);
     setCurrentPage({ page: 'home' });
   };
 
@@ -68,6 +94,8 @@ function App() {
           );
         }
         return <Home donorId={donorId} onNavigate={handleNavigate} />;
+      case 'impact':
+        return <FunnelDashboard />;
       case 'appointments':
         return (
           <div style={{ padding: '24px', textAlign: 'center', color: '#6b7280' }}>
@@ -115,7 +143,25 @@ function App() {
             >
               Dashboard
             </button>
+            <button
+              className={`nav-link ${currentPage.page === 'impact' ? 'active' : ''}`}
+              onClick={() => handleNavigate('impact')}
+            >
+              Impact
+            </button>
           </div>
+          <select
+            className="nav-donor-select"
+            value={donorId}
+            onChange={(e) => handleDonorChange(e.target.value)}
+            aria-label="Demo donor"
+          >
+            {DEMO_DONORS.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.label}
+              </option>
+            ))}
+          </select>
           <button className="nav-logout-btn" onClick={handleLogout}>
             Logout
           </button>

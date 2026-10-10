@@ -254,7 +254,7 @@ export function useMultiLanguage(
       // This would be fetched from backend in production
       const templates: Record<string, Record<string, string>> = {
         en: {
-          greeting: getTimeOfDayGreeting('en'),
+          greeting: `${getTimeOfDayGreeting('en')}, {{name}}`,
           bp_grade1_message: 'Your blood pressure is {{value}} mmHg - this is elevated. Please schedule a clinic visit.',
           bp_grade2_message: 'Your blood pressure is {{value}} mmHg - this is high. Immediate medical attention recommended.',
           hb_low_message: 'Your hemoglobin level is {{value}} g/dL - this is low. Please consult your doctor.',
@@ -264,7 +264,7 @@ export function useMultiLanguage(
           report_issue: 'Report Issue',
         },
         hi: {
-          greeting: getTimeOfDayGreeting('hi'),
+          greeting: `${getTimeOfDayGreeting('hi')}, {{name}}`,
           bp_grade1_message: 'आपका रक्त दाब {{value}} mmHg है - यह उच्च है। कृपया एक क्लिनिक विजिट निर्धारित करें।',
           bp_grade2_message: 'आपका रक्त दाब {{value}} mmHg है - यह बहुत अधिक है। तत्काल चिकित्सा ध्यान अनुशंसित है।',
           hb_low_message: 'आपका हीमोग्लोबिन स्तर {{value}} g/dL है - यह कम है। कृपया अपने डॉक्टर से सलाह लें।',
@@ -274,7 +274,7 @@ export function useMultiLanguage(
           report_issue: 'समस्या की रिपोर्ट करें',
         },
         ta: {
-          greeting: getTimeOfDayGreeting('ta'),
+          greeting: `${getTimeOfDayGreeting('ta')}, {{name}}`,
           bp_grade1_message: 'உங்கள் இரத்த அழுத்தம் {{value}} mmHg - இது உயர்ந்தது. கிளினிக் பார்வையை வரிசைப்படுத்தவும்.',
           bp_grade2_message: 'உங்கள் இரத்த அழுத்தம் {{value}} mmHg - இது மிக அதிகமாக உள்ளது. உடனடி மருத்துவ கவனம் பரிந்துரைக்கப்படுகிறது.',
           hb_low_message: 'உங்கள் ஹீமோகுளோபின் அளவு {{value}} g/dL - இது குறைந்தது. உங்கள் டாக்டரை பரிசாரணை செய்யவும்.',
@@ -284,7 +284,7 @@ export function useMultiLanguage(
           report_issue: 'சிக்கலைப் பதிவு செய்க',
         },
         te: {
-          greeting: getTimeOfDayGreeting('te'),
+          greeting: `${getTimeOfDayGreeting('te')}, {{name}}`,
           bp_grade1_message: 'మీ రక్త పీడనం {{value}} mmHg - ఇది ఎక్కువగా ఉంది. దయచేసి క్లినిక్ సందర్శన షెడ్యూల్ చేయండి.',
           bp_grade2_message: 'మీ రక్త పీడనం {{value}} mmHg - ఇది చాలా ఎక్కువ. తక్షణ వైద్య శ్రద్ధ సూచించబడుతుంది.',
           hb_low_message: 'మీ హెమోగ్లోబిన్ స్థాయి {{value}} g/dL - ఇది తక్కువ. దయచేసి మీ డాక్టర్‌ను సంప్రదించండి.',
@@ -294,7 +294,7 @@ export function useMultiLanguage(
           report_issue: 'సమస్యను నివేదించండి',
         },
         kn: {
-          greeting: getTimeOfDayGreeting('kn'),
+          greeting: `${getTimeOfDayGreeting('kn')}, {{name}}`,
           bp_grade1_message: 'ನಿಮ್ಮ ರಕ್ತದ ಒತ್ತಡ {{value}} mmHg - ಇದು ಎತ್ತರದಲ್ಲಿದೆ. ದಯವಿಟ್ಟು ಕ್ಲಿನಿಕ್ ಭೇಟಿ ನಿಗದಿಪಡಿಸಿ.',
           bp_grade2_message: 'ನಿಮ್ಮ ರಕ್ತದ ಒತ್ತಡ {{value}} mmHg - ಇದು ತುಂಬಾ ಹೆಚ್ಚಾಗಿದೆ. ತಕ್ಷಣ ವೈದ್ಯಕೀಯ ಗಮನ ಶಿಫಾರಸು ಮಾಡಲಾಗಿದೆ.',
           hb_low_message: 'ನಿಮ್ಮ ಹಿಮೋಗ್ಲೋಬಿನ್ ಮಟ್ಟ {{value}} g/dL - ಇದು ಕಡಿಮೆಯಾಗಿದೆ. ದಯವಿಟ್ಟು ನಿಮ್ಮ ಡಾಕ್ಟರ್ ಅನ್ನು ಸಂಪರ್ಕಿಸಿ.',
@@ -304,7 +304,7 @@ export function useMultiLanguage(
           report_issue: 'ಸಮಸ್ಯೆಯನ್ನು ವರದಿ ಮಾಡಿ',
         },
         ml: {
-          greeting: getTimeOfDayGreeting('ml'),
+          greeting: `${getTimeOfDayGreeting('ml')}, {{name}}`,
           bp_grade1_message: 'നിങ്ങളുടെ രക്തസമ്മർദ്ദം {{value}} mmHg - ഇത് ഉയർന്നതാണ്. കൃപയാ ക്ലിനിക് സന്ദർശനം ബുക്ക് ചെയ്യുക.',
           bp_grade2_message: 'നിങ്ങളുടെ രക്തസമ്മർദ്ദം {{value}} mmHg - ഇത് വളരെ ഉയർന്നതാണ്. ഉടനടി മെഡിക്കൽ ശ്രദ്ധ ശുപാർശ ചെയ്യപ്പെടുന്നു.',
           hb_low_message: 'നിങ്ങളുടെ ഹീമോഗ്ലോബിൻ നില {{value}} g/dL - ഇത് കുറവാണ്. നിങ്ങളുടെ ഡോക്ടറുമായി കൂടിയാലോചിക്കുക.',

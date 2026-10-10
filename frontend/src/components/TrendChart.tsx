@@ -34,7 +34,7 @@ const TrendChart: React.FC<TrendChartProps> = ({
       ...point,
       displayDate: new Date(point.date).toLocaleDateString('en-US', {
         month: 'short',
-        day: 'numeric',
+        year: 'numeric',
       }),
     }));
   }, [data]);
@@ -117,7 +117,7 @@ const TrendChart: React.FC<TrendChartProps> = ({
     <div className="trend-chart-container">
       <div className="chart-header">
         <h3 className="chart-title">{title}</h3>
-        <p className="chart-subtitle">Last 90 days</p>
+        <p className="chart-subtitle">Readings from each donation visit</p>
       </div>
 
       <div className="chart-wrapper">

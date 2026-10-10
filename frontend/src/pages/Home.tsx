@@ -17,6 +17,7 @@ import { Donor, Finding, Observation, Donation, TrendDataPoint } from '../types/
 import { useDonor, useDonorFindings, useDonorObservations } from '../hooks/useFirestoreListener';
 import { useMultiLanguage } from '../hooks/useMultiLanguage';
 import HealthStatusBadge from '../components/HealthStatusBadge';
+import { getFindingLabel } from '../utils/findingLabels';
 import './Home.css';
 
 interface HomeProps {
@@ -27,7 +28,8 @@ interface HomeProps {
 const Home: React.FC<HomeProps> = ({ donorId, onNavigate }) => {
   const { donor, loading: donorLoading } = useDonor(donorId);
   const { findings, loading: findingsLoading } = useDonorFindings(donorId, 1);
-  const { observations, loading: obsLoading } = useDonorObservations(donorId, undefined, 1);
+  // Full history: donors give blood every few months, so a short window is often empty
+  const { observations, loading: obsLoading } = useDonorObservations(donorId);
 
   const { translate, currentLanguage } = useMultiLanguage(donor?.language || 'en');
 
@@ -36,14 +38,23 @@ const Home: React.FC<HomeProps> = ({ donorId, onNavigate }) => {
   const [lastDonation, setLastDonation] = useState<Donation | null>(null);
   const [bpTrend, setBpTrend] = useState<'up' | 'down' | 'stable'>('stable');
 
-  // Extract latest vital signs from observations
+  // Extract latest vital signs (observations arrive newest first) and the BP trend
   useEffect(() => {
     if (observations && observations.length > 0) {
-      const bp = observations.find((o) => o.type === 'BP');
+      const bpReadings = observations.filter((o) => o.type === 'BP');
       const hb = observations.find((o) => o.type === 'Hb');
 
-      if (bp) setLatestBP(bp);
+      if (bpReadings[0]) setLatestBP(bpReadings[0]);
       if (hb) setLatestHb(hb);
+
+      if (bpReadings.length >= 2) {
+        const latest = parseBloodPressure(bpReadings[0].value);
+        const previous = parseBloodPressure(bpReadings[1].value);
+        if (latest && previous) {
+          const change = latest.systolic - previous.systolic;
+          setBpTrend(change >= 5 ? 'up' : change <= -5 ? 'down' : 'stable');
+        }
+      }
     }
   }, [observations]);
 
@@ -101,7 +112,6 @@ const Home: React.FC<HomeProps> = ({ donorId, onNavigate }) => {
   };
 
   const getBPTrendArrow = (): string => {
-    // In production, compare with historical data
     return bpTrend === 'up' ? '↑' : bpTrend === 'down' ? '↓' : '→';
   };
 
@@ -224,7 +234,7 @@ const Home: React.FC<HomeProps> = ({ donorId, onNavigate }) => {
           <h3 className="section-title">Latest Health Alert</h3>
           <div className="finding-preview">
             <div className="finding-preview-header">
-              <h4 className="finding-title">{latestFinding.category}</h4>
+              <h4 className="finding-title">{getFindingLabel(latestFinding.category)}</h4>
               <span className={`urgency-tag urgency-${latestFinding.urgency}`}>
                 {latestFinding.urgency.toUpperCase()}
               </span>
@@ -232,7 +242,7 @@ const Home: React.FC<HomeProps> = ({ donorId, onNavigate }) => {
             <p className="finding-text">{latestFinding.description}</p>
             <button
               className="finding-action-btn"
-              onClick={() => onNavigate('dashboard', { findingId: latestFinding.id })}
+              onClick={() => onNavigate('finding-detail', { findingId: latestFinding.id })}
             >
               View Details →
             </button>

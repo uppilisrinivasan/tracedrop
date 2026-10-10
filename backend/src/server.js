@@ -21,7 +21,12 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Initialize Firebase & routes here
+// Donor data (served from data/synthetic until Firestore is wired in)
+app.use('/api/donors', require('./routes/donors'));
+
+app.use('/api', (req, res) => {
+  res.status(404).json({ success: false, error: `No API route for ${req.method} ${req.originalUrl}` });
+});
 
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {

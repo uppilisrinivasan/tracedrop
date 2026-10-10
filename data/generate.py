@@ -187,6 +187,15 @@ class SyntheticDataGenerator:
                 }
                 self.donations.append(donation)
 
+        # Keep each donor's donations chronological (DON-1 oldest) so persona
+        # trends like Arjun's 128 -> 134 -> 148 read forward in time. Dates are
+        # only reassigned, so the random sequence (and seed output) is unchanged.
+        for i in range(0, len(self.donations), 3):
+            group = self.donations[i:i + 3]
+            dates = sorted(d["performedDateTime"] for d in group)
+            for donation, date in zip(group, dates):
+                donation["performedDateTime"] = date
+
         return self.donations
 
     def generate_observations(self, donors_count: int = 300) -> List[Dict]:

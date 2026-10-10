@@ -53,11 +53,20 @@ if [ ! -f "$ROOT/backend/.env" ]; then
 fi
 
 # --- Dependencies ----------------------------------------------------------
+# A past `sudo npm` can leave root-owned files in ~/.npm, which makes installs
+# fail with EACCES/EEXIST. Fall back to a project-local cache in that case.
+NPM_CACHE_ARGS=()
+if [ -d "$HOME/.npm" ] && [ -n "$(find "$HOME/.npm" ! -user "$(id -un)" -print -quit 2>/dev/null)" ]; then
+  warn "~/.npm has root-owned files; using local cache .npm-cache/ instead."
+  warn "Permanent fix: sudo chown -R \"\$(id -u):\$(id -g)\" ~/.npm"
+  NPM_CACHE_ARGS=(--cache "$ROOT/.npm-cache")
+fi
+
 install_deps() {
   local dir="$1"
   if $FORCE_INSTALL || [ ! -d "$ROOT/$dir/node_modules" ]; then
     info "Installing $dir dependencies..."
-    (cd "$ROOT/$dir" && npm install --no-audit --no-fund)
+    (cd "$ROOT/$dir" && npm install --no-audit --no-fund ${NPM_CACHE_ARGS[@]+"${NPM_CACHE_ARGS[@]}"})
   fi
 }
 install_deps backend

@@ -22,7 +22,8 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ donorId, onNavigate }) => {
-  const { observations, loading: obsLoading } = useDonorObservations(donorId, undefined, 90);
+  // Full history: with a donation every few months, 90 days would show one reading at most
+  const { observations, loading: obsLoading } = useDonorObservations(donorId);
   const { findings, loading: findingsLoading } = useDonorFindings(donorId, 50);
   const { carePlans, loading: carePlansLoading } = useCarePlans(donorId);
 
@@ -87,9 +88,8 @@ const Dashboard: React.FC<DashboardProps> = ({ donorId, onNavigate }) => {
     (f) => f.trend === 'declining' && f.status === 'active'
   ) ?? false;
 
-  const isConsistentDonor = observations.filter(
-    (o) => new Date(o.recordedAt).getTime() > Date.now() - 90 * 24 * 60 * 60 * 1000
-  ).length >= 3;
+  // One BP reading is taken at every donation visit
+  const isConsistentDonor = observations.filter((o) => o.type === 'BP').length >= 3;
 
   const isHealthConscious = carePlans?.some((cp) => cp.status === 'active') ?? false;
 
@@ -112,7 +112,7 @@ const Dashboard: React.FC<DashboardProps> = ({ donorId, onNavigate }) => {
 
       {/* Trend Charts */}
       <div className="charts-section">
-        <h2 className="section-title">3-Month Trends</h2>
+        <h2 className="section-title">Your Trends</h2>
 
         {bpTrendData.length > 0 && (
           <TrendChart
@@ -136,7 +136,7 @@ const Dashboard: React.FC<DashboardProps> = ({ donorId, onNavigate }) => {
 
         {bpTrendData.length === 0 && hbTrendData.length === 0 && (
           <div className="no-data-message">
-            <p>No vital signs recorded in the last 90 days</p>
+            <p>No vital signs recorded yet</p>
           </div>
         )}
       </div>

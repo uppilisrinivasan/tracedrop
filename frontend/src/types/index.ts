@@ -74,6 +74,8 @@ export interface Finding {
   urgency: 'routine' | 'soon' | 'urgent' | 'critical';
   carePlanId?: string;
   needsEscalation: boolean;
+  protocolId?: string;
+  followUpDays?: number; // protocol follow-up / deferral period
   createdAt: string;
   updatedAt: string;
 }

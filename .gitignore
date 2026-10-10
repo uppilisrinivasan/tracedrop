@@ -52,3 +52,6 @@ data/synthetic/*.jsonl.bak
 # Temporary files
 *.tmp
 .temp/
+
+# Local npm cache used by run.sh
+.npm-cache/

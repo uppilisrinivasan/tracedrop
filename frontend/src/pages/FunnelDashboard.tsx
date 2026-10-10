@@ -68,7 +68,6 @@ export const FunnelDashboard: React.FC = () => {
       const data = await response.json();
       setMetrics(data.metrics);
     } catch (err) {
-      console.error('Error fetching metrics:', err);
       setError(err instanceof Error ? err.message : 'Failed to load metrics');
       // Use demo data for development
       setMetrics(getDemoMetrics());
@@ -106,6 +105,13 @@ export const FunnelDashboard: React.FC = () => {
           Measuring TraceDrop's 2.8x improvement in care access
         </p>
       </div>
+
+      {error && (
+        <div className="projection-notice" role="note">
+          Projected targets for illustration. These figures are not measured from the
+          synthetic dataset; outcome tracking is not connected yet.
+        </div>
+      )}
 
       {/* Key Stats Summary */}
       <section className="summary-section">
@@ -265,7 +271,7 @@ export const FunnelDashboard: React.FC = () => {
           <div className="comparison-divider">
             <span className="improvement-badge">
               {accessImprovement.toFixed(1)}x
-            </improvement-badge>
+            </span>
           </div>
 
           <div className="comparison-column tracedrop">
@@ -514,6 +520,16 @@ export const FunnelDashboard: React.FC = () => {
           justify-content: center;
           min-height: 400px;
           gap: 16px;
+        }
+
+        .projection-notice {
+          margin-bottom: 24px;
+          padding: 12px 16px;
+          border-left: 4px solid #f59e0b;
+          border-radius: 4px;
+          background: #fffbeb;
+          color: #92400e;
+          font-size: 14px;
         }
 
         .error-message {

@@ -61,10 +61,12 @@ const DeferralFlow: React.FC<DeferralFlowProps> = ({ donorId, findingId, onNavig
     fetchFinding();
   }, [donorId, findingId]);
 
+  const [reminderSet, setReminderSet] = useState(false);
+
+  // Deferral lasts the protocol's follow-up period, counted from the finding date
   const calculateReeeligibilityDate = (): Date => {
-    // In production, calculate based on protocol
-    const date = new Date();
-    date.setDate(date.getDate() + 14); // 14 days for example
+    const date = finding ? new Date(finding.createdAt) : new Date();
+    date.setDate(date.getDate() + (finding?.followUpDays ?? 14));
     return date;
   };
 
@@ -94,8 +96,9 @@ const DeferralFlow: React.FC<DeferralFlowProps> = ({ donorId, findingId, onNavig
   };
 
   const reeligibilityDate = calculateReeeligibilityDate();
-  const daysUntilReeeligible = Math.ceil(
-    (reeligibilityDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+  const daysUntilReeeligible = Math.max(
+    0,
+    Math.ceil((reeligibilityDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
   );
 
   if (loading) {
@@ -148,6 +151,9 @@ const DeferralFlow: React.FC<DeferralFlowProps> = ({ donorId, findingId, onNavig
             <div className="step-icon">ℹ️</div>
             <h2>Why You're Deferred</h2>
             <p className="step-description">{finding.description}</p>
+            <p className="step-description">
+              <strong>Recommended:</strong> {finding.recommendedAction}
+            </p>
 
             <div className="reason-details">
               <h3>What This Means</h3>
@@ -292,14 +298,20 @@ const DeferralFlow: React.FC<DeferralFlowProps> = ({ donorId, findingId, onNavig
             <h2>Next Steps</h2>
 
             <div className="follow-up-actions">
-              <button className="follow-up-btn follow-up-primary">
+              <button
+                className="follow-up-btn follow-up-primary"
+                onClick={() => onNavigate('appointments')}
+              >
                 📅 Schedule AAM Visit
               </button>
               <button
                 className="follow-up-btn follow-up-secondary"
-                onClick={() => setFinding(null)}
+                onClick={() => setReminderSet(true)}
+                disabled={reminderSet}
               >
-                🔔 Set Reminder (14 days)
+                {reminderSet
+                  ? `✓ Reminder set for ${reeligibilityDate.toLocaleDateString()}`
+                  : `🔔 Set Reminder (${daysUntilReeeligible} days)`}
               </button>
             </div>
 
