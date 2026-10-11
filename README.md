@@ -19,7 +19,6 @@ Around the donor, TraceDrop shows what their contribution meant for blood centre
 **With Docker**
 
 ```bash
-cp .env.example .env        # add ANTHROPIC_API_KEY to enable AI features
 docker compose up --build
 # open http://localhost:8080
 ```
@@ -31,7 +30,7 @@ docker compose up --build
 # open http://localhost:5173
 ```
 
-Without an API key everything still works. Each AI feature falls back to a rule-based version and labels it as such.
+Without Google Cloud project configuration, the app still runs. Each AI feature falls back to a rule-based version and labels it as such. Cloud Run deployment steps are in [docs/CLOUD_RUN_VERTEX_SETUP.md](docs/CLOUD_RUN_VERTEX_SETUP.md).
 
 Use the **"Signed in as"** switcher to move between demo donors:
 
@@ -69,7 +68,7 @@ frontend/   React 19 + Vite + Recharts — mobile-first donor app
 backend/
   src/data/      in-memory store over data/synthetic (FHIR-aligned)
   src/domain/    deterministic engines: health, cover, impact, community, donation
-  src/ai/        llm gateway (rate limit, token budget, caching, traces),
+  src/ai/        Vertex AI gateway (rate limit, token budget, traces),
                  agent loop, tools, copilot, care plan, lab reader, stories, insights
   src/routes/    REST API
   test/          tests for the deterministic layer (npm test)
@@ -79,7 +78,7 @@ data/
   ontology/      clinical protocols and lifestyle guidance used by the agents
 ```
 
-- **Model:** Claude Opus 5.5 via the Anthropic SDK, with a 10 req/s rate limit and a 100k tokens/day budget (configurable in `.env`).
+- **Model:** Gemini 2.5 Flash-Lite via Vertex AI, with configurable per-instance limits of 2 requests/second, 50k tokens/day, and 200 calls/day. Cloud Run uses its service account; no API key is stored in the app.
 - **Privacy:**
   - Recipients appear only as age band + clinical use + hospital type; dates of use are rounded to the month.
   - Any combination shared by fewer than 5 patients is generalised further.

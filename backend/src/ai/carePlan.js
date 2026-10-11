@@ -9,7 +9,7 @@
  * and writes one prioritised, personal plan. Output is schema-constrained so
  * the UI can render it, and every action cites the evidence it is based on.
  *
- * Without an API key, a deterministic plan is built from the protocols.
+ * Without Vertex AI access, a deterministic plan is built from the protocols.
  */
 
 const store = require('../data/store');

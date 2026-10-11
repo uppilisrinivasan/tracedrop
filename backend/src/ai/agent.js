@@ -1,7 +1,7 @@
 /**
  * Manual tool-use loop shared by TraceDrop's agents.
  *
- * Runs Claude with a donor-scoped tool set until it stops calling tools,
+ * Runs Gemini with a donor-scoped tool set until it stops calling tools,
  * executing tool calls in parallel and returning the final text, the full
  * step trace (for the "how the agent decided" panel) and any UI actions the
  * agent requested via the navigate tool.
@@ -49,7 +49,7 @@ async function runAgent({ feature, system, messages, donorId, toolNames, maxToke
       }
       steps.push({ tool: call.name, input: call.input, ms: Date.now() - started, summary: summarise(call.name, output) });
       if (call.name === 'navigate') actions.push({ type: 'navigate', screen: call.input.screen, reason: call.input.reason });
-      return { type: 'tool_result', tool_use_id: call.id, content: JSON.stringify(output), ...(isError ? { is_error: true } : {}) };
+      return { type: 'tool_result', tool_use_id: call.id, name: call.name, content: JSON.stringify(output), ...(isError ? { is_error: true } : {}) };
     }));
     convo.push({ role: 'user', content: results });
   }

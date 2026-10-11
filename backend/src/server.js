@@ -44,5 +44,5 @@ app.listen(PORT, () => {
   console.log(ai.live
     ? `AI: ${ai.model} via ${ai.endpoint} (budget ${ai.dailyTokenBudget} tokens/day, ${ai.rateLimitRps} req/s)`
     : `AI offline: ${ai.reason} — rule-based fallbacks active`);
-  llm.verify().then((result) => console.log(result.ok ? `AI check: OK (${ai.endpoint} accepted the key)` : `AI check FAILED: ${result.reason}`));
+  llm.verify().then((result) => console.log(result.ok ? `AI configured: ${ai.endpoint}; access checked on first request` : `AI check: ${result.reason}`));
 });

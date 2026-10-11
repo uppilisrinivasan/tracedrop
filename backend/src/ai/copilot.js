@@ -40,7 +40,7 @@ async function chat({ donorId, history, message }) {
   return { reply: result.text, steps: result.steps, actions: result.actions, history: result.messages };
 }
 
-/** Offline answers for the demo when no API key is configured. */
+/** Offline answers for the demo when Vertex AI is unavailable. */
 function fallback(message) {
   return {
     reply: 'I need an AI connection to answer free-form questions, and none is configured right now. '

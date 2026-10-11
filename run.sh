@@ -45,7 +45,7 @@ port_in_use "$FRONTEND_PORT" && fail "Port $FRONTEND_PORT is already in use."
 if [ ! -f "$ROOT/.env" ]; then
   if [ -f "$ROOT/.env.example" ]; then
     cp "$ROOT/.env.example" "$ROOT/.env"
-    warn "Created .env from .env.example — set ANTHROPIC_API_KEY in it to enable the AI features."
+    warn "Created .env from .env.example — set GOOGLE_CLOUD_PROJECT to enable Vertex AI when running on Google Cloud."
   fi
 fi
 
