@@ -7,18 +7,18 @@ Sign-in stays off locally (`AUTH_DISABLED=true`), so you can open the app withou
 ## What you need
 
 - Node.js 20 or newer
-- The `gcloud` CLI, signed in as `sandeepsamant1702@gmail.com`
+- The `gcloud` CLI, signed in with your Google account email
 - The `tracedrop` gcloud configuration, project `project-6055aa98-bf59-48b5-a50`
 
 Vertex AI is already enabled on that project. Your account owns the project, so it can call the model.
 
 ## 1. Create local Google credentials
 
-Use the Gmail configuration, not the Celonis one:
+Sign in with your Google account email:
 
 ```sh
 gcloud config configurations activate tracedrop
-gcloud auth login sandeepsamant1702@gmail.com
+gcloud auth login <Add your Google email>
 gcloud config set project project-6055aa98-bf59-48b5-a50
 gcloud auth application-default login
 gcloud auth application-default set-quota-project project-6055aa98-bf59-48b5-a50
