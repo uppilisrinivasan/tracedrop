@@ -3,6 +3,10 @@ name: Deploy TraceDrop to Cloud Run
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - '.env.example'
 
 permissions:
   contents: read

@@ -30,7 +30,7 @@ docker compose up --build
 # open http://localhost:5173
 ```
 
-Without Google Cloud project configuration, the app still runs. Each AI feature falls back to a rule-based version and labels it as such. Cloud Run deployment steps are in [docs/CLOUD_RUN_VERTEX_SETUP.md](docs/CLOUD_RUN_VERTEX_SETUP.md).
+Without Google Cloud project configuration, the app still runs. Each AI feature falls back to a rule-based version and labels it as such. To call Gemini from your laptop, follow [docs/RUN_LOCALLY.md](docs/RUN_LOCALLY.md). Cloud Run deployment steps are in [docs/CLOUD_RUN_VERTEX_SETUP.md](docs/CLOUD_RUN_VERTEX_SETUP.md).
 
 Use the **"Signed in as"** switcher to move between demo donors:
 

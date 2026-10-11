@@ -1,4 +1,5 @@
-/** Gemini on Vertex AI, authenticated by the Cloud Run service account. */
+/** Gemini on Vertex AI. Cloud Run uses its service account; a laptop uses Application Default Credentials. No API key. */
+const { GoogleAuth } = require('google-auth-library');
 const MODEL = process.env.LLM_MODEL || 'gemini-2.5-flash-lite';
 const PROJECT = process.env.GOOGLE_CLOUD_PROJECT || process.env.GCP_PROJECT || '';
 const LOCATION = process.env.VERTEX_LOCATION || 'global';
@@ -78,11 +79,13 @@ function declarations(tools, outputSchema) {
   if (outputSchema) defs.push({ name: SUBMIT, description: 'Submit the final structured result.', parameters: cleanSchema(outputSchema) });
   return defs;
 }
+const auth = new GoogleAuth({ scopes: ['https://www.googleapis.com/auth/cloud-platform'] });
 async function accessToken() {
-  const res = await fetch('http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token',
-    { headers: { 'Metadata-Flavor': 'Google' }, signal: AbortSignal.timeout(5000) });
-  if (!res.ok) throw new Error(`Cloud Run identity unavailable (${res.status})`);
-  return (await res.json()).access_token;
+  const client = await auth.getClient();
+  const result = await client.getAccessToken();
+  const token = typeof result === 'string' ? result : result && result.token;
+  if (!token) throw new Error('Google Cloud credentials unavailable. On a laptop run: gcloud auth application-default login');
+  return token;
 }
 function normalise(raw) {
   const candidate = raw.candidates?.[0];
