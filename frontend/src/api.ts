@@ -110,19 +110,46 @@ export interface Network {
 
 export interface Trace { id: string; at: string; feature: string; model: string; ms: number; stopReason?: string; inputTokens?: number; outputTokens?: number; cacheReadTokens?: number; error?: string }
 
+export interface AuthUser {
+  sub?: string;
+  email: string;
+  name: string;
+  picture: string;
+  expiresAt: number | null;
+  local?: boolean;
+}
+
+export class ApiError extends Error {
+  status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
+
+let onUnauthorized = () => {};
+export function setUnauthorizedHandler(handler: () => void) { onUnauthorized = handler; }
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`/api${path}`, {
     ...init,
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) },
   });
   const body = await response.json().catch(() => ({ success: false, error: `HTTP ${response.status}` }));
-  if (!response.ok || !body.success) throw new Error(body.error || `HTTP ${response.status}`);
+  if (response.status === 401) onUnauthorized();
+  if (!response.ok || !body.success) throw new ApiError(response.status, body.error || `HTTP ${response.status}`);
   return body.data as T;
 }
 
 const post = <T,>(path: string, data?: unknown) => request<T>(path, { method: 'POST', body: JSON.stringify(data || {}) });
 
 export const api = {
+  authConfig: () => request<{ authDisabled: boolean; clientId: string; sessionMinutes: number }>('/auth/config'),
+  me: () => request<AuthUser>('/auth/me'),
+  googleSignIn: (credential: string) => post<AuthUser>('/auth/google', { credential }),
+  logout: () => post<{ signedOut: boolean }>('/auth/logout'),
   personas: () => request<{ id: string; name: string; bloodGroup: string; language: string }[]>('/donors'),
   overview: (id: string) => request<Overview>(`/donors/${id}/overview`),
   impact: (id: string) => request<{ summary: ImpactSummary; journeys: Journey[]; k: number }>(`/donors/${id}/impact`),

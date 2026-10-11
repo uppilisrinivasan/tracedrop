@@ -18,6 +18,8 @@ env:
   REPOSITORY: tracedrop
   SERVICE: tracedrop
   RUNTIME_SERVICE_ACCOUNT: tracedrop-run@project-6055aa98-bf59-48b5-a50.iam.gserviceaccount.com
+  GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
+  SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
 
 jobs:
   deploy:
@@ -69,7 +71,7 @@ jobs:
             --max-instances 1 \
             --concurrency 1 \
             --timeout 180 \
-            --set-env-vars "GOOGLE_CLOUD_PROJECT=${PROJECT_ID},VERTEX_LOCATION=global,LLM_MODEL=gemini-2.5-flash-lite,LLM_RATE_LIMIT_RPS=2,LLM_RATE_LIMIT_TOKENS_PER_DAY=50000,LLM_MAX_CALLS_PER_DAY=200" \
+            --set-env-vars "GOOGLE_CLOUD_PROJECT=${PROJECT_ID},VERTEX_LOCATION=global,LLM_MODEL=gemini-2.5-flash-lite,LLM_RATE_LIMIT_RPS=2,LLM_RATE_LIMIT_TOKENS_PER_DAY=50000,LLM_MAX_CALLS_PER_DAY=200,GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID},SESSION_SECRET=${SESSION_SECRET}" \
             --allow-unauthenticated \
             --quiet
       - name: Check deployed service

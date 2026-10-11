@@ -11,6 +11,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const llm = require('./ai/llm');
+const { requireAuth } = require('./auth/middleware');
 
 const app = express();
 const FRONTEND_DIST = path.join(__dirname, '../../frontend/dist');
@@ -23,8 +24,9 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString(), version: '2.0.0', ai: llm.status() });
 });
 
-app.use('/api/donors', require('./routes/donors'));
-app.use('/api', require('./routes/platform'));
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/donors', requireAuth, require('./routes/donors'));
+app.use('/api', requireAuth, require('./routes/platform'));
 
 app.use('/api', (req, res) => {
   res.status(404).json({ success: false, error: `No API route for ${req.method} ${req.originalUrl}` });
