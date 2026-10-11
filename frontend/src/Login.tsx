@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { api, type AuthUser } from './api';
 import { Icon } from './ui';
+import { LegalLinks } from './Legal';
 
 interface CredentialResponse { credential: string }
 interface GoogleAccounts {
@@ -62,6 +63,7 @@ export default function Login({ clientId, sessionMinutes, onSignedIn }: {
         {clientId ? <div ref={host} className="login-google" /> : <p className="login-error">Google sign-in is not configured.</p>}
         {busy && <p className="tiny muted">Checking your Google account…</p>}
         {error && <p className="login-error">{error}</p>}
+        <LegalLinks />
       </div>
     </div>
   );

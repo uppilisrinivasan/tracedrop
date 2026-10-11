@@ -79,6 +79,11 @@ button { font: inherit; color: inherit; cursor: pointer; background: none; borde
 .login-card h1 { font-size: 28px; letter-spacing: -0.03em; margin: 8px 0 10px; }
 .login-google { min-height: 44px; margin-top: 22px; }
 .login-error { color: var(--bad); margin-top: 14px; }
+.legal-links { margin-top: 22px; }
+.legal { width: min(720px, 100%); }
+.legal .brand { text-decoration: none; color: inherit; }
+.legal h2 { font-size: 17px; margin: 22px 0 6px; }
+.legal p + p { margin-top: 8px; }
 input, textarea, select { font: inherit; color: inherit; }
 a { color: var(--brand-ink); }
 h1, h2, h3, h4 { margin: 0; line-height: 1.25; }
