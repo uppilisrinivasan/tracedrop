@@ -27,7 +27,7 @@ function Privacy() {
       <h2>Where it is stored</h2>
       <p>TraceDrop runs on Google Cloud in India (asia-south1). Sign-in records are kept in Google Cloud Firestore. AI features send the relevant text to Google Vertex AI (Gemini) to produce an answer; Google does not use this to train its models.</p>
       <h2>Sessions</h2>
-      <p>A session lasts 10 minutes and is held in a secure cookie. After that you sign in again. TraceDrop sets no other cookies; Google's sign-in button follows Google's own privacy policy.</p>
+      <p>A session lasts 1 day and is held in a secure cookie. After that you sign in again. TraceDrop sets no other cookies; Google's sign-in button follows Google's own privacy policy.</p>
       <h2>Your choices</h2>
       <p>To see or delete the data we hold about you, email <a href={`mailto:${CONTACT}`}>{CONTACT}</a>. You can also remove TraceDrop's access at any time from your Google Account under Security, Third-party connections.</p>
       <h2>Contact</h2>

@@ -19,11 +19,11 @@ test('local auth bypass is ignored in production', () => {
   process.env.AUTH_DISABLED = previous.flag;
 });
 
-test('a session lasts 10 minutes and then must be signed in again', () => {
+test('a session lasts one day and then must be signed in again', () => {
   process.env.SESSION_SECRET = 'test-secret';
   const now = Date.parse('2026-10-11T10:00:00Z');
   const issued = sign({ sub: '1', email: 'a@gmail.com', name: 'A' }, now);
-  assert.equal(SESSION_MS, 10 * 60 * 1000);
+  assert.equal(SESSION_MS, 24 * 60 * 60 * 1000);
   assert.equal(verify(issued.token, now + SESSION_MS - 1).email, 'a@gmail.com');
   assert.equal(verify(issued.token, now + SESSION_MS), null);
 });

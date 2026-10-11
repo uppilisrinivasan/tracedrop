@@ -1,4 +1,4 @@
-/** HttpOnly session cookie. It expires after 10 minutes and is not renewed by use. */
+/** HttpOnly session cookie. It expires after one day and is not renewed by use. */
 const crypto = require('crypto');
 const { SESSION_MS } = require('./policy');
 

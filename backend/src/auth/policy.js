@@ -1,5 +1,5 @@
-/** Ten-minute sessions. Local bypass never applies on Cloud Run. */
-const SESSION_MS = 10 * 60 * 1000;
+/** One-day sessions. Local bypass never applies on Cloud Run. */
+const SESSION_MS = 24 * 60 * 60 * 1000;
 
 function authDisabled() {
   if (process.env.NODE_ENV === 'production') return false;

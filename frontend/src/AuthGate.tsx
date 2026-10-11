@@ -10,7 +10,7 @@ export default function AuthGate() {
   const [phase, setPhase] = useState<Phase>('loading');
   const [user, setUser] = useState<AuthUser | null>(null);
   const [clientId, setClientId] = useState('');
-  const [sessionMinutes, setSessionMinutes] = useState(10);
+  const [sessionMinutes, setSessionMinutes] = useState(24 * 60);
 
   const signOut = useCallback((remote = true) => {
     if (remote) api.logout().catch(() => undefined);
