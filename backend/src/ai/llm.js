@@ -52,14 +52,20 @@ function toPart(block) {
     ...(block.thoughtSignature ? { thoughtSignature: block.thoughtSignature } : {}) };
   if (block.type === 'tool_result') {
     let value;
-    try { value = JSON.parse(block.content); } catch { value = { value: block.content }; }
-    return { functionResponse: { name: block.name || block.tool_use_id.split(':')[0], response: value && typeof value === 'object' ? value : { value } } };
+    try { value = JSON.parse(block.content); } catch { value = block.content; }
+    return { functionResponse: { name: block.name || block.tool_use_id.split(':')[0], response: functionResponseBody(value) } };
   }
   throw new Error(`Unsupported message block: ${block.type}`);
 }
 function toContents(messages) {
   return messages.map((m) => ({ role: m.role === 'assistant' ? 'model' : 'user',
     parts: (Array.isArray(m.content) ? m.content : [{ type: 'text', text: String(m.content) }]).map(toPart) }));
+}
+/** Vertex requires functionResponse.response to be a JSON object, not a list or scalar. */
+function functionResponseBody(value) {
+  if (Array.isArray(value)) return { items: value };
+  if (value !== null && typeof value === 'object') return value;
+  return { result: value };
 }
 function cleanSchema(value) {
   if (Array.isArray(value)) return value.map(cleanSchema);
@@ -97,9 +103,14 @@ async function call({ feature, system, messages, tools, maxTokens = 4000, output
   await acquire();
   usage.calls += 1;
   const started = Date.now();
-  const defs = declarations(tools, outputSchema);
-  const body = { systemInstruction: { parts: [{ text: outputSchema ? `${system}\n\nFinish by calling ${SUBMIT} with the final result.` : system }] },
+  const jsonMode = Boolean(outputSchema) && !(tools && tools.length);
+  const defs = declarations(tools, jsonMode ? null : outputSchema);
+  const body = { systemInstruction: { parts: [{ text: !outputSchema || jsonMode ? system : `${system}\n\nFinish by calling ${SUBMIT} with the final result.` }] },
     contents: toContents(messages), generationConfig: { maxOutputTokens: Math.min(maxTokens, 6000), temperature: 0.2 } };
+  if (jsonMode) {
+    body.generationConfig.responseMimeType = 'application/json';
+    body.generationConfig.responseSchema = cleanSchema(outputSchema);
+  }
   if (defs.length) body.tools = [{ functionDeclarations: defs }];
   try {
     const token = await accessToken();
@@ -125,12 +136,15 @@ async function call({ feature, system, messages, tools, maxTokens = 4000, output
 function text(response) { return response.content.filter((b) => b.type === 'text').map((b) => b.text).join('\n').trim(); }
 function submitted(response) { return response.content.find((b) => b.type === 'tool_use' && b.name === SUBMIT)?.input || null; }
 async function json(options) {
-  const result = submitted(await call(options));
-  if (!result) throw new LLMUnavailable('AI did not return a structured result');
-  return result;
+  const response = await call(options);
+  const fromTool = submitted(response);
+  if (fromTool) return fromTool;
+  const raw = text(response);
+  if (!raw) throw new LLMUnavailable('AI did not return a structured result');
+  try { return JSON.parse(raw); } catch { throw new LLMUnavailable('AI did not return a structured result'); }
 }
 async function verify() {
   if (!PROJECT) return { ok: false, reason: reason() };
   return { ok: true, reason: 'Access checked on the first AI request' };
 }
-module.exports = { call, text, json, submitted, available, status, verify, traces: () => traces, LLMUnavailable, MODEL, SUBMIT };
+module.exports = { call, text, json, submitted, available, status, verify, traces: () => traces, toContents, LLMUnavailable, MODEL, SUBMIT };
