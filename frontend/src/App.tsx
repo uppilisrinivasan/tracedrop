@@ -1,191 +1,119 @@
-/**
- * TraceDrop Frontend App
- *
- * Main application component with routing.
- * Routes:
- * - / → Home
- * - /dashboard → Dashboard
- * - /deferral/:findingId → DeferralFlow
- * - /appointments → Appointments (placeholder)
- */
-
-import React, { useState, useEffect } from 'react';
-import './App.css';
+import { useEffect, useState } from 'react';
+import { api } from './api';
+import { Icon } from './ui';
+import Copilot from './components/Copilot';
 import Home from './pages/Home';
-import Dashboard from './pages/Dashboard';
-import DeferralFlow from './pages/DeferralFlow';
-import FunnelDashboard from './pages/FunnelDashboard';
+import Impact from './pages/Impact';
+import Health from './pages/Health';
+import Cover from './pages/Cover';
+import Community from './pages/Community';
+import Donate from './pages/Donate';
+import Ecosystem from './pages/Ecosystem';
+import AIConsole from './pages/AIConsole';
 
-type PageType = 'home' | 'dashboard' | 'deferral' | 'appointments' | 'finding-detail' | 'impact';
+export type Screen = 'home' | 'donate' | 'impact' | 'health' | 'cover' | 'community' | 'plan' | 'labs' | 'ecosystem' | 'ai';
 
-// Synthetic demo personas (data/generate.py)
-const DEMO_DONORS = [
-  { id: 'D-001', label: 'Arjun — rising BP' },
-  { id: 'D-002', label: 'Meera — low hemoglobin' },
-  { id: 'D-017', label: 'D-017 — urgent BP' },
-  { id: 'D-050', label: 'D-050 — BP trend' },
-  { id: 'D-003', label: 'D-003 — healthy' },
+const NAV: { id: Screen; label: string; icon: string; mobile?: boolean }[] = [
+  { id: 'home', label: 'Home', icon: 'home', mobile: true },
+  { id: 'impact', label: 'My impact', icon: 'drop', mobile: true },
+  { id: 'health', label: 'My health', icon: 'heart', mobile: true },
+  { id: 'cover', label: 'Health cover', icon: 'shield', mobile: true },
+  { id: 'community', label: 'Community', icon: 'users', mobile: true },
+  { id: 'donate', label: 'Donate', icon: 'calendar' },
+  { id: 'ecosystem', label: 'Ecosystem view', icon: 'globe' },
+  { id: 'ai', label: 'AI console', icon: 'cpu' },
 ];
 
-interface PageState {
-  page: PageType;
-  data?: Record<string, any>;
+function readStored(key: string, fallback: string) {
+  try {
+    return localStorage.getItem(key) || fallback;
+  } catch {
+    return fallback;
+  }
 }
 
-function App() {
-  const [donorId, setDonorId] = useState<string>(DEMO_DONORS[0].id);
-  const [currentPage, setCurrentPage] = useState<PageState>({ page: 'home' });
+function initialScreen(): Screen {
+  const hash = window.location.hash.replace('#', '') as Screen;
+  return NAV.some((n) => n.id === hash) || hash === 'plan' || hash === 'labs' ? hash : 'home';
+}
 
-  // Demo sign-in: remember the selected donor between visits
+export default function App() {
+  const [donorId, setDonorId] = useState(() => readStored('tracedrop.donor', 'D-001'));
+  const [screen, setScreen] = useState<Screen>(initialScreen);
+  const [personas, setPersonas] = useState<{ id: string; name: string; bloodGroup: string }[]>([]);
+  const [version, setVersion] = useState(0); // bump to refresh data after a donation or upload
+
+  useEffect(() => { api.personas().then(setPersonas).catch(() => setPersonas([])); }, []);
   useEffect(() => {
-    try {
-      const storedDonorId = localStorage.getItem('donorId');
-      if (storedDonorId) setDonorId(storedDonorId);
-    } catch {
-      // Storage unavailable (private mode) — keep the default donor
-    }
+    try { localStorage.setItem('tracedrop.donor', donorId); } catch { /* storage unavailable */ }
+  }, [donorId]);
+  useEffect(() => {
+    const onHash = () => setScreen(initialScreen());
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
   }, []);
 
-  const handleDonorChange = (id: string) => {
-    setDonorId(id);
-    try {
-      localStorage.setItem('donorId', id);
-    } catch {
-      // Ignore storage failures
-    }
-    setCurrentPage({ page: 'home' });
+  const go = (next: Screen) => {
+    window.location.hash = next;
+    setScreen(next);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+  const refresh = () => setVersion((v) => v + 1);
+  const page = { donorId, go, version, refresh };
 
-  const handleNavigate = (page: string, data?: any) => {
-    setCurrentPage({
-      page: page as PageType,
-      data,
-    });
-    // Scroll to top
-    window.scrollTo(0, 0);
-  };
-
-  const handleLogout = () => {
-    try {
-      localStorage.removeItem('donorId');
-      localStorage.removeItem('authToken');
-    } catch {
-      // Ignore storage failures
-    }
-    setDonorId(DEMO_DONORS[0].id);
-    setCurrentPage({ page: 'home' });
-  };
-
-  const renderPage = () => {
-    switch (currentPage.page) {
-      case 'home':
-        return <Home donorId={donorId} onNavigate={handleNavigate} />;
-      case 'dashboard':
-        return <Dashboard donorId={donorId} onNavigate={handleNavigate} />;
-      case 'deferral':
-      case 'finding-detail':
-        if (currentPage.data?.findingId) {
-          return (
-            <DeferralFlow
-              donorId={donorId}
-              findingId={currentPage.data.findingId}
-              onNavigate={handleNavigate}
-            />
-          );
-        }
-        return <Home donorId={donorId} onNavigate={handleNavigate} />;
-      case 'impact':
-        return <FunnelDashboard />;
-      case 'appointments':
-        return (
-          <div style={{ padding: '24px', textAlign: 'center', color: '#6b7280' }}>
-            <h2>Appointments Coming Soon</h2>
-            <button
-              onClick={() => handleNavigate('home')}
-              style={{
-                marginTop: '16px',
-                padding: '10px 20px',
-                background: '#3b82f6',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: 'pointer',
-              }}
-            >
-              Back to Home
-            </button>
-          </div>
-        );
-      default:
-        return <Home donorId={donorId} onNavigate={handleNavigate} />;
-    }
-  };
+  const personaPicker = (
+    <select className="persona-select" value={donorId} onChange={(e) => { setDonorId(e.target.value); go('home'); }} aria-label="Signed in as (demo donor)">
+      {personas.map((p) => <option key={p.id} value={p.id}>{p.name} · {p.bloodGroup}</option>)}
+    </select>
+  );
 
   return (
-    <div className="app-wrapper">
-      {/* Navigation Bar */}
-      <nav className="navbar">
-        <div className="navbar-container">
-          <div className="navbar-brand">
-            <span className="app-logo">🩸</span>
-            <span className="app-name">TraceDrop</span>
-          </div>
-          <div className="navbar-nav">
-            <button
-              className={`nav-link ${currentPage.page === 'home' ? 'active' : ''}`}
-              onClick={() => handleNavigate('home')}
-            >
-              Home
-            </button>
-            <button
-              className={`nav-link ${currentPage.page === 'dashboard' ? 'active' : ''}`}
-              onClick={() => handleNavigate('dashboard')}
-            >
-              Dashboard
-            </button>
-            <button
-              className={`nav-link ${currentPage.page === 'impact' ? 'active' : ''}`}
-              onClick={() => handleNavigate('impact')}
-            >
-              Impact
-            </button>
-          </div>
-          <select
-            className="nav-donor-select"
-            value={donorId}
-            onChange={(e) => handleDonorChange(e.target.value)}
-            aria-label="Demo donor"
-          >
-            {DEMO_DONORS.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.label}
-              </option>
-            ))}
-          </select>
-          <button className="nav-logout-btn" onClick={handleLogout}>
-            Logout
+    <div className="shell">
+      <aside className="sidebar">
+        <div className="brand"><span className="brand-mark"><Icon name="drop" size={18} stroke={2.4} /></span>TraceDrop</div>
+        {NAV.map((n) => (
+          <button key={n.id} className={`nav-item ${screen === n.id || (n.id === 'health' && (screen === 'plan' || screen === 'labs')) ? 'active' : ''}`} onClick={() => go(n.id)}>
+            <Icon name={n.icon} /> {n.label}
           </button>
+        ))}
+        <div className="sidebar-foot">
+          <span className="tiny faint">Demo: signed in as</span>
+          {personaPicker}
+          <span className="tiny faint">All data is synthetic.</span>
         </div>
-      </nav>
+      </aside>
 
-      {/* Main Content */}
-      <main className="app-main">
-        {renderPage()}
+      <main className="main">
+        <div className="mobile-top">
+          <div className="brand" style={{ padding: 0 }}><span className="brand-mark"><Icon name="drop" size={18} stroke={2.4} /></span>TraceDrop</div>
+          <div style={{ maxWidth: 180 }}>{personaPicker}</div>
+        </div>
+        {screen === 'home' && <Home {...page} />}
+        {screen === 'impact' && <Impact {...page} />}
+        {(screen === 'health' || screen === 'plan' || screen === 'labs') && <Health {...page} focus={screen} />}
+        {screen === 'cover' && <Cover {...page} />}
+        {screen === 'community' && <Community {...page} />}
+        {screen === 'donate' && <Donate {...page} />}
+        {screen === 'ecosystem' && <Ecosystem {...page} />}
+        {screen === 'ai' && <AIConsole />}
       </main>
 
-      {/* Footer */}
-      <footer className="app-footer">
-        <div className="footer-content">
-          <p>&copy; 2024 TraceDrop. Your health. Your blood. Your data.</p>
-          <div className="footer-links">
-            <a href="#">Privacy Policy</a>
-            <a href="#">Terms of Service</a>
-            <a href="#">Contact Support</a>
-          </div>
-        </div>
-      </footer>
+      <nav className="bottom-nav">
+        {NAV.filter((n) => n.mobile).map((n) => (
+          <button key={n.id} className={screen === n.id ? 'active' : ''} onClick={() => go(n.id)}>
+            <Icon name={n.icon} size={20} /> {n.label.replace('My ', '').replace('Health cover', 'Cover')}
+          </button>
+        ))}
+      </nav>
+
+      <Copilot key={donorId} donorId={donorId} go={go} />
     </div>
   );
 }
 
-export default App;
+export interface PageProps {
+  donorId: string;
+  go: (screen: Screen) => void;
+  version: number;
+  refresh: () => void;
+}

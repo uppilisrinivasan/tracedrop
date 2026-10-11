@@ -18,3 +18,5 @@ README.md
 docs/
 images/
 .github/
+.npm-cache/
+.claude/

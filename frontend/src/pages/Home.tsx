@@ -1,295 +1,152 @@
-/**
- * Home Screen - Main Dashboard for Donors
- *
- * Displays:
- * - Donor greeting with timezone-aware time of day
- * - Latest blood pressure with trend
- * - Latest hemoglobin with trend
- * - Current deferral status (if applicable)
- * - Latest finding with action button
- * - Quick action buttons
- * - Health status badge
- * - Last donation date
- */
+import { api, fmtDate, rupees } from '../api';
+import type { PageProps, Screen } from '../App';
+import { AIBadge, ErrorNote, Icon, Loading, Thinking, severityPill, useLoad } from '../ui';
 
-import React, { useEffect, useState } from 'react';
-import { Donor, Finding, Observation, Donation, TrendDataPoint } from '../types/index';
-import { useDonor, useDonorFindings, useDonorObservations } from '../hooks/useFirestoreListener';
-import { useMultiLanguage } from '../hooks/useMultiLanguage';
-import HealthStatusBadge from '../components/HealthStatusBadge';
-import { getFindingLabel } from '../utils/findingLabels';
-import './Home.css';
+export default function Home({ donorId, go, version }: PageProps) {
+  const { data, error, loading } = useLoad(() => api.overview(donorId), [donorId, version]);
+  const insight = useLoad(() => api.insight(donorId), [donorId, version]);
 
-interface HomeProps {
-  donorId: string;
-  onNavigate: (page: string, data?: any) => void;
-}
+  if (loading && !data) return <Loading />;
+  if (error || !data) return <ErrorNote error={error || 'Could not load'} />;
 
-const Home: React.FC<HomeProps> = ({ donorId, onNavigate }) => {
-  const { donor, loading: donorLoading } = useDonor(donorId);
-  const { findings, loading: findingsLoading } = useDonorFindings(donorId, 1);
-  // Full history: donors give blood every few months, so a short window is often empty
-  const { observations, loading: obsLoading } = useDonorObservations(donorId);
-
-  const { translate, currentLanguage } = useMultiLanguage(donor?.language || 'en');
-
-  const [latestBP, setLatestBP] = useState<Observation | null>(null);
-  const [latestHb, setLatestHb] = useState<Observation | null>(null);
-  const [lastDonation, setLastDonation] = useState<Donation | null>(null);
-  const [bpTrend, setBpTrend] = useState<'up' | 'down' | 'stable'>('stable');
-
-  // Extract latest vital signs (observations arrive newest first) and the BP trend
-  useEffect(() => {
-    if (observations && observations.length > 0) {
-      const bpReadings = observations.filter((o) => o.type === 'BP');
-      const hb = observations.find((o) => o.type === 'Hb');
-
-      if (bpReadings[0]) setLatestBP(bpReadings[0]);
-      if (hb) setLatestHb(hb);
-
-      if (bpReadings.length >= 2) {
-        const latest = parseBloodPressure(bpReadings[0].value);
-        const previous = parseBloodPressure(bpReadings[1].value);
-        if (latest && previous) {
-          const change = latest.systolic - previous.systolic;
-          setBpTrend(change >= 5 ? 'up' : change <= -5 ? 'down' : 'stable');
-        }
-      }
-    }
-  }, [observations]);
-
-  // Fetch last donation date
-  useEffect(() => {
-    const fetchLastDonation = async () => {
-      try {
-        const response = await fetch(`/api/donors/${donorId}/donations/last`);
-        if (response.ok) {
-          const json = await response.json();
-          setLastDonation(json.data);
-        }
-      } catch {
-        // Silent fail
-      }
-    };
-
-    if (donorId) {
-      fetchLastDonation();
-    }
-  }, [donorId]);
-
-  const getHealthStatus = (): 'healthy' | 'warning' | 'urgent' => {
-    if (!donor) return 'healthy';
-
-    switch (donor.healthStatus) {
-      case 'healthy':
-        return 'healthy';
-      case 'monitored':
-      case 'at_risk':
-        return 'warning';
-      case 'deferred':
-        return 'urgent';
-      default:
-        return 'healthy';
-    }
-  };
-
-  const formatDate = (dateString: string): string => {
-    const date = new Date(dateString);
-    const options: Intl.DateTimeFormatOptions = {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    };
-    return date.toLocaleDateString('en-US', options);
-  };
-
-  const parseBloodPressure = (value: string): { systolic: number; diastolic: number } | null => {
-    const match = value.match(/(\d+)\/(\d+)/);
-    if (match) {
-      return { systolic: parseInt(match[1]), diastolic: parseInt(match[2]) };
-    }
-    return null;
-  };
-
-  const getBPTrendArrow = (): string => {
-    return bpTrend === 'up' ? '↑' : bpTrend === 'down' ? '↓' : '→';
-  };
-
-  const getBPGrade = (bpParsed: { systolic: number; diastolic: number }): string => {
-    const { systolic, diastolic } = bpParsed;
-    if (systolic >= 140 || diastolic >= 90) return 'High';
-    if (systolic >= 130 || diastolic >= 80) return 'Elevated';
-    return 'Normal';
-  };
-
-  const getHbGrade = (value: number): string => {
-    if (value < 7.5) return 'Critical';
-    if (value < 12) return 'Low';
-    return 'Normal';
-  };
-
-  if (donorLoading) {
-    return (
-      <div className="home-container">
-        <div className="loading-state">
-          <p>Loading your health data...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!donor) {
-    return (
-      <div className="home-container">
-        <div className="error-state">
-          <p>Unable to load donor information</p>
-        </div>
-      </div>
-    );
-  }
-
-  const latestFinding = findings && findings.length > 0 ? findings[0] : null;
-  const bpParsed = latestBP ? parseBloodPressure(latestBP.value) : null;
-  const hbValue = latestHb ? parseFloat(latestHb.value) : null;
+  const first = data.donor.name.split(' ')[0];
+  const { impact: im, health, cover, eligibility: el } = data;
+  const scoreDelta = health.score != null && health.previousScore != null ? health.score - health.previousScore : 0;
+  const urgent = health.findings.find((f) => f.severity === 'urgent');
 
   return (
-    <div className="home-container">
-      {/* Header with Greeting */}
-      <div className="home-header">
-        <div className="greeting-section">
-          <h1 className="greeting-text">
-            {translate('greeting', { name: donor.name })}
-          </h1>
-          <p className="greeting-subtitle">Your health summary</p>
+    <div className="stack fade-in">
+      <div className="page-head">
+        <div>
+          <div className="page-title">Hello, {first}</div>
+          <div className="page-sub">{data.donor.bloodGroup} donor since {data.donations.firstDate ? fmtDate(data.donations.firstDate) : '—'} · {data.donor.district}</div>
         </div>
-        <HealthStatusBadge status={getHealthStatus()} />
+        <button className="btn btn-primary" onClick={() => go('donate')}><Icon name="calendar" /> {el.eligibleNow ? 'Book a donation' : 'Donation status'}</button>
       </div>
 
-      {/* Vital Signs Cards */}
-      <div className="vitals-grid">
-        {/* Blood Pressure Card */}
-        {latestBP && bpParsed && (
-          <div className="vital-card bp-card">
-            <div className="vital-header">
-              <h3 className="vital-label">Blood Pressure</h3>
-              <span className="vital-timestamp">
-                {formatDate(latestBP.recordedAt)}
-              </span>
-            </div>
-            <div className="vital-value">
-              <span className="value-number">{bpParsed.systolic}/{bpParsed.diastolic}</span>
-              <span className="value-unit">mmHg</span>
-              <span className="trend-arrow">{getBPTrendArrow()}</span>
-            </div>
-            <div className="vital-grade">
-              <span className={`grade-badge grade-${getBPGrade(bpParsed).toLowerCase()}`}>
-                {getBPGrade(bpParsed)}
-              </span>
-            </div>
+      {urgent && (
+        <div className="callout callout-bad">
+          <Icon name="alert" />
+          <div>
+            <b>{urgent.title}.</b> {urgent.detail}. Please see a doctor today — your care plan has nearby options.
+            <div className="mt-8"><button className="btn btn-sm btn-primary" onClick={() => go('plan')}>Open care plan</button></div>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Hemoglobin Card */}
-        {latestHb && hbValue !== null && (
-          <div className="vital-card hb-card">
-            <div className="vital-header">
-              <h3 className="vital-label">Hemoglobin</h3>
-              <span className="vital-timestamp">
-                {formatDate(latestHb.recordedAt)}
-              </span>
-            </div>
-            <div className="vital-value">
-              <span className="value-number">{hbValue.toFixed(1)}</span>
-              <span className="value-unit">g/dL</span>
-            </div>
-            <div className="vital-grade">
-              <span className={`grade-badge grade-${getHbGrade(hbValue).toLowerCase()}`}>
-                {getHbGrade(hbValue)}
-              </span>
-            </div>
+      <div className="hero">
+        <div className="row between wrap" style={{ alignItems: 'flex-start' }}>
+          <div>
+            <div className="muted small">Your blood has helped</div>
+            <div className="hero-big">{im.patientsHelped} <span style={{ fontSize: 22, fontWeight: 700 }}>patients</span></div>
+            <div className="muted small mt-8">{data.donations.completed} donations · {im.components} components made · {data.donations.litres} L given{im.children ? ` · ${im.children} children helped` : ''}</div>
+          </div>
+          <button className="btn" style={{ background: 'rgba(255,255,255,.95)', color: '#9b0c23', border: 0 }} onClick={() => go('impact')}>
+            See where it went <Icon name="arrow" size={16} />
+          </button>
+        </div>
+        {data.latestJourney?.recipient && (
+          <div className="hero-chip mt-16 small">
+            <b>Latest:</b> your {data.latestJourney.name.toLowerCase()} from {fmtDate(data.latestJourney.donationDate)} went to a {data.latestJourney.recipient.patient.toLowerCase()} — {data.latestJourney.recipient.context.toLowerCase()}.
           </div>
         )}
       </div>
 
-      {/* Deferral Status (if applicable) */}
-      {donor.healthStatus === 'deferred' && (
-        <div className="alert-card deferral-alert">
-          <div className="alert-icon">!</div>
-          <div className="alert-content">
-            <h4>Currently Deferred</h4>
-            <p>You are temporarily not eligible to donate. Please follow up with your healthcare provider.</p>
-            <button
-              className="alert-action-button"
-              onClick={() => onNavigate('dashboard')}
-            >
-              View Care Plan
-            </button>
+      <div className="card" style={{ borderColor: 'color-mix(in srgb, var(--ai) 30%, var(--border))' }}>
+        <div className="row between">
+          <div className="row"><AIBadge label="For you today" /></div>
+          {insight.data && <span className="tiny faint">{insight.data.generatedBy === 'ai' ? `Picked from ${insight.data.considered.length} signals` : 'Rule-based'}</span>}
+        </div>
+        {insight.loading && <div className="mt-12"><Thinking label="Finding what matters most for you today…" /></div>}
+        {insight.data && (
+          <div className="mt-12">
+            <div className="bold" style={{ fontSize: 17 }}>{insight.data.title}</div>
+            <p className="muted mt-8">{insight.data.message}</p>
+            <button className="btn btn-sm mt-12" onClick={() => go(insight.data!.cta as Screen)}>Open <Icon name="arrow" size={14} /></button>
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-3">
+        <button className="card" style={{ textAlign: 'left' }} onClick={() => go('health')}>
+          <div className="row between"><span className="stat-label">Health score</span><Icon name="heart" className="faint" /></div>
+          <div className="row mt-8" style={{ alignItems: 'baseline' }}>
+            <span className="stat-value">{health.score ?? '—'}</span><span className="muted">/100</span>
+            {scoreDelta !== 0 && <span className={`pill ${scoreDelta > 0 ? 'pill-good' : 'pill-warn'}`}>{scoreDelta > 0 ? '▲' : '▼'} {Math.abs(scoreDelta)}</span>}
+          </div>
+          <div className="row wrap mt-12" style={{ gap: 6 }}>
+            {health.findings.length === 0 && <span className="pill pill-good">All results in range</span>}
+            {health.findings.slice(0, 3).map((f) => <span key={f.id} className={`pill ${severityPill[f.severity]}`}>{f.title}</span>)}
+          </div>
+        </button>
+
+        <button className="card" style={{ textAlign: 'left' }} onClick={() => go('cover')}>
+          <div className="row between"><span className="stat-label">Health insurance cover</span><Icon name="shield" className="faint" /></div>
+          <div className="row mt-8" style={{ alignItems: 'baseline' }}>
+            <span className="stat-value">{rupees(cover.current)}</span>
+            {cover.current > cover.base && <span className="pill pill-good">+{rupees(cover.current - cover.base)}</span>}
+          </div>
+          <div className="small muted mt-12">
+            {cover.blockedBy === 'monitoring' ? `Qualifies for ${rupees(cover.eligible)} — one more check-up unlocks it`
+              : cover.pointsToNext != null && cover.next ? `${cover.pointsToNext} score point${cover.pointsToNext === 1 ? '' : 's'} to ${rupees(cover.next)}, same premium`
+                : cover.next ? 'Keep monitoring to grow your cover' : 'Top cover step reached'}
+          </div>
+        </button>
+
+        <button className="card" style={{ textAlign: 'left' }} onClick={() => go('donate')}>
+          <div className="row between"><span className="stat-label">Next donation</span><Icon name="calendar" className="faint" /></div>
+          <div className="stat-value mt-8" style={{ fontSize: 24 }}>
+            {el.eligibleNow ? 'Today' : el.nextEligibleDate ? fmtDate(el.nextEligibleDate) : 'On hold'}
+          </div>
+          <div className="small muted mt-12">
+            {el.blockers.length ? `Paused: ${el.blockers[0].toLowerCase()}` : el.eligibleNow ? 'You are eligible — each donation includes a free health check' : `Gap of ${el.gapDays} days after each donation`}
+          </div>
+        </button>
+      </div>
+
+      <div className="grid grid-2">
+        <div className="card">
+          <div className="card-title"><Icon name="users" size={17} /> Your circles</div>
+          <div className="stack mt-12" style={{ gap: 10 }}>
+            {data.communities.map((c) => (
+              <button key={c.id} className="row between" style={{ border: 0, background: 'none', padding: 0, textAlign: 'left' }} onClick={() => go('community')}>
+                <span><b>{c.name}</b> <span className="tiny muted">· {c.kind} · {c.memberCount} members</span></span>
+                <span className="small">{c.totals.patientsHelped} helped</span>
+              </button>
+            ))}
+            {!data.communities.length && <span className="muted small">Join or create a circle with family, friends or colleagues.</span>}
           </div>
         </div>
-      )}
-
-      {/* Latest Finding */}
-      {latestFinding && (
-        <div className="latest-finding-section">
-          <h3 className="section-title">Latest Health Alert</h3>
-          <div className="finding-preview">
-            <div className="finding-preview-header">
-              <h4 className="finding-title">{getFindingLabel(latestFinding.category)}</h4>
-              <span className={`urgency-tag urgency-${latestFinding.urgency}`}>
-                {latestFinding.urgency.toUpperCase()}
-              </span>
-            </div>
-            <p className="finding-text">{latestFinding.description}</p>
-            <button
-              className="finding-action-btn"
-              onClick={() => onNavigate('finding-detail', { findingId: latestFinding.id })}
-            >
-              View Details →
-            </button>
+        <div className="card">
+          <div className="card-title"><Icon name="sparkles" size={17} /> Try the AI</div>
+          <div className="stack mt-12" style={{ gap: 8 }}>
+            <QuickAI icon="doc" title="Read a lab report" sub="Paste or photograph any lab report — AI maps it to your record" onClick={() => go('labs')} />
+            <QuickAI icon="activity" title="Get your care plan" sub="An agent analyses all your results and writes a plan" onClick={() => go('plan')} />
+            <QuickAI icon="share" title="Turn a donation into a story" sub="Shareable, private, in your language" onClick={() => go('impact')} />
           </div>
-        </div>
-      )}
-
-      {/* Quick Action Buttons */}
-      <div className="quick-actions-section">
-        <h3 className="section-title">Quick Actions</h3>
-        <div className="actions-grid">
-          <button
-            className="action-btn action-btn-primary"
-            onClick={() => onNavigate('dashboard')}
-          >
-            <span className="action-icon">📊</span>
-            <span className="action-text">View Details</span>
-          </button>
-          <button
-            className="action-btn action-btn-secondary"
-            onClick={() => onNavigate('appointments')}
-          >
-            <span className="action-icon">📅</span>
-            <span className="action-text">Book Appointment</span>
-          </button>
-          <button
-            className="action-btn action-btn-secondary"
-            onClick={() => onNavigate('report')}
-          >
-            <span className="action-icon">⚠️</span>
-            <span className="action-text">Report Issue</span>
-          </button>
         </div>
       </div>
 
-      {/* Last Donation Info */}
-      {lastDonation && (
-        <div className="last-donation-card">
-          <span className="donation-icon">🩸</span>
-          <div className="donation-info">
-            <p className="donation-label">Last Donation</p>
-            <p className="donation-date">{formatDate(lastDonation.performedAt)}</p>
-          </div>
-        </div>
-      )}
+      <AIStatusLine ai={data.ai} />
     </div>
   );
-};
+}
 
-export default Home;
+function QuickAI({ icon, title, sub, onClick }: { icon: string; title: string; sub: string; onClick: () => void }) {
+  return (
+    <button className="row" style={{ border: '1px solid var(--border)', background: 'var(--surface)', borderRadius: 12, padding: 10, textAlign: 'left' }} onClick={onClick}>
+      <span className="unit-icon" style={{ width: 36, height: 36, background: 'var(--ai-soft)', color: 'var(--ai)' }}><Icon name={icon} size={17} /></span>
+      <span style={{ flex: 1 }}><span className="bold small">{title}</span><br /><span className="tiny muted">{sub}</span></span>
+      <Icon name="chevron" size={16} className="faint" />
+    </button>
+  );
+}
+
+export function AIStatusLine({ ai }: { ai: { live: boolean; model: string; reason: string | null; tokensUsedToday: number; dailyTokenBudget: number } }) {
+  return (
+    <div className="tiny faint row wrap" style={{ gap: 6 }}>
+      <span style={{ width: 8, height: 8, borderRadius: 9, background: ai.live ? 'var(--good)' : 'var(--warn)', display: 'inline-block' }} />
+      {ai.live ? `AI live · ${ai.model} · ${ai.tokensUsedToday.toLocaleString()} / ${ai.dailyTokenBudget.toLocaleString()} tokens today` : `AI offline (${ai.reason}) — rule-based fallbacks active`}
+    </div>
+  );
+}

@@ -1,295 +1,102 @@
-# TraceDrop: Your Health. Your Blood. Your Data.
+# TraceDrop
 
-**Consumer-centric health platform powered by the donation cycle**
+**Give blood. See every life it touches. Get healthier, and get better cover for it.**
 
-Every blood donation is a health check. TraceDrop makes sure every finding matters by putting the donor in control.
+TraceDrop puts the blood donor at the centre. Every donation becomes three things the donor can see:
+
+1. **Impact they can feel.** Each donation is separated into components (red cells, platelets, plasma, cryo, plasma for medicines). TraceDrop follows every component to the patient it helped. The donor sees an age band, the type of treatment and the type of hospital, never who the patient is. They can turn any unit into a shareable story in their own language.
+2. **A free, recurring health check.** The donation sample runs a full lab panel. TraceDrop tracks it over time, flags trends early (rising BP, falling iron, creeping HbA1c), and an AI agent writes a personal care plan.
+3. **Money back for good health.** Like a credit limit that rises with good credit behaviour, the donor's health-insurance cover steps up (₹5L → 6L → 7L → 8L) for the same premium as their health score stays strong. The rules are transparent and the donor gives consent.
+
+Around the donor, TraceDrop shows what their contribution meant for blood centres, hospitals, labs, government programmes and their own circles (family, friends, workplace). Users can drill down into every number, and privacy is preserved throughout.
+
+> All data is synthetic: 300 donors, 657 donation visits, 1,600+ blood components, 8,500+ lab results. Institutions and companies are fictional.
 
 ---
 
-## 🚀 Quick Start (Development)
+## Run it
 
-### Prerequisites
-- Node.js 20+
-- Docker & Docker Compose
-- Anthropic API key
+**With Docker**
 
-### Setup
 ```bash
-# 1. Copy environment template
-cp .env.example .env
-
-# 2. Add your API key to .env
-# Edit .env and set ANTHROPIC_API_KEY=sk-your-key
-
-# 3. Verify setup
-bash setup-verify.sh
-
-# 4. Start development
-docker-compose up --build
-
-# 5. Access
-- Frontend: http://localhost:8080
-- API: http://localhost:8080/api/health
-- Frontend dev: http://localhost:5173 (Vite)
+cp .env.example .env        # add ANTHROPIC_API_KEY to enable AI features
+docker compose up --build
+# open http://localhost:8080
 ```
 
-### Local Installation (without Docker)
+**Without Docker** (Node 20+)
+
 ```bash
-# Backend
-cd backend
-npm install
-npm run dev
-
-# Frontend (in another terminal)
-cd frontend
-npm install
-npm run dev
+./run.sh                    # installs deps on first run, starts API + web app
+# open http://localhost:5173
 ```
+
+Without an API key everything still works. Each AI feature falls back to a rule-based version and labels it as such.
+
+Use the **"Signed in as"** switcher to move between demo donors:
+
+| Donor | Story |
+|---|---|
+| **Arjun Rao** (B+) | Regular donor; BP creeping up 126 → 136, still eligible. Score qualifies for ₹6L but needs one more monitored visit. Donate in the app and watch the cover step up. |
+| **Meera Iyer** (O+) | Haemoglobin and ferritin falling over 4 visits; deferred. The care-plan agent connects the trend and routes her to a free clinic. |
+| **Ananya Sharma** (O−) | Healthy, rare group, eligible today; top cover (₹8L). |
+| **Vikram Gowda** (A+) | 184/118 at last visit: urgent same-day escalation. |
+| **Karthik Menon** (B+) | Prediabetic HbA1c and rising BP, otherwise well. |
+| **Rohan Verma** (AB+) | Shows the confidential path: one unit withheld for safety, no reason shown in-app. |
 
 ---
 
-## 📁 Project Structure
+## Where AI is used, and why it has to be AI
 
-See [FOLDER_STRUCTURE.md](FOLDER_STRUCTURE.md) for complete folder layout.
+| Feature | Type | Why rules can't do it |
+|---|---|---|
+| **Drop copilot** (chat button everywhere) | Agent with 13 tools | Donors ask open questions that cut across impact, health and cover ("why didn't my cover go up?"). The agent decides what to look up, combines it, answers in Kannada/Hindi/Tamil/Telugu/English, and can navigate the app. |
+| **Care-plan agent** (Health → Care plan) | Agent | Rules flag markers one at a time; people have several borderline results that interact. The agent pulls trends, protocols, evidence-based guidance, cover headroom and care slots, then writes one prioritised plan that cites evidence for every action. |
+| **Lab-report reader** (Health → Add a lab report) | Multimodal GenAI | Indian labs print in endless layouts, names and units, often as photos. The model reads any format, maps tests to LOINC and converts units (mmol/L → mg/dL, mmol/mol → %). Schema-constrained output plus range checks; the donor confirms before saving. |
+| **Impact stories** (Impact → a unit) | GenAI | Turns anonymised journey data into a moving, shareable story in the donor's language. The model must declare any detail it added; if it does, the template is used instead. |
+| **Insight of the day** (Home) | GenAI | Picks the one thing that matters most for this donor today from rule-computed candidates, so it can only choose real facts. |
 
-**Quick Overview:**
-```
-tracedrop/
-├── README.md                  ← You are here
-├── BUILD_START.md             ← Team orientation
-├── FOLDER_STRUCTURE.md        ← Detailed folder map
-│
-├── backend/                   # Node.js/Express + Anthropic ADK
-├── frontend/                  # React 19 + Vite
-├── data/                      # FHIR data + ontology
-│
-├── docs/                      # ALL DOCUMENTATION (organized by purpose)
-│   ├── README.md              ← Master navigation guide
-│   ├── 00-project-status/     ← Project overview
-│   ├── 01-foundation/         ← Setup guides
-│   ├── 01-team-perspectives/  ← 5 team leads
-│   ├── 02-phases/             ← 5 build phases
-│   ├── 02-user-perspectives/  ← 5 stakeholders
-│   ├── 03-build/              ← Architecture
-│   ├── 04-guide/              ← Judge & deployment
-│   └── 05-reference/          ← Reference materials
-│
-├── docker-compose.yml         # Multi-service compose
-├── Dockerfile                 # Multi-stage build
-├── .env.example               # Environment template
-└── setup-verify.sh            # Verification script
-```
-```
+**Kept deterministic on purpose:** donation eligibility (NBTC), clinical findings (ICMR / ACC-AHA thresholds), the health score, the insurance cover ladder, and privacy (k-anonymity). Anything that affects safety or money never depends on a model.
+
+The **AI console** (sidebar) shows live calls, latency, token use against the daily budget, prompt-cache hits and a tool trace for every agent answer.
 
 ---
 
-## 📖 Documentation
+## Architecture
 
-**Start with:** [docs/README.md](docs/README.md) (master navigation guide)
+```
+frontend/   React 19 + Vite + Recharts — mobile-first donor app
+backend/
+  src/data/      in-memory store over data/synthetic (FHIR-aligned)
+  src/domain/    deterministic engines: health, cover, impact, community, donation
+  src/ai/        llm gateway (rate limit, token budget, caching, traces),
+                 agent loop, tools, copilot, care plan, lab reader, stories, insights
+  src/routes/    REST API
+  test/          tests for the deterministic layer (npm test)
+data/
+  generate.py    reproducible synthetic world (seed 42)
+  synthetic/     donors, donations, lab results, components, communities, FHIR bundles
+  ontology/      clinical protocols and lifestyle guidance used by the agents
+```
 
-**For Judges:** [docs/04-guide/DEMO_SCRIPT.md](docs/04-guide/DEMO_SCRIPT.md)  
-**For Developers:** [docs/01-foundation/SETUP_GUIDE.md](docs/01-foundation/SETUP_GUIDE.md)  
-**For Team:** [BUILD_START.md](BUILD_START.md) or [docs/01-team-perspectives/](docs/01-team-perspectives/)
+- **Model:** Claude Opus 5.5 via the Anthropic SDK, with a 10 req/s rate limit and a 100k tokens/day budget (configurable in `.env`).
+- **Privacy:**
+  - Recipients appear only as age band + clinical use + hospital type; dates of use are rounded to the month.
+  - Any combination shared by fewer than 5 patients is generalised further.
+  - Communities see aggregates only, and names appear only for members who opt in.
+  - Insurers see the score, never raw results, and only with consent.
+- **Insurance maths (illustrative):**
+  - Relative risk = e^(−0.0115 × (score − 70)).
+  - Expected claims scale as cover^0.6, so lower risk creates headroom for more cover at the same expected cost.
+  - Capped at 1.6× base, and needs 2 monitored visits in 12 months plus consent.
+  - A partner insurer would substitute its filed rating factors.
 
-All documentation is organized in the `/docs/` folder by purpose:
-- `00-project-status/` — Project overview
-- `01-foundation/` — Setup & infrastructure
-- `01-team-perspectives/` — 5 team leads
-- `02-phases/` — 5 build phases
-- `02-user-perspectives/` — 5 stakeholders
-- `03-build/` — Architecture & technical guides
-- `04-guide/` — **Judge demo & deployment**
-- `05-reference/` — Reference materials
+## Tests
 
----
-
-## 🛠 Development Commands
-
-### Backend
 ```bash
-cd backend
-
-# Development
-npm run dev
-
-# Production
-npm start
-
-# Testing
-npm test
-
-# Linting
-npm run lint
+cd backend && npm test      # eligibility, findings, cover rules, privacy guarantees
 ```
 
-### Frontend
-```bash
-cd frontend
+## Docs
 
-# Development server
-npm run dev
-
-# Production build
-npm run build
-
-# Preview build
-npm run preview
-
-# Type checking
-npm run type-check
-```
-
----
-
-## 🎯 Build Timeline (Days 1-10)
-
-| Days | Focus | Deliverables |
-|------|-------|--------------|
-| 1-2 | Foundation | Data schema, Firestore, Docker setup |
-| 3-4 | Consumer App | React UI, dashboard, deferral flow |
-| 5-6 | AI Agents | Navigator agent, message generation |
-| 7-8 | Integration | Care booking, follow-up workflows |
-| 9-10 | Testing & Deploy | E2E tests, production deployment |
-
-See [BUILD_START.md](BUILD_START.md) for team roles and specific entry points.
-
----
-
-## 🎯 The 10x Insight
-
-**Donors at center, not margin.**
-
-The ecosystem shows:
-- **Donor in center** (blue circle)
-- **Direct benefits flow to donors** (control over health data)
-- **Institutional benefits flow from donor success** (supply, trust)
-- **Result: All win when donor wins**
-
-This consumer-centric positioning is the differentiator for the competition.
-
----
-
-## 🧪 Testing & Quality
-
-### Running Tests
-```bash
-# All tests
-npm test
-
-# Watch mode
-npm run test:watch
-
-# Coverage report
-npm run test:coverage
-```
-
-### Test Coverage
-- Unit tests (400 lines): Protocol rules, rate limiting, utilities
-- Integration tests (300 lines): End-to-end donor flows
-- Component tests (250 lines): React dashboard, booking, trends
-- **Overall coverage: 85%+**
-
-### Security
-```bash
-# Audit dependencies
-npm audit
-
-# Type checking
-npm run typecheck
-
-# Linting
-npm run lint
-```
-
-**Security Status: 0 vulnerabilities** ✓
-
----
-
-## 🚀 Deployment
-
-### Cloud Run (Production)
-```bash
-# Setup environment
-export GCP_PROJECT_ID=tracedrop-project
-export ANTHROPIC_API_KEY=sk-...
-
-# Deploy
-bash cloud-run/deploy.sh
-
-# View URL
-gcloud run services describe tracedrop --region asia-south1
-```
-
-### Docker
-```bash
-# Build production image
-docker build -f Dockerfile.prod -t tracedrop:latest .
-
-# Run locally
-docker run -p 8080:8080 \
-  -e ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY \
-  tracedrop:latest
-```
-
-### Performance
-- API p95 latency: <500ms
-- Dashboard load: <1s
-- Booking flow: <2s
-- Load test: 100 concurrent (0 errors)
-
----
-
-## 📊 Demo & Evaluation
-
-### For Judges
-- **Demo Script**: [DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) — 90-second walkthrough
-- **Evaluation Guide**: [HOW_TO_EVALUATE.md](docs/HOW_TO_EVALUATE.md) — Scoring rubric
-- **Security Review**: [securityReview.md](security/securityReview.md) — Vulnerability audit
-
-### Key Metrics
-- **Donors**: 300 enrolled
-- **Care Access**: 92% (vs 33% baseline = **2.8x improvement**)
-- **Day-1 Retention**: 85% (vs 40% baseline)
-- **Average Care Booking**: 14 days
-
----
-
-## 📋 Production Readiness
-
-**Status: READY FOR PRODUCTION ✓**
-
-See [PRODUCTION_CHECKLIST.md](docs/PRODUCTION_CHECKLIST.md) for full status:
-- [x] All tests passing (85%+ coverage)
-- [x] Security audit passed (0 vulnerabilities)
-- [x] Performance targets met (<500ms p95)
-- [x] Cloud Run deployment ready
-- [x] Documentation complete
-
----
-
-## 📝 Environment Variables
-
-See `.env.example` for all configuration options. Key variables:
-
-- `ANTHROPIC_API_KEY` - Claude API key (required)
-- `LLM_MODEL` - Model to use (default: claude-3-5-sonnet-20241022)
-- `LLM_RATE_LIMIT_RPS` - Rate limit in requests/second
-- `NODE_ENV` - Environment (development/production)
-- `PORT` - Backend port (default: 8080)
-
----
-
-## 🔗 Key Links
-
-- **Strategy:** [Consumer-Centric 10x Vision](memory/consumer-centric-10x-vision.md)
-- **Build Guide:** [BUILD_START.md](BUILD_START.md)
-- **Demo Script:** [DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md)
-- **Evaluation Guide:** [HOW_TO_EVALUATE.md](docs/HOW_TO_EVALUATE.md)
-- **Deployment:** [cloud-run/deploy.sh](cloud-run/deploy.sh)
-- **Security:** [security/securityReview.md](security/securityReview.md)
-
----
-
-**Status:** Phase 5 Complete. Production-ready.  
-**Deadline:** October 18, 2026  
-**Competition Score (Expected): 8.5-9.0/10**
+Strategy, perspectives and pitch material are in [docs/](docs/). Earlier planning documents are in [docs/archive/](docs/archive/). They describe an earlier design, and their metrics are not results from this build.

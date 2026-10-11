@@ -1,0 +1,179 @@
+/**
+ * Tools the TraceDrop agents can call. Each tool reads from the deterministic
+ * domain layer, so every number an agent states is grounded in real data and
+ * shows up in the agent trace. Tools are scoped to the signed-in donor; no
+ * tool can read another donor's records or any recipient identity.
+ */
+
+const store = require('../data/store');
+const health = require('../domain/health');
+const cover = require('../domain/cover');
+const impact = require('../domain/impact');
+const community = require('../domain/community');
+
+const obj = (properties, required = []) => ({ type: 'object', properties, required, additionalProperties: false });
+
+const DEFINITIONS = [
+  {
+    name: 'get_profile',
+    description: 'Donor profile: name, age, sex, blood group, language, district, donation count, eligibility to donate and next eligible date.',
+    input_schema: obj({}),
+  },
+  {
+    name: 'get_health_findings',
+    description: 'Current health findings from the latest screening and lab results, each with severity, evidence and the clinical protocol id. Use before giving any health advice.',
+    input_schema: obj({}),
+  },
+  {
+    name: 'get_trend',
+    description: 'History of one marker across visits, oldest first. Markers: bp, haemoglobin, weight, hba1c, ldl, hdl, tg, ferritin, alt, creat, tsh.',
+    input_schema: obj({ marker: { type: 'string', enum: ['bp', 'haemoglobin', 'weight', 'hba1c', 'ldl', 'hdl', 'tg', 'ferritin', 'alt', 'creat', 'tsh'] } }, ['marker']),
+  },
+  {
+    name: 'get_health_score',
+    description: 'Health score history (0-100) with the per-factor breakdown of the latest score.',
+    input_schema: obj({}),
+  },
+  {
+    name: 'get_protocol',
+    description: 'Clinical protocol (ICMR / ACC-AHA based) for a protocol id from a finding, e.g. BP-G1, HB-DEF, DM-PREDIAB: recommended action, follow-up days, escalation threshold.',
+    input_schema: obj({ protocol_id: { type: 'string' } }, ['protocol_id']),
+  },
+  {
+    name: 'get_lifestyle_guidance',
+    description: 'Evidence-based lifestyle interventions with expected effect sizes. Topics: hypertension_grade1, prediabetes_reversal, diabetes_management, anemia_management, general_cardiovascular_health.',
+    input_schema: obj({ topic: { type: 'string', enum: ['hypertension_grade1', 'prediabetes_reversal', 'diabetes_management', 'anemia_management', 'general_cardiovascular_health'] } }, ['topic']),
+  },
+  {
+    name: 'get_insurance_cover',
+    description: 'Health-linked insurance cover: base and current sum insured, the cover the score qualifies for, next step, toReachNextStep (ALL requirements to reach it — state every one), conditions, and the method. recentHistory shows the cover each past score qualified for, not cover the donor actually held.',
+    input_schema: obj({}),
+  },
+  {
+    name: 'simulate_cover',
+    description: 'What-if: the sum insured the donor would qualify for at a given health score (0-100).',
+    input_schema: obj({ score: { type: 'integer', minimum: 0, maximum: 100 } }, ['score']),
+  },
+  {
+    name: 'get_donation_impact',
+    description: 'Where the donor\'s blood components went: per component journey status and anonymised recipient context (age band, clinical use, hospital type). Includes totals.',
+    input_schema: obj({}),
+  },
+  {
+    name: 'get_stakeholder_impact',
+    description: 'What the donor\'s contribution meant for the blood centre, hospitals, labs, government programmes and society, with metrics.',
+    input_schema: obj({}),
+  },
+  {
+    name: 'get_communities',
+    description: 'The donor\'s communities (family, friends, workplace) with aggregate donations, patients helped and participation.',
+    input_schema: obj({}),
+  },
+  {
+    name: 'find_care_slots',
+    description: 'Available free primary-care visits (Ayushman Arogya Mandir) and partner clinic slots near the donor in the next N days.',
+    input_schema: obj({ within_days: { type: 'integer', minimum: 0, maximum: 60 } }, ['within_days']),
+  },
+  {
+    name: 'navigate',
+    description: 'Open a screen in the app for the donor. Use when the donor asks where to find something or wants to go somewhere.',
+    input_schema: obj({
+      screen: { type: 'string', enum: ['home', 'donate', 'impact', 'health', 'cover', 'community', 'plan', 'labs'] },
+      reason: { type: 'string' },
+    }, ['screen', 'reason']),
+  },
+];
+
+const MARKER_KEYS = { haemoglobin: 'hb' };
+
+function careSlots(donor, withinDays) {
+  // Deterministic synthetic slots so the demo is reproducible
+  const base = new Date(store.TODAY);
+  const places = [
+    { name: `Ayushman Arogya Mandir, ${donor.district}`, kind: 'Free government primary care', cost: 0 },
+    { name: `Partner clinic, ${donor.district}`, kind: 'Insurer network clinic (cashless)', cost: 0 },
+  ];
+  const slots = [];
+  for (let day = 1; day <= Math.min(withinDays || 7, 14); day += 1) {
+    const d = new Date(base.getTime() + day * 864e5);
+    if (d.getDay() === 0) continue;
+    places.forEach((p, i) => {
+      if ((day + i) % 2 === 0) slots.push({ ...p, date: d.toISOString().slice(0, 10), time: i ? '18:30' : '10:00' });
+    });
+  }
+  return slots.slice(0, 6);
+}
+
+function run(name, input, donorId) {
+  const donor = store.getDonor(donorId);
+  switch (name) {
+    case 'get_profile': {
+      const visits = store.getDonations(donorId);
+      return {
+        name: donor.name, age: donor.age, sex: donor.sex, bloodGroup: donor.bloodGroup, language: donor.language,
+        district: donor.district, smoker: donor.smoker, familyHistory: donor.familyHistory,
+        donations: visits.filter((v) => v.status === 'completed').length, deferrals: visits.filter((v) => v.status === 'deferred').length,
+        eligibility: health.eligibility(donorId), today: store.TODAY,
+      };
+    }
+    case 'get_health_findings':
+      return health.findings(donorId).map(({ id, title, severity, detail, evidence, protocolId, date }) => ({ id, title, severity, detail, evidence, protocolId, date }));
+    case 'get_trend': {
+      if (['bp', 'haemoglobin', 'weight'].includes(input.marker)) {
+        return health.vitalsSeries(donorId).map((v) => ({
+          date: v.date,
+          value: input.marker === 'bp' ? `${v.systolic}/${v.diastolic}` : input.marker === 'weight' ? v.weightKg : v.haemoglobin,
+        }));
+      }
+      const key = MARKER_KEYS[input.marker] || input.marker;
+      return (health.labSeries(donorId)[key] || []).map((o) => ({ date: o.date, value: o.value, unit: o.unit, low: o.low, high: o.high }));
+    }
+    case 'get_health_score': {
+      const history = health.scoreHistory(donorId);
+      return { history: history.map((h) => ({ date: h.date, score: h.score })), latestBreakdown: history.length ? history[history.length - 1].parts : [] };
+    }
+    case 'get_protocol': {
+      const p = store.protocols.get(input.protocol_id);
+      return p ? { id: p.id, name: p.name, recommendedAction: p.recommendedAction, followUpDays: p.followUpDays,
+        escalationThreshold: p.escalationThreshold, lifestyle: p.lifestyle, monitoring: p.monitoringIntervals } : { error: 'Unknown protocol id' };
+    }
+    case 'get_lifestyle_guidance': {
+      const g = store.lifestyle[input.topic];
+      return g ? { title: g.title, source: g.source, recommendations: g.recommendations.map((r) => ({
+        intervention: r.intervention, target: r.target, expectedEffect: r.expectedReduction || r.expectedOutcome || null, tips: r.tips || r.examples || [],
+      })) } : { error: 'Unknown topic' };
+    }
+    case 'get_insurance_cover': {
+      const c = cover.evaluate(donorId);
+      const { history, ...rest } = c;
+      return { ...rest, recentHistory: history.slice(-4) };
+    }
+    case 'simulate_cover':
+      return cover.simulate(donorId, input.score);
+    case 'get_donation_impact': {
+      const journeys = impact.donorJourneys(donorId);
+      return {
+        totals: impact.summarise(journeys),
+        components: journeys.map((j) => ({ id: j.id, component: j.name, donated: j.donationDate, status: j.statusLabel,
+          patient: j.recipient && j.recipient.patient, use: j.recipient && j.recipient.context, place: j.recipient && j.recipient.place,
+          outcome: j.recipient && j.recipient.outcome, withheld: j.withheld })),
+      };
+    }
+    case 'get_stakeholder_impact':
+      return impact.stakeholders(donorId).map(({ name, headline, metrics, story }) => ({ name, headline, metrics, story }));
+    case 'get_communities':
+      return community.forDonor(donorId).map(({ name, kind, memberCount, totals, participation, contexts }) => ({ name, kind, memberCount, totals, participation, topUses: contexts.slice(0, 3) }));
+    case 'find_care_slots':
+      return careSlots(donor, input.within_days);
+    case 'navigate':
+      return { ok: true, screen: input.screen };
+    default:
+      return { error: `Unknown tool ${name}` };
+  }
+}
+
+function definitions(names) {
+  return names ? DEFINITIONS.filter((d) => names.includes(d.name)) : DEFINITIONS;
+}
+
+module.exports = { definitions, run, careSlots };

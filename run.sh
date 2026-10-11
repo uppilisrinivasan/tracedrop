@@ -41,14 +41,11 @@ port_in_use "$BACKEND_PORT"  && fail "Port $BACKEND_PORT is already in use."
 port_in_use "$FRONTEND_PORT" && fail "Port $FRONTEND_PORT is already in use."
 
 # --- Environment -----------------------------------------------------------
-# The backend loads .env from its working directory (backend/).
-if [ ! -f "$ROOT/backend/.env" ]; then
-  if [ -f "$ROOT/.env" ]; then
-    cp "$ROOT/.env" "$ROOT/backend/.env"
-    info "Copied .env to backend/.env"
-  elif [ -f "$ROOT/.env.example" ]; then
-    cp "$ROOT/.env.example" "$ROOT/backend/.env"
-    warn "Created backend/.env from .env.example — set ANTHROPIC_API_KEY in it for AI features."
+# The backend reads only the project-root .env.
+if [ ! -f "$ROOT/.env" ]; then
+  if [ -f "$ROOT/.env.example" ]; then
+    cp "$ROOT/.env.example" "$ROOT/.env"
+    warn "Created .env from .env.example — set ANTHROPIC_API_KEY in it to enable the AI features."
   fi
 fi
 
