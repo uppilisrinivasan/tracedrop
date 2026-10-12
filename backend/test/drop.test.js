@@ -136,6 +136,7 @@ const { keepsFacts } = require('../src/ai/dropWriter');
 
 test('chat memory: preferences are kept, health facts are refused', () => {
   assert.ok(tools.run('remember', { fact: 'I take my BP tablet at night' }, 'D-001').error);
+  assert.ok(tools.run('remember', { fact: 'You take metformin 500 mg' }, 'D-001').error);
   const out = tools.run('remember', { fact: 'Weekday evenings suit you', replaces: 'Saturday' }, 'D-001');
   assert.match(out._ui.text, /replaces "Saturdays suit you"/);
 });

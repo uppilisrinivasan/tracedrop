@@ -13,7 +13,7 @@ const community = require('../domain/community');
 const drop = require('../domain/drop');
 
 // Never kept as memory: health facts belong in the Plan; some topics are never stored at all
-const NOT_MEMORY = /\b(bp|blood pressure|hb|haemoglobin|hemoglobin|tablets?|medicines?|medication|pills?|diabet\w*|sugar|cholesterol|thyroid|religion|religious|caste|income|salary|hindu|muslim|christian|sikh|jain)\b/i;
+const NOT_MEMORY = /\b(bp|blood pressure|hb|haemoglobin|hemoglobin|tablets?|medicines?|medication|pills?|mg|dose|insulin|metformin|amlodipine|telmisartan|losartan|atorvastatin|statins?|supplements?|diabet\w*|sugar|cholesterol|thyroid|religion|religious|caste|income|salary|hindu|muslim|christian|sikh|jain)\b/i;
 const escapeRe = (t) => String(t).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const obj = (properties, required = []) => ({ type: 'object', properties, required, additionalProperties: false });

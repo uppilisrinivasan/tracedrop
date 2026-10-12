@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Drop: how it works</title>
+<style>
+:root{--bg:#f6f5f3;--surface:#fff;--soft:#f1efec;--line:#e4e0db;--text:#1c1917;--muted:#6b645d;--faint:#9a928a;--brand:#c8102e;--brand-soft:#fde8eb;--ai:#6d28d9;--ai-soft:#f0e9fd;--good:#15803d;--good-soft:#e5f5ea;--warn:#b45309;--warn-soft:#fdf1df;--bad:#b91c1c;--bad-soft:#fde7e7}
+@media (prefers-color-scheme:dark){:root{--bg:#121110;--surface:#1c1a19;--soft:#262321;--line:#34302d;--text:#f3f1ee;--muted:#b0a79e;--faint:#847b72;--brand:#ef4458;--brand-soft:#3a1419;--ai:#b794f6;--ai-soft:#251a3a;--good:#4ade80;--good-soft:#10291a;--warn:#fbbf24;--warn-soft:#33260c;--bad:#f87171;--bad-soft:#351414}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+a{color:var(--ai)}
+code{font:13px ui-monospace,Menlo,monospace;background:var(--soft);padding:1px 5px;border-radius:5px}
+pre{background:var(--soft);border-radius:10px;padding:12px 14px;overflow-x:auto;font:13px/1.5 ui-monospace,Menlo,monospace}
+.wrap{display:grid;grid-template-columns:220px minmax(0,1fr);gap:40px;max-width:1180px;margin:0 auto;padding:32px 20px 80px}
+@media (max-width:880px){.wrap{grid-template-columns:minmax(0,1fr)}nav.toc{display:none}}
+nav.toc{position:sticky;top:24px;align-self:start;font-size:14px}
+nav.toc a{display:block;color:var(--muted);text-decoration:none;padding:5px 0}
+nav.toc a:hover{color:var(--text)}
+main{max-width:820px;min-width:0}
+h1{font-size:34px;line-height:1.15;letter-spacing:-.02em;margin:0 0 8px}
+h2{font-size:23px;margin:48px 0 10px;letter-spacing:-.01em}
+h3{font-size:17px;margin:24px 0 6px}
+p{margin:8px 0}
+.lead{font-size:18px;color:var(--muted)}
+.tag{display:inline-block;font-size:12px;font-weight:600;padding:2px 9px;border-radius:999px;background:var(--ai-soft);color:var(--ai)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:14px 0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+.card h4{margin:0 0 4px;font-size:15px}
+.card p{font-size:14px;color:var(--muted);margin:4px 0 0}
+.who{display:flex;align-items:center;gap:10px}
+.av{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:700;flex:none}
+table{width:100%;border-collapse:collapse;font-size:14.5px;margin:12px 0;background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12.5px;color:var(--muted);background:var(--soft)}
+tr:last-child td{border-bottom:0}
+.callout{border-radius:12px;padding:12px 14px;margin:14px 0;font-size:15px}
+.callout.ai{background:var(--ai-soft)}
+.callout.warn{background:var(--warn-soft)}
+.callout.good{background:var(--good-soft)}
+.flow{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px;margin:14px 0}
+.flow svg{width:100%;height:auto;display:block}
+.flow text{font:13px system-ui,sans-serif;fill:var(--text)}
+.flow .sub{font-size:11px;fill:var(--muted)}
+.box{fill:var(--surface);stroke:var(--line)}
+.box.ai{fill:var(--ai-soft);stroke:var(--ai)}
+.box.rule{fill:var(--warn-soft);stroke:var(--warn)}
+.box.donor{fill:var(--brand-soft);stroke:var(--brand)}
+.arrow{stroke:var(--faint);stroke-width:1.5;fill:none;marker-end:url(#arr)}
+/* test scripts */
+.tests-bar{position:sticky;top:0;z-index:2;background:var(--bg);padding:10px 0;display:flex;flex-wrap:wrap;gap:8px;align-items:center;border-bottom:1px solid var(--line)}
+.tests-bar .count{font-weight:600}
+button{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:10px;padding:8px 14px;min-height:40px}
+button:hover{border-color:var(--ai)}
+.script{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:4px 16px 12px;margin:14px 0}
+.script summary{cursor:pointer;padding:12px 0;font-weight:700;list-style:none;display:flex;align-items:center;gap:10px}
+.script summary::-webkit-details-marker{display:none}
+.script summary .n{font-size:12px;color:var(--muted);font-weight:500;margin-left:auto}
+.script .why{font-size:14px;color:var(--muted);margin:0 0 8px}
+.step{display:grid;grid-template-columns:28px minmax(0,1fr);gap:8px;padding:8px 0;border-top:1px solid var(--line)}
+.step input{width:20px;height:20px;margin-top:3px;accent-color:var(--good)}
+.step .do{font-size:15px}
+.step .expect{font-size:14px;color:var(--good);margin-top:2px}
+.step .expect::before{content:"Expect: ";font-weight:600}
+.step.done .do{color:var(--faint);text-decoration:line-through}
+kbd{font:12px ui-monospace,Menlo,monospace;border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:0 5px;background:var(--surface)}
+.files td:first-child{white-space:nowrap}
+footer{margin-top:60px;font-size:13px;color:var(--faint)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav class="toc" aria-label="Contents">
+  <b>Drop guide</b>
+  <a href="#why">Why Drop</a>
+  <a href="#donors">The demo donors</a>
+  <a href="#how">How Drop decides</a>
+  <a href="#rules">The rules</a>
+  <a href="#cards">Card types</a>
+  <a href="#ai">Where the AI comes in</a>
+  <a href="#run">Run it locally</a>
+  <a href="#demo">Demo controls</a>
+  <a href="#tests">Test scripts</a>
+  <a href="#limits">Not built yet</a>
+  <a href="#code">Where the code is</a>
+</nav>
+
+<main>
+<span class="tag">Team guide · branch feature/drop-home</span>
+<h1>Drop: how it works and how to test it</h1>
+<p class="lead">Drop is TraceDrop's assistant. It turns each donation's free lab panel into a light health follow-up between donations, and keeps the donor's blood and its impact in view, all through a few short cards instead of a tracker.</p>
+
+<h2 id="why">Why Drop exists</h2>
+<p>People can donate blood every 90 days (men) or 120 days (women). That's too rare to keep anyone opening an app. But every donation comes with a free lab panel: BP, haemoglobin, sugar, cholesterol and more. Drop uses that:</p>
+<div class="grid">
+  <div class="card"><h4>Between donations</h4><p>Drop follows up on what the results found: a goal, a free check-up, a check-in every two weeks, a reminder the donor asked for.</p></div>
+  <div class="card"><h4>At each donation</h4><p>The donation is the check-up. It measures progress and starts a new cycle.</p></div>
+  <div class="card"><h4>All the time</h4><p>Where their blood went and who it helped, without revealing the patient.</p></div>
+</div>
+<div class="callout warn"><b>What Drop is not:</b> a calorie or food tracker, or an app that pings all day. No meal logs, no streaks, no daily nagging. Drop sends few messages, merges them, and stays quiet when nothing matters. Every screen still works without Drop.</div>
+
+<h2 id="donors">The demo donors</h2>
+<p>Pick a donor from the switcher at the bottom of the sidebar. The demo starts on <b>Saturday 10 Oct 2026, 8 am</b>. All data is synthetic.</p>
+<div class="grid">
+  <div class="card"><div class="who"><span class="av" style="background:var(--ai-soft);color:var(--ai)">A</span><h4>Arjun · rising BP</h4></div><p>Donated 3 Oct, BP 148/94 (third rise: 132 → 136 → 148). Opens on an impact card; his results arrive the next day. <b>The main demo.</b></p></div>
+  <div class="card"><div class="who"><span class="av" style="background:var(--good-soft);color:var(--good)">M</span><h4>Meera · turned away</h4></div><p>Hb 11.8, below the 12.5 needed. Three months into her Plan. Her comeback: upload a report showing Hb 12.6 → she can donate again.</p></div>
+  <div class="card"><div class="who"><span class="av" style="background:var(--warn-soft);color:var(--warn)">A</span><h4>Ananya · healthy O−</h4></div><p>All results normal. O− is short at her blood centre, so she opens on Saturday slots. Monthly report only: Drop stays quiet.</p></div>
+  <div class="card"><div class="who"><span class="av" style="background:var(--bad-soft);color:var(--bad)">V</span><h4>Vikram · urgent</h4></div><p>BP 184/118 on 3 Oct. His urgent card always sits first, can't be hidden and can only wait an hour.</p></div>
+  <div class="card"><div class="who"><span class="av" style="background:var(--soft);color:var(--muted)">K</span><h4>Karthik · calm</h4></div><p>Can donate from 3 Nov. No cards today: this is what a quiet Home looks like.</p></div>
+  <div class="card"><div class="who"><span class="av" style="background:var(--brand-soft);color:var(--brand)">R</span><h4>Rohan · Hindi</h4></div><p>Prefers Hindi, so Drop writes his cards in Hindi. He can donate now.</p></div>
+</div>
+
+<h2 id="how">How Drop decides what to show</h2>
+<div class="flow">
+<svg viewBox="0 0 760 335" role="img" aria-labelledby="flowt flowd">
+<title id="flowt">How Drop turns facts into cards</title>
+<desc id="flowd">Facts about the donor go into fixed rules, which decide the cards on Home. The AI only rewrites the wording. The donor answers, and each answer is saved where it belongs.</desc>
+<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor" style="color:var(--faint)"/></marker></defs>
+<rect class="box" x="10" y="20" width="170" height="160" rx="12"/>
+<text x="24" y="46" font-weight="600">Facts (events)</text>
+<text class="sub" x="24" y="70">Results arrive</text><text class="sub" x="24" y="90">Blood reaches a patient</text><text class="sub" x="24" y="110">Can donate soon</text><text class="sub" x="24" y="130">A check-in is due</text><text class="sub" x="24" y="150">Urgent finding</text><text class="sub" x="24" y="170">Their own reminders</text>
+<rect class="box rule" x="225" y="20" width="170" height="160" rx="12"/>
+<text x="239" y="46" font-weight="600">Rules (no AI)</text>
+<text class="sub" x="239" y="70">Message budget</text><text class="sub" x="239" y="90">Priority order</text><text class="sub" x="239" y="110">Quiet hours 9 pm–8 am</text><text class="sub" x="239" y="130">Snooze, fold, expiry</text><text class="sub" x="239" y="150">Weekly / monthly report</text>
+<rect class="box donor" x="440" y="20" width="140" height="160" rx="12"/>
+<text x="454" y="46" font-weight="600">Cards on Home</text>
+<text class="sub" x="454" y="70">Urgent first</text><text class="sub" x="454" y="90">At most 3 shown</text><text class="sub" x="454" y="110">One main button</text><text class="sub" x="454" y="130">Form inside if needed</text>
+<rect class="box" x="620" y="20" width="130" height="160" rx="12"/>
+<text x="634" y="46" font-weight="600">Saved to</text>
+<text class="sub" x="634" y="70">Health (readings)</text><text class="sub" x="634" y="90">Plan (goals, reminders)</text><text class="sub" x="634" y="110">Bookings</text><text class="sub" x="634" y="130">Memory (preferences)</text>
+<path class="arrow" d="M180 100H222"/><path class="arrow" d="M395 100H437"/><path class="arrow" d="M580 100H617"/>
+<rect class="box ai" x="420" y="214" width="180" height="62" rx="12"/>
+<text x="434" y="238" font-weight="600">AI (Gemini)</text><text class="sub" x="434" y="258">Rewrites the wording only</text>
+<path class="arrow" d="M510 214V184"/>
+<path class="arrow" d="M684 180C684 260 650 298 400 298C160 298 95 260 95 184" stroke-dasharray="4 4"/>
+<text class="sub" x="230" y="326">Each answer can create a new fact (a booked visit → "How did it go?")</text>
+</svg>
+</div>
+<p>The rules always decide <b>which</b> cards exist and <b>when</b>. The AI only phrases them, so the same history always gives the same cards, and the demo behaves the same every time.</p>
+
+<h2 id="rules">The rules</h2>
+<table>
+<tr><th>Rule</th><th>What it does</th></tr>
+<tr><td>Message budget</td><td>At most <b>1 new card a day</b>. Donors with a health goal: <b>2 a week</b> plus a <b>weekly report</b> on Sunday afternoon. Healthy donors: <b>1 a week</b> plus a <b>monthly report</b>.</td></tr>
+<tr><td>Priority</td><td>When two arrive the same day: urgent → results → donating → check-in / Plan → goal reached → impact. Other blood used, circle news and activity only go into the report.</td></tr>
+<tr><td>Outside the budget</td><td>Urgent cards; cards the donor asked for (slots after "Book a check-up"); follow-ups to something they did ("How did the check-up go?"); their own reminders.</td></tr>
+<tr><td>Quiet hours</td><td>Nothing new from 9 pm to 8 am. Waits until morning. Exceptions: urgent cards and the donor's own reminders.</td></tr>
+<tr><td>Snooze</td><td>⋯ or "Not now": 1 hour, tonight (7 pm), tomorrow, next week, or hide until the app is opened again. Snoozed 3 times → folds into the next report.</td></tr>
+<tr><td>Urgent cards</td><td>Always first, can't be hidden, can only wait 1 hour, never expire.</td></tr>
+<tr><td>Unanswered</td><td>A card left for 7 days folds into the next report ("Still waiting: …" with a button to answer it).</td></tr>
+<tr><td>Impact</td><td>Only the first unit from a donation that reaches a patient gets its own card; the rest go in the report and the story.</td></tr>
+<tr><td>Reminders</td><td>Only ones the donor asked for. Taken / Skipped. Ignored → "no answer" next day, no nagging, no streaks.</td></tr>
+<tr><td>Memory</td><td>Preferences and life context only (days that suit, work, area, language, food). Never health facts, religion, caste, income, family health or anything about recipients. Max 20, deletable, a newer one replaces a contradicting one.</td></tr>
+<tr><td>Cycle</td><td>The conversation is per donation cycle; the Plan and memory carry over.</td></tr>
+</table>
+
+<h2 id="cards">Card types</h2>
+<table>
+<tr><th>Card</th><th>When</th><th>What's inside</th><th>Answer goes to</th></tr>
+<tr><td>Results</td><td>Results arrive; Plan ready; goal reached</td><td>Book a free check-up, Explain my results, Save my Plan</td><td>Health, Plan</td></tr>
+<tr><td>Urgent</td><td>Urgent finding</td><td>Care slots today, Call the clinic</td><td>Bookings</td></tr>
+<tr><td>Check-in</td><td>Every 2 weeks on a goal; after a check-up</td><td>BP number boxes (wheels on touch screens); Hb lab report; "Started a tablet"</td><td>Health, Plan</td></tr>
+<tr><td>Slots</td><td>Check-up, or donating (3 weeks before they can)</td><td>Time chips</td><td>Bookings</td></tr>
+<tr><td>Reminder</td><td>Offer to set one; then daily</td><td>Time choice; Taken / Skipped</td><td>Plan</td></tr>
+<tr><td>Impact</td><td>Their blood reached a patient</td><td>Watch the story</td><td>Impact</td></tr>
+<tr><td>Weekly report</td><td>Sunday afternoon (monthly for healthy donors)</td><td>A tap-through story; waiting items</td><td>—</td></tr>
+<tr><td>Chart</td><td>In chat: "How is my BP doing?"</td><td>A small trend chart</td><td>—</td></tr>
+</table>
+
+<h2 id="ai">Where the AI comes in</h2>
+<div class="grid">
+  <div class="card"><h4>Card wording</h4><p>Gemini rewrites up to 3 open cards in the donor's language. If it drops any number, the card keeps the rule wording. If the card's content changes, it is rewritten.</p></div>
+  <div class="card"><h4>Drop's chat</h4><p>"Ask Drop" answers in two short sentences plus at most one card: a chart, check-up slots or a reminder. It reads its memory and the Plan every turn.</p></div>
+  <div class="card"><h4>Lab reports</h4><p>Reads a photo of a lab report (Meera's sample report) and the donor confirms before saving.</p></div>
+</div>
+<div class="callout ai">With the AI switched off, everything still works: cards use rule wording and the chat answers common questions (results, BP, impact, donating, cover, check-up, memory) from rules.</div>
+
+<h2 id="run">Run it locally</h2>
+<pre>git checkout feature/drop-home
+./run.sh              # first run installs packages; then open http://localhost:5173</pre>
+<p>In the repo's <code>.env</code>:</p>
+<table>
+<tr><th>Setting</th><th>Use</th></tr>
+<tr><td><code>AUTH_DISABLED=true</code></td><td>Skips Google sign-in locally.</td></tr>
+<tr><td><code>GOOGLE_CLOUD_PROJECT</code></td><td>Your project, for Gemini on Vertex AI. Leave empty to test with the AI off.</td></tr>
+<tr><td><code>LLM_RATE_LIMIT_TOKENS_PER_DAY</code></td><td>Daily AI budget (50,000 by default). A long test session can use it up; raise it locally if cards fall back to rule wording.</td></tr>
+</table>
+<p>For the AI on a laptop, sign in once: <code>gcloud auth application-default login</code>.</p>
+<div class="callout warn"><b>Good to know:</b> Drop's state is kept in the backend's memory. Restarting the backend (any backend code change does this with <code>./run.sh</code>) puts the demo back to Sat 10 Oct. Use <b>Reset</b> on the demo bar to start a test cleanly.</div>
+
+<h2 id="demo">Demo controls</h2>
+<table>
+<tr><th>Control</th><th>What it does</th></tr>
+<tr><td>Demo bar (yellow, top)</td><td>Shows the demo date and time. <b>+ few hours</b> (8 am → 2 pm → 7 pm → 9 pm), <b>+1 day</b>, <b>+1 week</b>, <b>Next event</b> (the next card for the donor you're viewing), <b>Reset</b>, <b>ⓘ</b> (what the bar is). Tap the date to hide the bar.</td></tr>
+<tr><td>What Drop knows</td><td>Side panel with the engine's real state: budget used, what's on Home and whether it counted, what's waiting and why, snoozed and folded cards, what's coming up, a log of what just happened, Plan and memory.</td></tr>
+<tr><td>Donor switcher</td><td>Bottom of the sidebar. Switching donors keeps the same demo date.</td></tr>
+<tr><td>Language</td><td>Next to Drop on Home: English or the donor's own language (Arjun: ಕನ್ನಡ).</td></tr>
+</table>
+
+<h2 id="tests">Test scripts</h2>
+<p>Each script starts from <b>Reset</b>. Tick each step as you go; ticks are saved in this browser. Use <b>Copy my results</b> to paste what passed and failed into the team chat.</p>
+<div class="tests-bar"><span class="count" id="count">0 of 0 steps</span><button id="copy">Copy my results</button><button id="clear">Clear ticks</button><span id="copied" class="sub" style="color:var(--good)"></span></div>
+<div id="scripts"></div>
+
+<h2 id="limits">Not built yet</h2>
+<table>
+<tr><th>Item</th><th>Status</th></tr>
+<tr><td>Guided tour for judges</td><td>Planned (the tour panel; "What Drop knows" is done).</td></tr>
+<tr><td>Judge access without sign-in, deploy to Cloud Run</td><td>Needs Sandeep (sign-in change).</td></tr>
+<tr><td>Drop's state in Firestore</td><td>After the demo; today it is in memory with Reset.</td></tr>
+<tr><td>"Add to Google Calendar" for Drop bookings and reminders</td><td>Not wired; bookings live in the app.</td></tr>
+<tr><td>Real Fitbit / Google Health data</td><td>Out of scope: the Fitbit Web API shuts down 30 Oct 2026 and the Google Health API isn't taking new projects. Activity in the weekly report is simulated.</td></tr>
+<tr><td>WhatsApp delivery, voice notes, lock-screen updates, choosing Drop's tone</td><td>Pitch only.</td></tr>
+</table>
+
+<h2 id="code">Where the code is</h2>
+<table class="files">
+<tr><th>File</th><th>What it does</th></tr>
+<tr><td><code>backend/src/domain/drop.js</code></td><td>The rules engine: events → cards, budget, snooze, memory, answers, undo.</td></tr>
+<tr><td><code>backend/src/domain/screenLines.js</code></td><td>Drop's one line on each screen.</td></tr>
+<tr><td><code>backend/src/ai/dropWriter.js</code></td><td>AI wording of open cards, with the number check.</td></tr>
+<tr><td><code>backend/src/ai/copilot.js</code>, <code>tools.js</code></td><td>Drop's chat and its tools (chart, slots, reminder, remember, log a reading).</td></tr>
+<tr><td><code>backend/src/routes/drop.js</code>, <code>demo.js</code></td><td>The Drop API and the demo clock.</td></tr>
+<tr><td><code>data/demo/</code></td><td>Arjun's 3 Oct donation and each demo donor's starting state.</td></tr>
+<tr><td><code>frontend/src/components/drop/</code></td><td>Cards, story viewer, lab report upload, memory list, screen line, Health sections, What Drop knows.</td></tr>
+<tr><td><code>frontend/src/components/Copilot.tsx</code></td><td>Drop's chat panel.</td></tr>
+<tr><td><code>backend/test/drop.test.js</code></td><td>Tests for every rule above (<code>cd backend &amp;&amp; npm test</code>).</td></tr>
+<tr><td><code>CONTEXT.md</code></td><td>The shared words: Donor, Drop, Card, Plan, Cycle, Message budget, Check-in, Reminder, Weekly report, Story.</td></tr>
+<tr><td><code>docs/changes/mihir-bhatt.md</code></td><td>Every commit: what changed, why, and how to revert it.</td></tr>
+</table>
+
+<footer>TraceDrop · Drop guide · synthetic data only · 13 Oct 2026</footer>
+</main>
+</div>
+
+<script>
+const SCRIPTS = [
+  { id: 'arjun-results', title: 'Arjun: results to a free check-up', why: 'The main demo. Drop notices a trend and books care.', steps: [
+    ['Reset, then pick Arjun Rao in the donor switcher.', 'One Impact card: his platelets helped a child.'],
+    ['Click +1 day.', 'Sun 11 Oct. A Results card on top: BP 148/94, third rise (132, 136, 148).'],
+    ['Click "Explain my results".', 'Drop\'s panel opens and answers in about two sentences.'],
+    ['Close the panel (Esc). Click "Book a free check-up".', 'A green receipt with Undo, and a Free check-up card with Saturday slots (his memory says Saturdays suit him).'],
+    ['Click "Weekday evenings instead".', 'A line "Remembered: weekday evenings suit you (replaces …)" with Undo; the slots change to weekday 18:30.'],
+    ['Pick a slot.', 'Receipt "Booked … · Ayushman Arogya Mandir". The card leaves Home.'],
+  ]},
+  { id: 'arjun-goal', title: 'Arjun: Plan, BP check-in and goal', why: 'The follow-up between donations, and how it leads back to donating.', steps: [
+    ['Reset, Arjun, then click Next event three times (results, then Sunday\'s report, then the Plan).', 'Mon 12 Oct: a "Your Plan" card (BP under 135/85, 150 minutes of walking a week).'],
+    ['Click "Save my Plan". Open My health.', 'Health shows Your Plan with the goal, weekly walking and the next check-in date.'],
+    ['Back on Home, click Next event until a "Check-in · BP goal" card appears (about two weeks on).', 'Two number boxes filled with 148 / 94.'],
+    ['Type 132 and 84, press Enter.', 'Receipt "132/84 saved to Health".'],
+    ['Click +1 day.', 'A "Goal reached" card. The header now says "Donate in N days" and Next donation shows 1 Jan 2027.'],
+    ['Open My health.', 'Drop\'s line: "BP 132/84 on …, down from 148". The BP chart includes 132/84. "Readings you added" lists it with Delete.'],
+  ]},
+  { id: 'budget', title: 'The message budget and What Drop knows', why: 'Shows that Drop holds back instead of piling up messages.', steps: [
+    ['Reset, Arjun, click +1 day, then open "What Drop knows" on the demo bar.', 'New cards today 1 of 1; this week 2 of 2; Results and Impact both "counted".'],
+    ['Click "Book a free check-up" on the Results card.', 'The new Free check-up card shows "outside budget" in the panel.'],
+    ['Click +1 week.', 'A Weekly report card. The panel log shows what was sent and what was folded in.'],
+    ['Click "Watch your week" and step through with →. On the last slide click Share.', 'A tap-through story; Share opens the share sheet or WhatsApp with the text.'],
+  ]},
+  { id: 'snooze', title: 'Snooze, hide and quiet hours', why: 'Drop never nags.', steps: [
+    ['Reset, Arjun. On the Impact card click ⋯.', 'A menu: In 1 hour, Tonight (7 pm), Tomorrow morning, Next week, Hide for now.'],
+    ['Choose "Tonight (7 pm)".', 'The card leaves Home; the panel lists it as snoozed.'],
+    ['Click + few hours twice (to 7 pm).', 'The card is back.'],
+    ['Click + few hours once more (9 pm).', 'The panel says quiet hours. Nothing new appears.'],
+    ['On a card choose ⋯ → Hide for now, then switch to another donor and back.', 'The hidden card is back (hidden lasts until the app is opened again).'],
+  ]},
+  { id: 'meera', title: 'Meera: back to donating', why: 'Health work that leads straight back to the donation chair.', steps: [
+    ['Reset, pick Meera Iyer.', 'A Check-in · Hb goal card and her own 2 pm reminder later in the day.'],
+    ['Click "Add a report", then "Use a sample report".', 'The sample report appears; Drop finds Haemoglobin 12.6 on 8 Oct (read by the AI, or the known value if AI is off).'],
+    ['Click Save.', 'A "Goal reached" card: you can donate again. Next donation on the right shows Today.'],
+    ['Click Undo on the receipt.', 'The result is removed and she is on hold again.'],
+  ]},
+  { id: 'vikram', title: 'Vikram: urgent always first', why: 'Safety beats every other rule.', steps: [
+    ['Reset, pick Vikram Gowda.', 'An Urgent card with a red edge: 184/118, see a doctor today, care slots and Call the clinic.'],
+    ['Click ⋯ on it.', 'Only "In 1 hour" is enabled; the note says urgent cards can only wait an hour.'],
+    ['Choose In 1 hour, then + few hours.', 'The urgent card is back on top.'],
+  ]},
+  { id: 'chat', title: 'Drop\'s chat', why: 'Short answers with at most one card, and memory you can see.', steps: [
+    ['As Arjun, click "Ask Drop" and ask: How is my BP doing?', 'Two sentences and a small BP chart.'],
+    ['Say: Saturdays don\'t work for me any more, weekday evenings are better.', '"Got it" and a Remembered line with Undo. "What I remember" shows the change.'],
+    ['Say: My BP at the pharmacy today was 138/88.', 'A receipt "138/88 saved to Health"; it appears in Health.'],
+    ['Say: Remember that I take metformin.', 'Drop does not store it (health facts go in the Plan, not memory).'],
+    ['Say: Book me a free check-up.', 'A slots card in the chat; the same card also appears on Home.'],
+  ]},
+  { id: 'lang', title: 'Languages', why: 'Drop writes in the donor\'s language.', steps: [
+    ['Reset, Arjun, +1 day, click ಕನ್ನಡ next to Drop.', 'After a few seconds both cards and their buttons are in Kannada, with the same numbers and dates.'],
+    ['Click English.', 'Back to English.'],
+    ['Pick Rohan Verma.', 'His card is in Hindi; with the AI on, its time chips are too.'],
+  ]},
+  { id: 'lines', title: 'Drop\'s line on each screen', why: 'One true sentence per screen, never filler.', steps: [
+    ['As Arjun open My health, My impact, Donate, Health cover and Community.', 'Each starts with a purple Drop line about that screen.'],
+    ['Click the line on any screen.', 'Drop\'s panel opens with that sentence and 2–3 questions to ask.'],
+    ['Click × on a line.', 'It stays hidden on that screen for the rest of the demo day.'],
+    ['On My health, click "Hide from my app" on a blood-centre result.', 'It moves under "Show 1 hidden result". Eligibility does not change.'],
+  ]},
+  { id: 'ai-off', title: 'With the AI switched off', why: 'The demo must never break.', steps: [
+    ['Set GOOGLE_CLOUD_PROJECT= (empty) in .env and restart ./run.sh.', 'The app loads; the AI status line says offline.'],
+    ['Reset, Arjun, +1 day.', 'Cards appear with rule wording (no errors).'],
+    ['Ask Drop: How is my BP doing?', 'A rule-based answer with the BP chart, marked "AI offline: answered by rules".'],
+    ['Meera: Add a report → Use a sample report → Save.', 'Works with the sample\'s known value.'],
+  ]},
+];
+
+const KEY = 'tracedrop.dropGuide.ticks';
+let ticks = {};
+try { ticks = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch { ticks = {}; }
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(ticks)); } catch { /* storage unavailable */ } };
+const esc = (t) => t.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function render() {
+  const host = document.getElementById('scripts');
+  host.innerHTML = SCRIPTS.map((s, si) => {
+    const done = s.steps.filter((_, i) => ticks[`${s.id}:${i}`]).length;
+    return `<details class="script" ${si < 2 ? 'open' : ''}><summary>${si + 1}. ${esc(s.title)}<span class="n">${done} of ${s.steps.length}</span></summary>
+      <p class="why">${esc(s.why)}</p>
+      ${s.steps.map(([d, e], i) => { const k = `${s.id}:${i}`; return `<label class="step ${ticks[k] ? 'done' : ''}"><input type="checkbox" data-k="${k}" ${ticks[k] ? 'checked' : ''}><span><div class="do">${esc(d)}</div><div class="expect">${esc(e)}</div></span></label>`; }).join('')}
+    </details>`;
+  }).join('');
+  const total = SCRIPTS.reduce((n, s) => n + s.steps.length, 0);
+  const done = Object.values(ticks).filter(Boolean).length;
+  document.getElementById('count').textContent = `${done} of ${total} steps checked`;
+}
+
+document.addEventListener('change', (e) => {
+  const k = e.target.dataset && e.target.dataset.k;
+  if (!k) return;
+  ticks[k] = e.target.checked;
+  save();
+  const open = [...document.querySelectorAll('details.script')].map((d) => d.open);
+  render();
+  document.querySelectorAll('details.script').forEach((d, i) => { d.open = open[i]; });
+});
+document.getElementById('clear').addEventListener('click', () => { ticks = {}; save(); render(); });
+document.getElementById('copy').addEventListener('click', async () => {
+  const lines = SCRIPTS.map((s) => {
+    const done = s.steps.filter((_, i) => ticks[`${s.id}:${i}`]).length;
+    const missing = s.steps.map(([d], i) => (ticks[`${s.id}:${i}`] ? null : `   - not checked: ${d}`)).filter(Boolean);
+    return [`${done === s.steps.length ? '✓' : '•'} ${s.title}: ${done}/${s.steps.length}`, ...missing].join('\n');
+  });
+  const text = `Drop test results\n${lines.join('\n')}`;
+  try { await navigator.clipboard.writeText(text); document.getElementById('copied').textContent = 'Copied'; }
+  catch { prompt('Copy your results:', text); }
+});
+render();
+</script>
+</body>
+</html>

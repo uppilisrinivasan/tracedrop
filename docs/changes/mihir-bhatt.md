@@ -4,6 +4,12 @@ One entry per commit on the Drop-first redesign (branch `feature/drop-home`), ne
 To revert one: find it with `git log --oneline --grep "<commit title>"`, then `git revert <hash>`.
 The design behind these changes is in `CONTEXT.md` (vocabulary) and the build plan.
 
+## 2026-10-13 · Add the team guide to Drop, and refuse medicine names as memories
+
+- **What and why:** `docs/drop/index.html` is a self-contained page (open it in a browser, no build) for the team: why Drop exists, the six demo donors, how Drop decides with a diagram, the rules, card types, where the AI comes in, how to run it locally, the demo controls, what isn't built yet, where the code is, and ten test scripts with expected results, tick boxes saved in the browser, and a "Copy my results" button for the team chat. `docs/drop/README.md` points to it, since GitHub shows HTML as source. Drop's memory guard now also refuses medicine names and doses (e.g. "metformin 500 mg"), which belong in the Plan.
+- **Files:** `docs/drop/index.html` (new), `docs/drop/README.md` (new), `backend/src/ai/tools.js`, `backend/test/drop.test.js`.
+- **Revert:** safe to revert on its own.
+
 ## 2026-10-13 · Add the "What Drop knows" panel
 
 - **What and why:** a "What Drop knows" button on the demo bar opens a side panel with the Drop engine's real state for the Donor being viewed: the demo date and quiet hours, the message budget used today and this week, which Cards are on Home and whether they counted against the budget, what is waiting and why, what is snoozed, hidden or folded, what is coming up, a log of what just happened, the Plan, memories and readings, and how many open Cards the AI worded. It explains why a Card appeared, waited or folded away. Demo mode only; Esc closes it.
