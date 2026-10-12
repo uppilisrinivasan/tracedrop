@@ -11,6 +11,8 @@ const cover = require('../domain/cover');
 const impact = require('../domain/impact');
 const community = require('../domain/community');
 const donation = require('../domain/donation');
+const booking = require('../booking/service');
+const settings = require('../auth/userSettings');
 const llm = require('../ai/llm');
 const copilot = require('../ai/copilot');
 const carePlan = require('../ai/carePlan');
@@ -110,14 +112,37 @@ router.patch('/:donorId/consent', (req, res) => {
 
 // ---- Donation flow
 router.get('/:donorId/slots', (req, res) => ok(res, donation.slots(req.donor.id)));
-router.post('/:donorId/appointments', (req, res) => {
+router.post('/:donorId/booking/recommend', async (req, res) => {
   try {
-    ok(res, donation.book(req.donor.id, req.body));
+    const body = req.body || {};
+    ok(res, await booking.availability(req.user, req.donor.id, body.preferences, body.accessToken));
   } catch (error) {
-    fail(res, 400, error.message);
+    fail(res, error.status || 400, error.message);
   }
 });
-router.get('/:donorId/appointments', (req, res) => ok(res, store.session.appointments.get(req.donor.id) || []));
+router.post('/:donorId/appointments', async (req, res) => {
+  try {
+    ok(res, await booking.confirm(req.user, req.donor, req.body || {}));
+  } catch (error) {
+    fail(res, error.status || 400, error.message);
+  }
+});
+router.post('/:donorId/appointments/:appointmentId/cancel', async (req, res) => {
+  try {
+    ok(res, await booking.cancel(req.user, req.donor.id, req.params.appointmentId, req.body && req.body.accessToken));
+  } catch (error) {
+    fail(res, error.status || 400, error.message);
+  }
+});
+router.get('/:donorId/appointments', async (req, res) => {
+  try {
+    const rows = await settings.listAppointments(req.user, req.donor.id);
+    store.session.appointments.set(req.donor.id, rows);
+    ok(res, rows);
+  } catch (error) {
+    fail(res, error.status || 400, error.message);
+  }
+});
 router.post('/:donorId/appointments/:appointmentId/checkin', (req, res) => {
   try {
     ok(res, donation.checkIn(req.donor.id, req.params.appointmentId, req.body));

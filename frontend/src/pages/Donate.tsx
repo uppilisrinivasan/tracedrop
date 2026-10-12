@@ -1,26 +1,30 @@
 import { useState } from 'react';
 import { api, fmtDate, type Appointment } from '../api';
 import type { PageProps } from '../App';
+import BookingChat from '../BookingChat';
+import { requestCalendarAccess } from '../calendarAuth';
 import { ErrorNote, Icon, Loading, Section, useLoad } from '../ui';
 
-export default function Donate({ donorId, go, version, refresh }: PageProps) {
+export default function Donate({ donorId, go, version, refresh, clientId }: PageProps) {
   const { data, error, loading, reload } = useLoad(() => api.slots(donorId), [donorId, version]);
   const appts = useLoad(() => api.appointments(donorId), [donorId, version]);
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [result, setResult] = useState<{ status: string; reasons: string[]; components: string[] } | null>(null);
   const [vitals, setVitals] = useState({ systolic: '', diastolic: '', haemoglobin: '' });
+  const [showAll, setShowAll] = useState(false);
 
   if (loading && !data) return <Loading />;
   if (error || !data) return <ErrorNote error={error || 'Could not load'} />;
   const booked = (appts.data || []).filter((a) => a.status === 'booked');
   const el = data.eligibility;
 
-  async function book(slotId: string) {
-    setBusy(slotId);
+  async function cancel(a: Appointment) {
+    setBusy(a.id);
     setErr(null);
     try {
-      await api.book(donorId, slotId);
+      const accessToken = a.eventId ? await requestCalendarAccess(clientId) : undefined;
+      await api.cancelAppointment(donorId, a.id, accessToken);
       appts.reload();
     } catch (e) {
       setErr((e as Error).message);
@@ -81,30 +85,35 @@ export default function Donate({ donorId, go, version, refresh }: PageProps) {
             <label className="small">Diastolic BP<input className="input" inputMode="numeric" value={vitals.diastolic} onChange={(e) => setVitals({ ...vitals, diastolic: e.target.value })} placeholder="e.g. 82" /></label>
             <label className="small">Haemoglobin (g/dL)<input className="input" inputMode="decimal" value={vitals.haemoglobin} onChange={(e) => setVitals({ ...vitals, haemoglobin: e.target.value })} placeholder="e.g. 14.2" /></label>
           </div>
-          <button className="btn btn-primary mt-12" onClick={() => checkIn(a)} disabled={busy === a.id}><Icon name="drop" size={16} /> Check in and donate</button>
+          <div className="row mt-12 wrap">
+            <button className="btn btn-primary" onClick={() => checkIn(a)} disabled={busy === a.id}><Icon name="drop" size={16} /> Check in and donate</button>
+            <button className="btn" disabled={busy === a.id} onClick={() => cancel(a)}>Cancel booking</button>
+          </div>
         </Section>
       ))}
 
-      {!booked.length && (
-        <Section title="Book a slot" sub={el.eligibleNow ? 'You are eligible to donate now.' : el.nextEligibleDate ? `You can donate from ${fmtDate(el.nextEligibleDate)} (${el.gapDays}-day gap between donations).` : 'Donation is paused for now.'}>
-          {!data.slots.length && (
-            <div className="callout callout-warn small">
-              <Icon name="info" size={16} />
-              <span>{el.blockers.length ? `Paused because: ${el.blockers.join('; ')}. Your care plan shows how to get back to donating.` : 'No slots available.'} <button className="btn btn-sm" onClick={() => go('plan')}>Care plan</button></span>
-            </div>
-          )}
-          <div className="grid grid-3" style={{ gap: 10 }}>
+      <Section title="Book a donation" sub={el.eligibleNow ? 'Answer a few questions and TraceDrop will match an open slot.' : el.nextEligibleDate ? `You can donate from ${fmtDate(el.nextEligibleDate)}.` : 'Donation is paused for now.'}>
+        {el.blockers.length > 0 && (
+          <div className="callout callout-warn small">
+            <Icon name="info" size={16} />
+            <span>Paused because: {el.blockers.join('; ')}. <button className="btn btn-sm" onClick={() => go('plan')}>Care plan</button></span>
+          </div>
+        )}
+        {!el.blockers.length && <BookingChat mode="book" donorId={donorId} clientId={clientId} onBooked={() => appts.reload()} />}
+        <button className="btn btn-ghost btn-sm mt-12" onClick={() => setShowAll((open) => !open)}>{showAll ? 'Hide other slots' : 'Browse every open slot'}</button>
+        {showAll && (
+          <div className="grid grid-3 mt-12" style={{ gap: 10 }}>
             {data.slots.map((s) => (
               <div key={s.id} style={{ border: '1px solid var(--border)', borderRadius: 14, padding: 14 }}>
                 <div className="bold">{fmtDate(s.date)} · {s.time}</div>
                 <div className="small muted">{s.centre}</div>
                 <div className="tiny faint">{s.district}</div>
-                <button className="btn btn-sm btn-primary mt-12" onClick={() => book(s.id)} disabled={busy === s.id}>Book</button>
               </div>
             ))}
+            {!data.slots.length && <p className="small muted">No open slots.</p>}
           </div>
-        </Section>
-      )}
+        )}
+      </Section>
     </div>
   );
 }

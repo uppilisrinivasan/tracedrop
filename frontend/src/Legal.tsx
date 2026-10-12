@@ -28,6 +28,8 @@ function Privacy() {
       <p>TraceDrop runs on Google Cloud in India (asia-south1). Sign-in records are kept in Google Cloud Firestore. AI features send the relevant text to Google Vertex AI (Gemini) to produce an answer; Google does not use this to train its models.</p>
       <h2>Sessions</h2>
       <p>A session lasts 1 day and is held in a secure cookie. After that you sign in again. TraceDrop sets no other cookies; Google's sign-in button follows Google's own privacy policy.</p>
+      <h2>Calendar and location</h2>
+      <p>If you book a donation, you can connect Google Calendar and allow this device to share an approximate location. We use that only to hide times you are busy, rank nearby blood centres, add the appointment to your calendar, and email you a confirmation and reminders. The Google access token is not stored. You can skip both and pick a slot yourself.</p>
       <h2>Your choices</h2>
       <p>To see or delete the data we hold about you, email <a href={`mailto:${CONTACT}`}>{CONTACT}</a>. You can also remove TraceDrop's access at any time from your Google Account under Security, Third-party connections.</p>
       <h2>Contact</h2>

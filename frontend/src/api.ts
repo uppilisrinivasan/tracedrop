@@ -97,7 +97,30 @@ export interface CopilotReply {
 }
 
 export interface Slot { id: string; centreId: string; centre: string; district: string; date: string; time: string }
-export interface Appointment extends Slot { status: string }
+export interface Appointment extends Slot { status: string; eventId?: string | null; emailSent?: boolean; emailError?: string }
+export interface BookingLocation { label: string; lat: number; lng: number; source: 'gps' | 'manual' }
+export interface BookingPreferences {
+  days: string[];
+  timeWindows: string[];
+  maxDistanceKm: number | null;
+  avoidHolidays: boolean | null;
+  reminderMinutes: number[];
+  location: BookingLocation | null;
+  onboardingComplete: boolean;
+  onboardingSkipped: boolean;
+}
+export interface BookingTurn {
+  preferences: BookingPreferences;
+  step: string | null;
+  prompt: string | null;
+  chips: { id: string; label: string }[];
+  ready: boolean;
+}
+export interface RankedSlot extends Slot {
+  distanceKm: number | null;
+  score: number;
+  reasons: string[];
+}
 
 export interface Network {
   asOf: string; donors: number; donations: number; deferrals: number; components: number; patientsHelped: number;
@@ -150,6 +173,10 @@ export const api = {
   me: () => request<AuthUser>('/auth/me'),
   googleSignIn: (credential: string) => post<AuthUser>('/auth/google', { credential }),
   logout: () => post<{ signedOut: boolean }>('/auth/logout'),
+  preferences: () => request<BookingPreferences | null>('/auth/preferences'),
+  savePreferences: (preferences: Partial<BookingPreferences>) => request<BookingPreferences>('/auth/preferences', { method: 'PUT', body: JSON.stringify(preferences) }),
+  bookingTurn: (preferences?: Partial<BookingPreferences>, answer?: { step: string; value: string | BookingPreferences['location'] }) =>
+    post<BookingTurn>('/auth/booking/turn', { preferences, answer }),
   personas: () => request<{ id: string; name: string; bloodGroup: string; language: string }[]>('/donors'),
   overview: (id: string) => request<Overview>(`/donors/${id}/overview`),
   impact: (id: string) => request<{ summary: ImpactSummary; journeys: Journey[]; k: number }>(`/donors/${id}/impact`),
@@ -161,7 +188,11 @@ export const api = {
   setConsent: (id: string, consent: Partial<Donor['consent']>) => request<Donor['consent']>(`/donors/${id}/consent`, { method: 'PATCH', body: JSON.stringify(consent) }),
   slots: (id: string) => request<{ eligibility: Eligibility; slots: Slot[] }>(`/donors/${id}/slots`),
   appointments: (id: string) => request<Appointment[]>(`/donors/${id}/appointments`),
-  book: (id: string, slotId: string) => post<Appointment>(`/donors/${id}/appointments`, { slotId }),
+  recommend: (id: string, preferences: BookingPreferences, accessToken?: string) =>
+    post<{ eligibility: Eligibility; slots: RankedSlot[]; calendarConnected: boolean }>(`/donors/${id}/booking/recommend`, { preferences, accessToken }),
+  book: (id: string, body: { slotId: string; preferences: BookingPreferences; accessToken?: string }) => post<Appointment>(`/donors/${id}/appointments`, body),
+  cancelAppointment: (id: string, appointmentId: string, accessToken?: string) =>
+    post<Appointment>(`/donors/${id}/appointments/${appointmentId}/cancel`, { accessToken }),
   checkIn: (id: string, appointmentId: string, vitals: Record<string, number>) =>
     post<{ status: string; reasons: string[]; visitId: string; components: string[] }>(`/donors/${id}/appointments/${appointmentId}/checkin`, vitals),
   copilot: (id: string, message: string, history: unknown[] | null) => post<CopilotReply>(`/donors/${id}/copilot`, { message, history }),

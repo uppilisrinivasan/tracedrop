@@ -37,7 +37,7 @@ function initialScreen(): Screen {
   return NAV.some((n) => n.id === hash) || hash === 'plan' || hash === 'labs' ? hash : 'home';
 }
 
-export default function App({ user, onSignOut }: { user: AuthUser; onSignOut: () => void }) {
+export default function App({ user, clientId, onSignOut }: { user: AuthUser; clientId: string; onSignOut: () => void }) {
   const [donorId, setDonorId] = useState(() => readStored('tracedrop.donor', 'D-001'));
   const [screen, setScreen] = useState<Screen>(initialScreen);
   const [personas, setPersonas] = useState<{ id: string; name: string; bloodGroup: string }[]>([]);
@@ -59,7 +59,7 @@ export default function App({ user, onSignOut }: { user: AuthUser; onSignOut: ()
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
   const refresh = () => setVersion((v) => v + 1);
-  const page = { donorId, go, version, refresh };
+  const page = { donorId, go, version, refresh, clientId };
 
   const personaPicker = (
     <select className="persona-select" value={donorId} onChange={(e) => { setDonorId(e.target.value); go('home'); }} aria-label="Signed in as (demo donor)">
@@ -119,4 +119,5 @@ export interface PageProps {
   go: (screen: Screen) => void;
   version: number;
   refresh: () => void;
+  clientId: string;
 }

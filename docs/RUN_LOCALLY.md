@@ -79,6 +79,26 @@ A credentials problem shows up on that first call, in the backend log, as `[llm]
 
 Local Gemini calls bill the same free-trial project as the deployed app. The limits above stop the process after 50,000 tokens or 200 calls in a day. A full day at that cap is about ₹2. Firestore is not used while `AUTH_DISABLED=true`.
 
+## Donation booking and Google Calendar
+
+Booking asks for convenient days, time, travel distance, holidays, reminder timing and location. Location is optional. If you allow it, the browser coordinates are rounded to about one kilometre before they are saved.
+
+Connecting Google Calendar is a separate consent from sign-in. TraceDrop asks only to read free/busy time, create events on calendars you own, and send the booking email through Gmail. The access token is held in the page until you reload it. It is not written to the database.
+
+In Google Auth Platform, add these scopes to the app before the consent screen will grant them:
+
+- `https://www.googleapis.com/auth/calendar.events.freebusy`
+- `https://www.googleapis.com/auth/calendar.events.owned`
+- `https://www.googleapis.com/auth/gmail.send`
+
+Calendar and Gmail scopes are sensitive. Until Google verifies the app, only accounts listed as test users can complete that consent. A booked event emails a confirmation immediately and adds email and popup reminders at the time chosen in the chat.
+
+Enable the APIs once on the project:
+
+```sh
+gcloud services enable calendar-json.googleapis.com gmail.googleapis.com --project project-6055aa98-bf59-48b5-a50
+```
+
 ## Optional: Google sign-in on localhost
 
 Skip this for normal local work. To try the login page against the real project:
