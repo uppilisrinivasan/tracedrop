@@ -21,7 +21,7 @@ export default function Home({ donorId, go, version, refresh }: PageProps) {
   const from = drop.data?.donate.from;
 
   return (
-    <div className="fade-in drop-home">
+    <div className="fade-in">
       <div className="page-head">
         <div>
           <div className="page-title">Hello, {first}</div>

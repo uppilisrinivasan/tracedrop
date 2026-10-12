@@ -151,6 +151,7 @@ footer{margin-top:60px;font-size:13px;color:var(--faint)}
 <tr><td>Impact</td><td>Only the first unit from a donation that reaches a patient gets its own card; the rest go in the report and the story.</td></tr>
 <tr><td>Reminders</td><td>Only ones the donor asked for. Taken / Skipped. Ignored → "no answer" next day, no nagging, no streaks.</td></tr>
 <tr><td>Memory</td><td>Preferences and life context only (days that suit, work, area, language, food). Never health facts, religion, caste, income, family health or anything about recipients. Max 20, deletable, a newer one replaces a contradicting one.</td></tr>
+<tr><td>Bookings</td><td>Booked check-ups and donations show under "Coming up" on Home with Change and Cancel, any time. Undo on a receipt only lasts until time moves on.</td></tr>
 <tr><td>Cycle</td><td>The conversation is per donation cycle; the Plan and memory carry over.</td></tr>
 </table>
 
@@ -239,9 +240,10 @@ const SCRIPTS = [
     ['Reset, then pick Arjun Rao in the donor switcher.', 'One Impact card: his platelets helped a child.'],
     ['Click +1 day.', 'Sun 11 Oct. A Results card on top: BP 148/94, third rise (132, 136, 148).'],
     ['Click "Explain my results".', 'Drop\'s panel opens and answers in about two sentences.'],
-    ['Close the panel (Esc). Click "Book a free check-up".', 'A green receipt with Undo, and a Free check-up card with Saturday slots (his memory says Saturdays suit him).'],
+    ['Close the panel (Esc). Click "Book a free check-up".', 'A Free check-up card with Saturday slots (his memory says Saturdays suit him). No receipt: the slots card is the answer.'],
     ['Click "Weekday evenings instead".', 'A line "Remembered: weekday evenings suit you (replaces …)" with Undo; the slots change to weekday 18:30.'],
-    ['Pick a slot.', 'Receipt "Booked … · Ayushman Arogya Mandir". The card leaves Home.'],
+    ['Pick a slot.', 'Receipt "Booked … · Ayushman Arogya Mandir" with Undo, and the visit under "Coming up" with Change and Cancel.'],
+    ['Click + few hours, then Change on the booking.', 'Undo has gone (time moved on), but Change still works: the booking is removed and a new Free check-up card appears. Cancel removes it without new slots.'],
   ]},
   { id: 'arjun-goal', title: 'Arjun: Plan, BP check-in and goal', why: 'The follow-up between donations, and how it leads back to donating.', steps: [
     ['Reset, Arjun, then click Next event three times (results, then Sunday\'s report, then the Plan).', 'Mon 12 Oct: a "Your Plan" card (BP under 135/85, 150 minutes of walking a week).'],

@@ -1,15 +1,25 @@
 /* Drop: the Card conversation on Home, its forms, menus, Stories and the demo bar.
    Desktop now, touch later: targets at least 44px, nothing hover-only, Esc closes overlays. */
 
-.drop-home { max-width: 1360px; }
 .drop-board { display: grid; gap: 20px; align-items: start; }
-/* Two columns from a medium window up; the cards and the stats grow together, no gap between them */
+/* Two columns from a medium window up: cards and stats share the width, no gap between them */
 @container app (min-width: 760px) {
-  .drop-board { grid-template-columns: minmax(0, 900px) minmax(260px, 420px); }
+  .drop-board { grid-template-columns: minmax(0, 3fr) minmax(260px, 2fr); }
+}
+/* Very wide windows: the cards stop at a readable width and the stat tiles spread into columns */
+@container app (min-width: 1500px) {
+  .drop-board { grid-template-columns: minmax(0, 940px) minmax(0, 1fr); }
 }
 .drop-feed { display: grid; gap: 12px; align-content: start; min-width: 0; }
 .dcard-text { max-width: 72ch; }
-.drop-side { display: grid; gap: 14px; align-content: start; min-width: 0; }
+.drop-side { display: grid; gap: 14px; align-content: start; align-items: start; min-width: 0; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.drop-side > .tiny { grid-column: 1 / -1; }
+.drop-coming { display: grid; gap: 6px; }
+.drop-coming-title { font-size: 13px; font-weight: 700; color: var(--muted); }
+.drop-booking { display: flex; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 8px 8px 8px 14px; font-size: 14px; }
+.drop-booking > span { flex: 1; }
+.drop-booking button { min-height: 40px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--border); font-weight: 600; font-size: 13px; }
+.drop-booking button:hover { background: var(--surface-2); }
 
 .drop-head { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; min-height: 44px; }
 .drop-head .drop-who span, .drop-link { white-space: nowrap; }

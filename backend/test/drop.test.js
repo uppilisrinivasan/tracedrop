@@ -187,3 +187,18 @@ test('Next event follows the Donor being viewed and skips their routine reminder
   drop.nextEvent('D-001');
   assert.equal(store.clock().date, '2026-10-11', "Arjun's results, not Meera's reminder");
 });
+
+test('a booked check-up shows as coming up, and can be changed or cancelled later', () => {
+  advance(DAY);
+  drop.answer('D-001', card('D-001', 'results', 'results').id, 'book');
+  assert.equal(drop.view('D-001').receipts.length, 0, 'no "booking…" receipt: the slots card is the response');
+  const slots = card('D-001', 'slots', 'care');
+  drop.answer('D-001', slots.id, slots.chips[0].value);
+  advance(1); // Undo is gone once time moves on
+  const [booking] = drop.view('D-001').bookings;
+  assert.ok(booking, 'listed as coming up');
+  drop.cancelBooking('D-001', booking.id, { reschedule: true });
+  assert.equal(drop.view('D-001').bookings.length, 0);
+  assert.ok(card('D-001', 'slots', 'care'), 'Change offers new slots');
+  assert.ok(drop._state('D-001').events.every((e) => !e.key.startsWith('postvisit:') || e.status === 'cancelled'), 'no "how did it go?" for a cancelled visit');
+});

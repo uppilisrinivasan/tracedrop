@@ -14,6 +14,8 @@ import './drop.css';
 /** Ask Drop a question in the side panel (the Copilot listens for this). */
 const LANGUAGE_NAMES: Record<string, string> = { en: 'English', hi: 'हिंदी', kn: 'ಕನ್ನಡ', ta: 'தமிழ்', te: 'తెలుగు', ml: 'മലയാളം' };
 
+const fmtDay = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
+
 export function askDrop(question: string) {
   window.dispatchEvent(new CustomEvent('drop:ask', { detail: question }));
 }
@@ -111,6 +113,20 @@ export default function DropFeed({ donorId, version, refresh, calmLine }: { dono
         />
       ))}
       {view.open.length > 3 && !showAll && <button className="drop-more" onClick={() => setShowAll(true)}>{view.open.length - 3} more</button>}
+
+      {view.bookings.length > 0 && (
+        <div className="drop-coming" aria-label="Coming up">
+          <div className="drop-coming-title">Coming up</div>
+          {view.bookings.map((b) => (
+            <div key={b.id} className="drop-booking">
+              <Icon name="calendar" size={16} />
+              <span><b>{b.kind === 'donate' ? 'Donation' : 'Free check-up'}</b> · {fmtDay(b.date)} · {b.time}<br /><span className="tiny muted">{b.place}</span></span>
+              <button disabled={busy} onClick={() => run(api.dropCancelBooking(donorId, b.id, true), true)}>Change</button>
+              <button disabled={busy} onClick={() => run(api.dropCancelBooking(donorId, b.id, false), true)}>Cancel</button>
+            </div>
+          ))}
+        </div>
+      )}
 
       {view.earlier.length > 0 && (
         <>

@@ -44,6 +44,7 @@ router.post('/cards/:cardId/answer', act((donorId, req) => drop.answer(donorId, 
 router.post('/cards/:cardId/snooze', act((donorId, req) => drop.snooze(donorId, req.params.cardId, req.body.option)));
 router.post('/cards/:cardId/hide', act((donorId, req) => drop.hide(donorId, req.params.cardId)));
 router.post('/undo', act((donorId) => drop.undo(donorId)));
+router.post('/bookings/:bookingId/cancel', act((donorId, req) => drop.cancelBooking(donorId, req.params.bookingId, { reschedule: Boolean(req.body.reschedule) })));
 router.post('/memory/undo', act((donorId) => drop.undoMemory(donorId)));
 router.delete('/memory/:memoryId', act((donorId, req) => drop.forget(donorId, req.params.memoryId)));
 router.delete('/memory', act((donorId) => drop.forget(donorId, null)));

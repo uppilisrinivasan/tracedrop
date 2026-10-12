@@ -479,7 +479,7 @@ function words(st, c) {
     case 'report:week':
     case 'report:month':
       return {
-        text: `Your ${d.period}, in ${d.slides.length} taps.`,
+        text: `Your ${d.period}, in ${d.slides.length} tap${d.slides.length === 1 ? '' : 's'}.`,
         main: { label: `Watch your ${d.period}`, value: 'seen', story: true },
         story: d.slides,
         chips: (d.waiting || []).map((w) => ({ label: `Still waiting: ${w.name}`, value: { pull: w.key } })),
@@ -518,6 +518,8 @@ function answer(donorId, cardId, value) {
   const snapshot = clone({ ...st, undo: null });
   const effects = [];
   const done = (receipt) => { c.status = 'answered'; c.fresh = true; c.receipt = receipt; c.answeredOn = store.today(); };
+  // When the answer opens a follow-up Card, that Card is the response: no receipt on Home, just a line in Earlier
+  const handOff = (receipt) => { done(receipt); c.fresh = false; };
   const today = store.today();
 
   switch (`${c.type}:${c.variant}`) {
@@ -533,7 +535,7 @@ function answer(donorId, cardId, value) {
       done(`${c.variant === 'week' ? 'Weekly' : 'Monthly'} report seen`);
       break;
     case 'results:results':
-      if (value === 'book') { done('Booking a free check-up…'); pushCard(st, 'slots', 'care', { purpose: 'care' }); } else done('Results seen · in Health');
+      if (value === 'book') { handOff('Results seen · chose a free check-up'); pushCard(st, 'slots', 'care', { purpose: 'care' }); } else done('Results seen · in Health');
       break;
     case 'results:plan': {
       st.plan = draftPlan(st);
@@ -545,7 +547,7 @@ function answer(donorId, cardId, value) {
     case 'results:goal':
       // Goal reached: Drop keeps an eye on it monthly instead of every two weeks
       if (st.plan?.nextCheckin) st.plan.nextCheckin = { date: addDays(today, 28), marker: st.plan.nextCheckin.marker };
-      if (value === 'book') { done('Goal reached · in your Plan'); pushCard(st, 'slots', 'donate', { purpose: 'donate' }); } else done('Goal reached · in your Plan');
+      if (value === 'book') { handOff('Goal reached · chose a donation slot'); pushCard(st, 'slots', 'donate', { purpose: 'donate' }); } else done('Goal reached · in your Plan');
       break;
     case 'slots:care':
       if (value === 'evenings') {
@@ -585,7 +587,7 @@ function answer(donorId, cardId, value) {
         done('Saved to your Plan: started a BP tablet');
       } else if (value === 'missed') {
         pushCard(st, 'slots', 'care', { purpose: 'care' });
-        done('No problem. Pick a new time.');
+        handOff("Didn't make the check-up · picking a new time");
       } else {
         if (st.plan) st.plan.nextCheckin = { date: addDays(today, CHECKIN_DAYS), marker: 'bp' };
         done('Saved to your Plan: walking, no tablet');
@@ -660,6 +662,29 @@ function undo(donorId) {
   restored.undo = null;
   states.set(donorId, restored);
   log(restored, 'Undone.');
+  return view(donorId);
+}
+
+/* ------------------------------------------------------------------ bookings */
+
+/** Cancel a booked check-up or donation, optionally offering new slots straight away (Change). */
+function cancelBooking(donorId, bookingId, { reschedule = false } = {}) {
+  const st = get(donorId);
+  const b = st.bookings.find((x) => x.id === bookingId);
+  if (!b) throw new Error('Booking not found');
+  st.bookings = st.bookings.filter((x) => x.id !== bookingId);
+  // The "How did it go?" check-in for a cancelled visit never comes
+  st.events.filter((e) => e.key === `postvisit:${bookingId}` && e.status === 'pending').forEach((e) => { e.status = 'cancelled'; });
+  if (b.kind === 'donate') {
+    const list = store.session.appointments.get(donorId) || [];
+    store.session.appointments.set(donorId, list.filter((a) => a.id !== bookingId));
+  }
+  st.undo = null;
+  if (reschedule) {
+    const existing = st.cards.find((c) => c.status === 'open' && c.type === 'slots' && c.variant === (b.kind === 'donate' ? 'donate' : 'care'));
+    if (!existing) pushCard(st, 'slots', b.kind === 'donate' ? 'donate' : 'care', { purpose: b.kind === 'donate' ? 'donate' : 'care' });
+  }
+  log(st, `${reschedule ? 'Changing' : 'Cancelled'} ${b.kind === 'donate' ? 'donation' : 'check-up'} on ${fmt(b.date)} ${b.time}.`);
   return view(donorId);
 }
 
@@ -783,7 +808,7 @@ function view(donorId) {
     plan: st.plan ? { ...st.plan, reminders: st.reminders } : (st.reminders.length ? { goals: [], activity: null, notes: [], reminders: st.reminders } : null),
     readings: st.readings,
     hiddenResults: st.hiddenResults,
-    bookings: st.bookings,
+    bookings: st.bookings.filter((x) => x.date >= today).sort((a, z) => `${a.date}${a.time}`.localeCompare(`${z.date}${z.time}`)),
     donate: { from: ready, daysTo: ready ? Math.max(0, dayNum(ready) - dayNum(today)) : null },
     budget: { kind: b.kind, today: b.today, perDay: b.perDay, week: b.week, perWeek: b.perWeek, weekOf: b.weekOf, report: b.report, quiet: store.clock().part === NIGHT },
     waiting: st.events.filter((e) => e.status === 'pending' && e.at <= today).map((e) => ({ name: eventName(e), foldOnly: Boolean(e.foldOnly) })),
@@ -916,7 +941,7 @@ function nextEvent(donorId) {
 }
 
 module.exports = {
-  get, view, answer, undo, snooze, hide, reopen, forget, undoMemory, deleteReading, hideResult, nextEvent,
+  get, view, answer, undo, snooze, cancelBooking, hide, reopen, forget, undoMemory, deleteReading, hideResult, nextEvent,
   openForWriting, setAi, words, label, setLanguage, offerCard, logReading, chatContext, chartPoints, readinessOf: (donorId) => readiness(get(donorId)),
   rememberText: (donorId, text, replacesPattern) => { const st = get(donorId); remember(st, text, replacesPattern ? new RegExp(replacesPattern, 'i') : null); return view(donorId); },
   BUDGETS, PRIORITY, BP_GOAL,

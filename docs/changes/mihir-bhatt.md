@@ -4,6 +4,16 @@ One entry per commit on the Drop-first redesign (branch `feature/drop-home`), ne
 To revert one: find it with `git log --oneline --grep "<commit title>"`, then `git revert <hash>`.
 The design behind these changes is in `CONTEXT.md` (vocabulary) and the build plan.
 
+## 2026-10-13 · Change or cancel bookings any time; Home uses the full width on ultra-wide screens
+
+- **What and why:**
+  - Tapping "Book a free check-up" used to leave a "Booking a free check-up…" receipt on Home that never went away. Answers that open a follow-up Card (book a check-up, book a donation after a goal, rebook a missed visit) no longer leave a receipt; the follow-up Card is the response, and a line goes into "Earlier this cycle".
+  - Undo only lasts until time moves on, so there was no way to change a booking later. Booked check-ups and donations now show under "Coming up" on Home with Change (removes it and offers new slots) and Cancel. A cancelled visit gets no "How did it go?" check-in; a cancelled donation is removed from appointments.
+  - On ultra-wide screens Home left a large empty area. The cards and stats now share the width in proportion; on very wide screens the cards stop at a readable width and the stat tiles spread into columns.
+  - "Your week, in 1 taps" now reads "1 tap".
+- **Files:** `backend/src/domain/drop.js`, `backend/src/routes/drop.js`, `backend/test/drop.test.js`, `frontend/src/api.ts`, `frontend/src/components/drop/DropFeed.tsx`, `frontend/src/components/drop/drop.css`, `frontend/src/pages/Home.tsx`, `docs/drop/index.html` (test script and rules updated).
+- **Revert:** safe to revert on its own.
+
 ## 2026-10-13 · Fix empty Drop answers, a wrong donation date, and Home on wide and medium windows
 
 - **What and why:**
