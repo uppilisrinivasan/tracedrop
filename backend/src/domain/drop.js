@@ -44,6 +44,7 @@ const fmt = (iso) => new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-GB', { 
 const clone = (x) => JSON.parse(JSON.stringify(x));
 const id = (prefix) => `${prefix}${seq++}`;
 const partOfTime = (hhmm) => { const h = Number(String(hhmm).slice(0, 2)); return h < 12 ? 0 : h < 17 ? 1 : h < 21 ? 2 : 3; };
+const lcFirst = (t) => t.charAt(0).toLowerCase() + t.slice(1);
 const time12 = (hhmm) => { const [h, m] = String(hhmm).split(':').map(Number); const hr = ((h + 11) % 12) + 1; return `${hr}${m ? `:${String(m).padStart(2, '0')}` : ''} ${h < 12 ? 'am' : 'pm'}`; };
 
 /* ------------------------------------------------------------------ state */
@@ -416,10 +417,10 @@ function words(st, c) {
       const series = health.vitalsSeries(donorId).filter((v) => v.date <= visit.date).slice(-3).map((v) => v.systolic);
       const rising = series.length === 3 && series[0] < series[1] && series[1] < series[2];
       const acts = health.findings(donorId).filter((f) => f.severity !== 'watch');
-      const others = health.findings(donorId).filter((f) => f.severity === 'watch' && f.concept !== 'hypertension').map((f) => f.title.toLowerCase());
+      const others = health.findings(donorId).filter((f) => f.severity === 'watch' && f.concept !== 'hypertension').map((f) => lcFirst(f.title));
       if (!acts.length) return { text: `Your results from ${fmt(visit.date)} are in. All in the healthy range${others.length ? `, apart from ${others.join(' and ')} to watch` : ''}. Nothing to do.`, main: { label: 'Got it', value: 'ok' } };
       return {
-        text: `Your results from ${fmt(visit.date)} are in. BP ${visit.vitals.systolic}/${visit.vitals.diastolic}${rising ? `, up for the third donation in a row (${series.join(', ')})` : ''}. ${acts.length > 1 ? `Also: ${acts.filter((f) => f.concept !== 'hypertension').map((f) => f.title.toLowerCase()).join(', ')}. ` : ''}Nothing scary, but worth a free check-up. Want me to book one?`,
+        text: `Your results from ${fmt(visit.date)} are in. BP ${visit.vitals.systolic}/${visit.vitals.diastolic}${rising ? `, up for the third donation in a row (${series.join(', ')})` : ''}. ${acts.length > 1 ? `Also: ${acts.filter((f) => f.concept !== 'hypertension').map((f) => lcFirst(f.title)).join(', ')}. ` : ''}Nothing scary, but worth a free check-up. Want me to book one?`,
         main: { label: 'Book a free check-up', value: 'book' },
         chips: [{ label: 'Explain my results', value: 'explain', ask: 'Can you explain my latest results?' }],
       };

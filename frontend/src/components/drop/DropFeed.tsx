@@ -1,0 +1,127 @@
+/**
+ * Drop's conversation on Home: open Cards first (urgent on top, at most 3 before
+ * "N more"), receipts with Undo, and "Earlier this cycle". Rules live on the server.
+ */
+import { useEffect, useState } from 'react';
+import { api, type DropCard, type DropView } from '../../api';
+import { ErrorNote, Icon } from '../../ui';
+import DropCardView from './DropCardView';
+import StoryViewer from './StoryViewer';
+import ReportUpload from './ReportUpload';
+import MemorySheet from './MemorySheet';
+import './drop.css';
+
+/** Ask Drop a question in the side panel (the Copilot listens for this). */
+export function askDrop(question: string) {
+  window.dispatchEvent(new CustomEvent('drop:ask', { detail: question }));
+}
+
+export default function DropFeed({ donorId, version, refresh, calmLine }: { donorId: string; version: number; refresh: () => void; calmLine: string }) {
+  const [view, setView] = useState<DropView | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [showAll, setShowAll] = useState(false);
+  const [earlierOpen, setEarlierOpen] = useState(false);
+  const [story, setStory] = useState<DropCard | null>(null);
+  const [upload, setUpload] = useState<DropCard | null>(null);
+  const [memoryOpen, setMemoryOpen] = useState(false);
+
+  // Opening the app (or switching Persona) brings hidden Cards back
+  useEffect(() => {
+    let alive = true;
+    setView(null);
+    api.dropReopen(donorId).then((v) => alive && setView(v)).catch((e: Error) => alive && setError(e.message));
+    return () => { alive = false; };
+  }, [donorId]);
+  useEffect(() => {
+    if (!version) return;
+    let alive = true;
+    api.drop(donorId).then((v) => alive && setView(v)).catch((e: Error) => alive && setError(e.message));
+    return () => { alive = false; };
+  }, [donorId, version]);
+
+  async function run(action: Promise<DropView>, refreshAfter = false) {
+    setBusy(true);
+    setError(null);
+    try {
+      setView(await action);
+      if (refreshAfter) refresh();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!view) return <div className="drop-feed">{error ? <ErrorNote error={error} /> : <div className="skeleton" style={{ height: 180 }} />}</div>;
+
+  const shown = showAll ? view.open : view.open.slice(0, 3);
+  const answer = (card: DropCard, value: unknown) => run(api.dropAnswer(donorId, card.id, value), true);
+
+  return (
+    <div className="drop-feed">
+      <div className="drop-head">
+        <button className="drop-who" onClick={() => setMemoryOpen(true)} aria-label="Drop: see what Drop remembers">
+          <span className="drop-avatar"><Icon name="drop" size={18} stroke={2.2} /></span>
+          <span><b>Drop</b><br /><span className="tiny muted">Your TraceDrop assistant</span></span>
+        </button>
+        <button className="drop-link" onClick={() => setMemoryOpen(true)}>What do you remember about me?</button>
+      </div>
+
+      {view.memReceipt && (
+        <div className="drop-memline"><Icon name="info" size={15} /><span>{view.memReceipt}</span><button onClick={() => run(api.dropMemoryUndo(donorId))}>Undo</button></div>
+      )}
+      {view.receipts.map((r) => (
+        <div className="drop-receipt" key={r.id}>
+          <Icon name="check" size={16} /><span>{r.receipt}</span>
+          {r.undo && <button onClick={() => run(api.dropUndo(donorId), true)}>Undo</button>}
+        </div>
+      ))}
+
+      {view.open.length === 0 && <div className="drop-calm">Nothing needs you right now.<br />{calmLine}</div>}
+      {shown.map((card) => (
+        <DropCardView
+          key={card.id}
+          card={card}
+          busy={busy}
+          onAnswer={(value) => answer(card, value)}
+          onSnooze={(option) => run(api.dropSnooze(donorId, card.id, option))}
+          onHide={() => run(api.dropHide(donorId, card.id))}
+          onStory={() => setStory(card)}
+          onUpload={() => setUpload(card)}
+          onAsk={askDrop}
+        />
+      ))}
+      {view.open.length > 3 && !showAll && <button className="drop-more" onClick={() => setShowAll(true)}>{view.open.length - 3} more</button>}
+
+      {view.earlier.length > 0 && (
+        <>
+          <button className="drop-earlier-toggle" aria-expanded={earlierOpen} onClick={() => setEarlierOpen(!earlierOpen)}>
+            <Icon name="chevron" size={14} /> Earlier this cycle · {view.earlier.length}
+          </button>
+          {earlierOpen && (
+            <div className="drop-earlier">
+              {view.earlier.map((e) => <div key={e.id}><span>{e.receipt}</span><span className="on">{e.on}</span></div>)}
+            </div>
+          )}
+        </>
+      )}
+      {error && <ErrorNote error={error} />}
+
+      {story && story.story && (
+        <StoryViewer title={story.label} slides={story.story} onClose={() => { const c = story; setStory(null); answer(c, c.main?.value ?? 'seen'); }} />
+      )}
+      {upload && (
+        <ReportUpload donorId={donorId} onClose={() => setUpload(null)} onSave={(value) => { const c = upload; setUpload(null); answer(c, value); }} />
+      )}
+      {memoryOpen && (
+        <MemorySheet
+          memory={view.memory}
+          onForget={(id) => run(api.dropForget(donorId, id))}
+          onForgetAll={() => run(api.dropForget(donorId))}
+          onClose={() => setMemoryOpen(false)}
+        />
+      )}
+    </div>
+  );
+}
