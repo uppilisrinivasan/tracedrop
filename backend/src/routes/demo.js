@@ -6,6 +6,7 @@
 
 const express = require('express');
 const store = require('../data/store');
+const drop = require('../domain/drop');
 
 const router = express.Router();
 const MAX_STEPS = 4 * 60; // two months, in parts of a day
@@ -26,6 +27,9 @@ router.post('/advance', (req, res) => {
   for (let i = 0; i < parts; i += 1) store.stepClock();
   ok(res, store.clock());
 });
+
+/** Jump to the next moment any demo Donor gets a new Card. */
+router.post('/next', (req, res) => ok(res, drop.nextEvent()));
 
 router.post('/reset', (req, res) => {
   store.resetDemo();

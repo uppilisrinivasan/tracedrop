@@ -142,6 +142,32 @@ export interface AuthUser {
   local?: boolean;
 }
 
+export interface DemoClock { date: string; part: number; partName: 'morning' | 'afternoon' | 'evening' | 'night'; start: string }
+
+export type DropCardType = 'results' | 'urgent' | 'checkin' | 'slots' | 'reminder' | 'impact' | 'report' | 'chart';
+export interface DropAction { label: string; value: unknown; story?: boolean; ask?: string }
+export interface DropCard {
+  id: string; type: DropCardType; variant: string; label: string; urgent: boolean; counted: boolean; createdOn: string;
+  text: string; ruleText: string; main: DropAction | null; out: DropAction | null; chips: DropAction[];
+  wheel: { kind: 'bp'; s: number; d: number } | null; upload: boolean; story: string[] | null; snoozes: number;
+}
+export interface DropReading { id: string; marker: 'bp' | 'hb'; date: string; s?: number; d?: number; value?: number; observationId?: string }
+export interface DropPlan {
+  goals: { marker: string; label: string }[]; activity: { label: string; minutesPerWeek: number } | null; notes?: string[];
+  nextCheckin?: { date: string; marker: string }; reminders: { id: string; label: string; time: string }[];
+}
+export interface DropView {
+  clock: DemoClock; language: string;
+  open: DropCard[]; receipts: { id: string; receipt: string; undo: boolean }[]; earlier: { id: string; label: string; receipt: string; on: string }[];
+  memory: { id: string; text: string }[]; memReceipt: string | null; plan: DropPlan | null; readings: DropReading[]; hiddenResults: string[];
+  bookings: { id: string; kind: string; date: string; time: string; place: string }[];
+  donate: { from: string | null; daysTo: number | null };
+  budget: { kind: 'goal' | 'healthy'; today: number; perDay: number; week: number; perWeek: number; weekOf: string; report: 'week' | 'month'; quiet: boolean };
+  waiting: { name: string; foldOnly: boolean }[]; later: { label: string; status: string; snoozes: number; reason: string | null }[];
+  upcoming: { name: string; on: string }[]; log: { at: string; text: string }[];
+}
+export type SnoozeOption = 'hour' | 'tonight' | 'tomorrow' | 'week';
+
 export class ApiError extends Error {
   status: number;
   constructor(status: number, message: string) {
@@ -204,6 +230,20 @@ export const api = {
   network: () => request<Network>('/network'),
   aiStatus: () => request<AIStatus>('/ai/status'),
   traces: () => request<Trace[]>('/ai/traces'),
+  drop: (id: string) => request<DropView>(`/donors/${id}/drop`),
+  dropReopen: (id: string) => post<DropView>(`/donors/${id}/drop/reopen`),
+  dropAnswer: (id: string, cardId: string, value: unknown) => post<DropView>(`/donors/${id}/drop/cards/${cardId}/answer`, { value }),
+  dropSnooze: (id: string, cardId: string, option: SnoozeOption) => post<DropView>(`/donors/${id}/drop/cards/${cardId}/snooze`, { option }),
+  dropHide: (id: string, cardId: string) => post<DropView>(`/donors/${id}/drop/cards/${cardId}/hide`),
+  dropUndo: (id: string) => post<DropView>(`/donors/${id}/drop/undo`),
+  dropMemoryUndo: (id: string) => post<DropView>(`/donors/${id}/drop/memory/undo`),
+  dropForget: (id: string, memoryId?: string) => request<DropView>(`/donors/${id}/drop/memory${memoryId ? `/${memoryId}` : ''}`, { method: 'DELETE' }),
+  dropDeleteReading: (id: string, readingId: string) => request<DropView>(`/donors/${id}/drop/readings/${readingId}`, { method: 'DELETE' }),
+  dropHideResult: (id: string, observationId: string) => post<DropView>(`/donors/${id}/drop/results/${observationId}/hide`),
+  demoClock: () => request<DemoClock>('/demo'),
+  demoAdvance: (parts: number) => post<DemoClock>('/demo/advance', { parts }),
+  demoNext: () => post<DemoClock>('/demo/next'),
+  demoReset: () => post<DemoClock>('/demo/reset'),
 };
 
 export const rupees = (n: number) => (n >= 100000 ? `₹${(n / 100000).toFixed(n % 100000 ? 1 : 0)} lakh` : `₹${n.toLocaleString('en-IN')}`);

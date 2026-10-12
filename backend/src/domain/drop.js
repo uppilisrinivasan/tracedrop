@@ -808,6 +808,7 @@ store.onReset(() => { states.clear(); seed = null; seq = 1; });
 
 /** Demo "Next event": move the clock until some Donor gets a new Card (max two months). */
 function nextEvent() {
+  Object.keys(store.readDemo('drop-seed.json') || {}).filter((k) => !k.startsWith('_')).forEach((donorId) => get(donorId));
   const before = [...states.values()].reduce((n, st) => n + st.created, 0);
   for (let i = 0; i < PARTS * 60; i += 1) {
     store.stepClock();
