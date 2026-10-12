@@ -4,6 +4,19 @@ One entry per commit on the Drop-first redesign (branch `feature/drop-home`), ne
 To revert one: find it with `git log --oneline --grep "<commit title>"`, then `git revert <hash>`.
 The design behind these changes is in `CONTEXT.md` (vocabulary) and the build plan.
 
+## 2026-10-13 · Fixes from the full click-through
+
+- **What and why:** problems found by clicking through every Drop flow at desktop width.
+  - AI wording now applies only while it matches exactly what the rules say. Before, after "Weekday evenings instead" the slots Card kept the AI's Saturday labels while its buttons booked evening slots.
+  - "Next event" moves to the next Card for the Donor being viewed and skips routine Reminders (Meera's daily reminder used to stop it every day).
+  - Pressing Enter in the BP number boxes saves the reading.
+  - After a goal is reached, the next check-in moves to a month later instead of staying in the past.
+  - The demo bar keeps its date in step with the server (it showed a stale date after a backend restart).
+  - Locally, the "When can you donate?" question is remembered in the browser once answered or skipped; the backend only keeps it in memory, so it came back after every restart.
+  - Drop's chat replies are held to two short sentences.
+- **Files:** `backend/src/domain/drop.js`, `backend/src/ai/dropWriter.js`, `backend/src/ai/copilot.js`, `backend/src/routes/demo.js`, `backend/test/drop.test.js`, `frontend/src/components/drop/DropCardView.tsx`, `frontend/src/components/drop/DropFeed.tsx`, `frontend/src/components/DemoBar.tsx`, `frontend/src/App.tsx` (passes the donor to the demo bar), `frontend/src/AuthGate.tsx` (local-only memory of the preferences answer), `frontend/src/api.ts`.
+- **Revert:** safe to revert on its own; the bugs above come back.
+
 ## 2026-10-13 · Give Drop its voice and put it on every screen
 
 - **What and why:** finishes groups 1 and 2 of the local build.

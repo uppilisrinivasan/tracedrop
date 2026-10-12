@@ -10,13 +10,21 @@ function fmt(iso: string) {
   return new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
 }
 
-export default function DemoBar({ onChange }: { onChange: () => void }) {
+export default function DemoBar({ donorId, onChange }: { donorId: string; onChange: () => void }) {
   const [clock, setClock] = useState<DemoClock | null>(null);
   const [busy, setBusy] = useState(false);
   const [info, setInfo] = useState(false);
   const [hidden, setHidden] = useState(false);
 
-  useEffect(() => { api.demoClock().then(setClock).catch(() => setClock(null)); }, []);
+  // Stay in step with the server: it can restart (which resets the demo) or move on elsewhere
+  useEffect(() => {
+    const load = () => api.demoClock().then(setClock).catch(() => setClock(null));
+    load();
+    const onClock = (e: Event) => setClock((e as CustomEvent<DemoClock>).detail);
+    window.addEventListener('demo:clock', onClock);
+    window.addEventListener('focus', load);
+    return () => { window.removeEventListener('demo:clock', onClock); window.removeEventListener('focus', load); };
+  }, []);
   if (!clock) return null; // demo mode is off
 
   async function run(action: Promise<DemoClock>) {
@@ -41,7 +49,7 @@ export default function DemoBar({ onChange }: { onChange: () => void }) {
       <button className="b" disabled={busy} onClick={() => run(api.demoAdvance(1))}>+ few hours</button>
       <button className="b" disabled={busy} onClick={() => run(api.demoAdvance(4))}>+1 day</button>
       <button className="b" disabled={busy} onClick={() => run(api.demoAdvance(28))}>+1 week</button>
-      <button className="b" disabled={busy} onClick={() => run(api.demoNext())}>Next event</button>
+      <button className="b" disabled={busy} onClick={() => run(api.demoNext(donorId))}>Next event</button>
       <button className="b" disabled={busy} aria-label="Reset the demo" title="Reset the demo" onClick={() => run(api.demoReset())}><Icon name="refresh" size={16} /></button>
       {info && (
         <div className="demobar-info">

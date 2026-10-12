@@ -6,6 +6,14 @@ import BookingChat from './BookingChat';
 import Login from './Login';
 import { Icon } from './ui';
 
+const LOCAL_SETUP_KEY = 'tracedrop.localSetupDone';
+function localSetupDone() {
+  try { return localStorage.getItem(LOCAL_SETUP_KEY) === '1'; } catch { return false; }
+}
+function rememberLocalSetup() {
+  try { localStorage.setItem(LOCAL_SETUP_KEY, '1'); } catch { /* storage unavailable */ }
+}
+
 type Phase = 'loading' | 'in' | 'out';
 
 export default function AuthGate() {
@@ -51,7 +59,8 @@ export default function AuthGate() {
     let live = true;
     api.preferences().then((prefs) => {
       if (!live) return;
-      setSetup(prefs?.onboardingComplete || prefs?.onboardingSkipped ? 'hide' : 'show');
+      // Locally, preferences live in the backend's memory and vanish on every restart; the browser remembers the answer instead
+      setSetup(prefs?.onboardingComplete || prefs?.onboardingSkipped || (user.local && localSetupDone()) ? 'hide' : 'show');
     }).catch(() => { if (live) setSetup('show'); });
     return () => { live = false; };
   }, [phase, user]);
@@ -77,7 +86,7 @@ export default function AuthGate() {
           <h1>When can you donate?</h1>
           <p className="muted">These answers are saved to your account and used whenever you book. Skip if you want to decide later.</p>
           {setup === 'show'
-            ? <BookingChat mode="setup" clientId={clientId} onFinished={() => setSetup('hide')} />
+            ? <BookingChat mode="setup" clientId={clientId} onFinished={() => { if (user.local) rememberLocalSetup(); setSetup('hide'); }} />
             : <p className="tiny muted">Loading your donation preferences…</p>}
         </div>
       </div>

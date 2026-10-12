@@ -247,7 +247,7 @@ export const api = {
   dropLine: (id: string, screen: string) => request<{ screen: string; text: string; questions: string[]; date: string }>(`/donors/${id}/drop/line/${screen}`),
   demoClock: () => request<DemoClock>('/demo'),
   demoAdvance: (parts: number) => post<DemoClock>('/demo/advance', { parts }),
-  demoNext: () => post<DemoClock>('/demo/next'),
+  demoNext: (donorId: string) => post<DemoClock>('/demo/next', { donorId }),
   demoReset: () => post<DemoClock>('/demo/reset'),
 };
 

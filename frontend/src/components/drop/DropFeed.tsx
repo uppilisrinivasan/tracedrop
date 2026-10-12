@@ -48,6 +48,9 @@ export default function DropFeed({ donorId, version, refresh, calmLine }: { dono
     return () => { alive = false; };
   }, [donorId, version]);
 
+  // Tell the demo bar what date the server is on
+  useEffect(() => { if (view) window.dispatchEvent(new CustomEvent('demo:clock', { detail: view.clock })); }, [view]);
+
   async function run(action: Promise<DropView>, refreshAfter = false) {
     setBusy(true);
     setError(null);

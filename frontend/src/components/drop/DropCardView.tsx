@@ -77,6 +77,7 @@ export default function DropCardView({ card, busy, onAnswer, onSnooze, onHide, o
           <label>Bottom number<input type="number" inputMode="numeric" min={40} max={140} value={bp.d || ''} onChange={(e) => setBp((v) => ({ ...v, d: Number(e.target.value) }))} /></label>
           <span className="unit">mmHg</span>
           {!bpValid && <span className="numbers-error">Check the numbers: top 80–220, bottom 40–140.</span>}
+          <button type="submit" hidden aria-hidden="true" tabIndex={-1} />
         </form>
       )}
       {card.wheel && touch && (

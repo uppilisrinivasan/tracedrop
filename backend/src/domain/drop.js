@@ -543,6 +543,8 @@ function answer(donorId, cardId, value) {
       break;
     }
     case 'results:goal':
+      // Goal reached: Drop keeps an eye on it monthly instead of every two weeks
+      if (st.plan?.nextCheckin) st.plan.nextCheckin = { date: addDays(today, 28), marker: st.plan.nextCheckin.marker };
       if (value === 'book') { done('Goal reached · in your Plan'); pushCard(st, 'slots', 'donate', { purpose: 'donate' }); } else done('Goal reached · in your Plan');
       break;
     case 'slots:care':
@@ -750,11 +752,13 @@ function hideResult(donorId, observationId) {
 
 function cardView(st, c) {
   const w = words(st, c);
-  const l = c.aiLabels || {};
+  // AI wording is used only while it was written for exactly what the rules say now
+  const ai = Boolean(c.aiText) && c.aiFor === signature(w);
+  const l = (ai && c.aiLabels) || {};
   const relabel = (a, name) => (a && name ? { ...a, label: name } : a || null);
   return {
     id: c.id, type: c.type, variant: c.variant, label: w.label || label(c), urgent: c.urgent, counted: c.counted, createdOn: c.createdOn,
-    text: c.aiText || w.text, ruleText: w.text, byAi: Boolean(c.aiText),
+    text: ai ? c.aiText : w.text, ruleText: w.text, byAi: ai,
     main: relabel(w.main, l.main), out: relabel(w.out, l.out),
     chips: (w.chips || []).map((chip, i) => relabel(chip, l.chips?.[i])), wheel: w.wheel || null,
     upload: Boolean(w.upload), story: w.story || null, snoozes: c.snoozes,
@@ -790,16 +794,31 @@ function view(donorId) {
 }
 
 /** Facts for the AI writer and the copilot: the open Cards with their data and rule wording. */
-function openForWriting(donorId) {
-  const st = get(donorId);
-  return st.cards.filter((c) => c.status === 'open' && !c.aiText && !c.aiTried).map((c) => ({ card: c, words: words(st, c) }));
+/** What the rules currently say on a Card; AI wording only applies while it matches. */
+function signature(w) {
+  return JSON.stringify([w.text, w.main?.label, w.out?.label, (w.chips || []).map((c) => c.label)]);
 }
 
-function setAi(donorId, cardId, { text, labels }) {
+/** Open Cards whose current wording the AI hasn't written (or tried) yet; marks them as tried. */
+function openForWriting(donorId) {
+  const st = get(donorId);
+  const out = [];
+  for (const c of st.cards.filter((x) => x.status === 'open')) {
+    const w = words(st, c);
+    const sig = signature(w);
+    if (c.aiFor === sig || c.aiTriedFor === sig) continue;
+    c.aiTriedFor = sig;
+    out.push({ card: c, words: w, sig });
+  }
+  return out;
+}
+
+function setAi(donorId, cardId, { text, labels, sig }) {
   const c = get(donorId).cards.find((x) => x.id === cardId);
   if (!c || !text) return;
   c.aiText = text;
   c.aiLabels = labels || null;
+  c.aiFor = sig;
 }
 
 /* ------------------------------------------------------------------ chat helpers */
@@ -811,7 +830,7 @@ function setLanguage(donorId, language) {
   if (!LANGUAGES.includes(language)) throw new Error('Unsupported language');
   const st = get(donorId);
   st.language = language;
-  st.cards.filter((c) => c.status === 'open').forEach((c) => { c.aiText = null; c.aiLabels = null; c.aiTried = false; });
+  st.cards.filter((c) => c.status === 'open').forEach((c) => { c.aiText = null; c.aiLabels = null; c.aiFor = null; c.aiTriedFor = null; });
   return view(donorId);
 }
 
@@ -884,14 +903,14 @@ store.onStep(() => {
 });
 store.onReset(() => { states.clear(); seed = null; seq = 1; });
 
-/** Demo "Next event": move the clock until some Donor gets a new Card (max two months). */
-function nextEvent() {
-  Object.keys(store.readDemo('drop-seed.json') || {}).filter((k) => !k.startsWith('_')).forEach((donorId) => get(donorId));
-  const before = [...states.values()].reduce((n, st) => n + st.created, 0);
+/** Demo "Next event": move the clock until this Donor gets a new Card, not counting their routine Reminders (max two months). */
+function nextEvent(donorId) {
+  const st = get(donorId);
+  const count = () => st.cards.filter((c) => !(c.type === 'reminder' && c.variant === 'due')).length;
+  const before = count();
   for (let i = 0; i < PARTS * 60; i += 1) {
     store.stepClock();
-    const after = [...states.values()].reduce((n, st) => n + st.created, 0);
-    if (after > before) break;
+    if (count() > before) break;
   }
   return store.clock();
 }

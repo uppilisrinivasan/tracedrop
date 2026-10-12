@@ -58,7 +58,6 @@ async function write(donorId) {
   if (!pending.length || !llm.available(2000)) return 0;
   const donor = store.getDonor(donorId);
   const language = drop.chatContext(donorId).language;
-  pending.forEach(({ card }) => { card.aiTried = true; });
   const input = pending.map(({ card, words }) => ({
     id: card.id, label: drop.label(card), text: words.text,
     main: words.main?.label, out: words.out?.label, chips: (words.chips || []).map((c) => c.label),
@@ -74,6 +73,7 @@ async function write(donorId) {
     if (!given || !out.text || !keepsFacts(given.text, out.text)) continue;
     const chipsOk = Array.isArray(out.chips) && out.chips.length === given.chips.length && out.chips.every((label, i) => keepsFacts(given.chips[i], label));
     drop.setAi(donorId, out.id, {
+      sig: pending.find((p) => p.card.id === out.id).sig,
       text: out.text,
       labels: { main: given.main ? out.main || null : null, out: given.out ? out.out || null : null, chips: chipsOk ? out.chips : null },
     });

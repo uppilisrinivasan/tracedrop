@@ -155,8 +155,9 @@ test('every screen has a true line for every demo Persona', () => {
 });
 
 test('switching language clears AI wording so open Cards are rewritten', () => {
+  const [{ sig }] = drop.openForWriting('D-001');
   const c = card('D-001', 'impact');
-  drop.setAi('D-001', c.id, { text: 'AI text with 3 Oct', labels: null });
+  drop.setAi('D-001', c.id, { text: 'AI text with 3 Oct', labels: null, sig });
   assert.equal(card('D-001', 'impact').text, 'AI text with 3 Oct');
   drop.setLanguage('D-001', 'kn');
   assert.notEqual(card('D-001', 'impact').text, 'AI text with 3 Oct');
@@ -166,4 +167,22 @@ test('switching language clears AI wording so open Cards are rewritten', () => {
 test('AI wording must keep every number from the rule wording', () => {
   assert.ok(keepsFacts('BP 148/94, up (132, 136, 148).', 'Your BP was 148/94: 132, 136 then 148.'));
   assert.ok(!keepsFacts('BP 148/94, up (132, 136, 148).', 'Your BP went up to 148.'));
+});
+
+test("AI wording stops applying when the Card's content changes (no stale slot labels)", () => {
+  advance(DAY);
+  drop.answer('D-001', card('D-001', 'results', 'results').id, 'book');
+  const slots = drop.openForWriting('D-001').find((p) => p.card.variant === 'care');
+  drop.setAi('D-001', slots.card.id, { text: 'Saturdays: pick one', labels: { chips: ['Sat A', 'Sat B', 'Sat C', 'Evenings'] }, sig: slots.sig });
+  assert.equal(card('D-001', 'slots', 'care').chips[0].label, 'Sat A');
+  drop.answer('D-001', slots.card.id, 'evenings');
+  const after = card('D-001', 'slots', 'care');
+  assert.equal(after.byAi, false);
+  assert.match(after.chips[0].label, /18:30/);
+});
+
+test('Next event follows the Donor being viewed and skips their routine reminders', () => {
+  drop.view('D-002'); // Meera has a daily 2 pm reminder
+  drop.nextEvent('D-001');
+  assert.equal(store.clock().date, '2026-10-11', "Arjun's results, not Meera's reminder");
 });

@@ -28,8 +28,12 @@ router.post('/advance', (req, res) => {
   ok(res, store.clock());
 });
 
-/** Jump to the next moment any demo Donor gets a new Card. */
-router.post('/next', (req, res) => ok(res, drop.nextEvent()));
+/** Jump to the next moment the Donor being viewed gets a new Card. */
+router.post('/next', (req, res) => {
+  const donorId = String(req.body.donorId || '');
+  if (!store.getDonor(donorId)) return res.status(400).json({ success: false, error: 'donorId is required' });
+  return ok(res, drop.nextEvent(donorId));
+});
 
 router.post('/reset', (req, res) => {
   store.resetDemo();
