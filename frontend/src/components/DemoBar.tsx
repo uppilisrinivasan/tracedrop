@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { api, type DemoClock } from '../api';
 import { Icon } from '../ui';
+import DropKnows from './drop/DropKnows';
 import './drop/drop.css';
 
 const TIMES: Record<DemoClock['partName'], string> = { morning: '8 am', afternoon: '2 pm', evening: '7 pm', night: '9 pm' };
@@ -15,6 +16,7 @@ export default function DemoBar({ donorId, onChange }: { donorId: string; onChan
   const [busy, setBusy] = useState(false);
   const [info, setInfo] = useState(false);
   const [hidden, setHidden] = useState(false);
+  const [knows, setKnows] = useState(false);
 
   // Stay in step with the server: it can restart (which resets the demo) or move on elsewhere
   useEffect(() => {
@@ -51,6 +53,8 @@ export default function DemoBar({ donorId, onChange }: { donorId: string; onChan
       <button className="b" disabled={busy} onClick={() => run(api.demoAdvance(28))}>+1 week</button>
       <button className="b" disabled={busy} onClick={() => run(api.demoNext(donorId))}>Next event</button>
       <button className="b" disabled={busy} aria-label="Reset the demo" title="Reset the demo" onClick={() => run(api.demoReset())}><Icon name="refresh" size={16} /></button>
+      <button className="b" aria-pressed={knows} onClick={() => setKnows(!knows)}><Icon name="cpu" size={15} /> What Drop knows</button>
+      {knows && <DropKnows donorId={donorId} onClose={() => setKnows(false)} />}
       {info && (
         <div className="demobar-info">
           <b>Demo only.</b> Moves the app's date so you can see how Drop behaves over days and weeks. Real donors never see this bar. Reset puts everything back to Sat 10 Oct. Tap the date to hide the bar.
