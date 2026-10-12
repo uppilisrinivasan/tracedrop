@@ -45,6 +45,11 @@ Cards waiting for them on Home: ${c.openCards.join(', ') || 'none'}.`;
 async function chat({ donorId, history, message }) {
   const messages = [...(history || []), { role: 'user', content: message }];
   const result = await runAgent({ feature: 'copilot', system: `${SYSTEM}\n\n${context(donorId)}`, messages, donorId, toolNames: CHAT_TOOLS, maxTokens: 2500, effort: 'low' });
+  if (!result.text && !result.actions.some((x) => x.type !== 'navigate')) {
+    // The model looked things up but gave no words: answer the question from the rules instead
+    const rules = fallback(donorId, message);
+    return { reply: rules.reply, steps: result.steps, actions: rules.actions, history: result.messages, answeredByRules: true };
+  }
   return { reply: result.text || defaultReply(result.actions), steps: result.steps, actions: result.actions, history: result.messages };
 }
 

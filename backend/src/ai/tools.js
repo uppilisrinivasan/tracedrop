@@ -21,7 +21,7 @@ const obj = (properties, required = []) => ({ type: 'object', properties, requir
 const DEFINITIONS = [
   {
     name: 'get_profile',
-    description: 'Donor profile: name, age, sex, blood group, language, district, donation count, eligibility to donate and next eligible date.',
+    description: 'Donor profile: name, age, sex, blood group, language, district, donation count, eligibility, and donationStatus: the exact sentence to use when they ask when they can donate.',
     input_schema: obj({}),
   },
   {
@@ -144,6 +144,8 @@ function run(name, input, donorId) {
         district: donor.district, smoker: donor.smoker, familyHistory: donor.familyHistory,
         donations: visits.filter((v) => v.status === 'completed').length, deferrals: visits.filter((v) => v.status === 'deferred').length,
         eligibility: health.eligibility(donorId), today: store.today(),
+        // Plain answer to "when can I donate?" (use this, not the raw dates)
+        donationStatus: require('../domain/screenLines').line(donorId, 'donate').text,
       };
     }
     case 'get_health_findings':

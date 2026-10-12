@@ -4,6 +4,15 @@ One entry per commit on the Drop-first redesign (branch `feature/drop-home`), ne
 To revert one: find it with `git log --oneline --grep "<commit title>"`, then `git revert <hash>`.
 The design behind these changes is in `CONTEXT.md` (vocabulary) and the build plan.
 
+## 2026-10-13 · Fix empty Drop answers, a wrong donation date, and Home on wide and medium windows
+
+- **What and why:**
+  - "Explain my latest results" sometimes got "Done." because Gemini looked up the results and then returned no words. Drop now asks once more for the answer and, if it is still empty, answers from the rules. Gemini 2.5 Flash-Lite also sometimes sends a malformed tool call (`MALFORMED_FUNCTION_CALL`), which used to fall back to the offline answer; it is now retried once.
+  - "When can I donate next?" could get an invented past date. The profile tool now gives Drop the same plain sentence the Donate screen uses.
+  - Home on wide windows left a large empty gap between the cards and the stats; on medium windows the stats dropped below the cards. The cards and stats now grow together side by side from about 1,000 px wide, Home is capped at 1,360 px, and Drop's header row wraps instead of squeezing the language switch.
+- **Files:** `backend/src/ai/agent.js`, `backend/src/ai/copilot.js`, `backend/src/ai/tools.js`, `frontend/src/components/drop/drop.css`, `frontend/src/pages/Home.tsx`.
+- **Revert:** safe to revert on its own.
+
 ## 2026-10-13 · Ship the demo data in the Docker image
 
 - **What and why:** the live site was missing Arjun's 3 Oct donation and every demo donor's starting Drop state, because the Dockerfile only copied `data/synthetic` and `data/ontology`. It now also copies `data/demo`.

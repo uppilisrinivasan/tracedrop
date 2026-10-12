@@ -17,14 +17,31 @@ async function runAgent({ feature, system, messages, donorId, toolNames, maxToke
   const convo = [...messages];
   const steps = [];
   const actions = [];
+  let nudged = false;
+  let retriedMalformed = false;
 
   for (let i = 0; i < MAX_STEPS; i += 1) {
     let response;
     try {
       response = await llm.call({ feature, system, messages: convo, tools: toolDefs, maxTokens, effort, outputSchema });
     } catch (error) {
-      // Gemini sometimes ends with no text right after a tool call; the tools' work still stands
-      if (i > 0 && !outputSchema && /no content/.test(error.message)) return { text: '', steps, actions, messages: convo };
+      // Gemini Flash-Lite occasionally emits a malformed tool call; one retry almost always succeeds
+      if (/MALFORMED_FUNCTION_CALL/.test(error.message) && !retriedMalformed) {
+        retriedMalformed = true;
+        i -= 1;
+        continue;
+      }
+      // Gemini sometimes ends with no text right after a tool call. Ask once more for the answer
+      // (in the same turn as the tool results); if it is still empty, the caller answers from rules.
+      if (i > 0 && !outputSchema && /no content/.test(error.message)) {
+        const last = convo[convo.length - 1];
+        if (!nudged && last && last.role === 'user' && Array.isArray(last.content)) {
+          nudged = true;
+          convo[convo.length - 1] = { ...last, content: [...last.content, { type: 'text', text: 'Now answer the donor in one or two short sentences, using these tool results.' }] };
+          continue;
+        }
+        return { text: '', steps, actions, messages: convo };
+      }
       throw error;
     }
     if (response.stop_reason === 'max_tokens') throw new llm.LLMUnavailable('Response cut off');

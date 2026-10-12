@@ -1,14 +1,19 @@
 /* Drop: the Card conversation on Home, its forms, menus, Stories and the demo bar.
    Desktop now, touch later: targets at least 44px, nothing hover-only, Esc closes overlays. */
 
+.drop-home { max-width: 1360px; }
 .drop-board { display: grid; gap: 20px; align-items: start; }
-@container app (min-width: 980px) {
-  .drop-board { grid-template-columns: minmax(0, 1fr) minmax(280px, 32%); }
+/* Two columns from a medium window up; the cards and the stats grow together, no gap between them */
+@container app (min-width: 760px) {
+  .drop-board { grid-template-columns: minmax(0, 900px) minmax(260px, 420px); }
 }
-.drop-feed { display: grid; gap: 12px; align-content: start; max-width: 680px; min-width: 0; }
+.drop-feed { display: grid; gap: 12px; align-content: start; min-width: 0; }
+.dcard-text { max-width: 72ch; }
 .drop-side { display: grid; gap: 14px; align-content: start; min-width: 0; }
 
-.drop-head { display: flex; align-items: center; gap: 10px; min-height: 44px; }
+.drop-head { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; min-height: 44px; }
+.drop-head .drop-who span, .drop-link { white-space: nowrap; }
+.drop-lang { flex: none; }
 .drop-who { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0; text-align: left; }
 .drop-avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--ai-soft); color: var(--ai); display: grid; place-items: center; flex: none; }
 .drop-who b { font-size: 16px; }
