@@ -1,10 +1,18 @@
-/** Drop, the AI copilot: answers across the platform using tools and can navigate the app. */
+/**
+ * Drop's side panel: the chat half of the Drop conversation. Replies are one or
+ * two sentences plus at most one Card (a chart, check-up slots or a reminder),
+ * memory lines and receipts. Cards it opens also appear on Home.
+ */
 import { useEffect, useRef, useState, type ReactElement } from 'react';
-import { api, type AgentStep } from '../api';
-import { AgentTrace, AIBadge, Icon, Thinking } from '../ui';
+import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { api, fmtDate, type AgentStep, type ChartPoint, type CopilotAction, type DropView } from '../api';
+import { AgentTrace, Icon, Thinking } from '../ui';
 import type { Screen } from '../App';
+import DropCardView from './drop/DropCardView';
+import MemorySheet from './drop/MemorySheet';
+import './drop/drop.css';
 
-interface Turn { role: 'user' | 'ai'; text: string; steps?: AgentStep[]; offline?: boolean; navigatedTo?: string }
+interface Turn { role: 'user' | 'ai'; text: string; steps?: AgentStep[]; offline?: boolean; actions?: CopilotAction[]; questions?: string[] }
 
 /** Minimal formatter for model replies: **bold**, "- " bullets and paragraphs. No HTML injection. */
 function Rich({ text }: { text: string }) {
@@ -28,13 +36,35 @@ function Rich({ text }: { text: string }) {
 }
 
 const SUGGESTIONS = [
+  'Explain my latest results',
+  'How is my BP doing?',
   'Where did my blood go?',
-  'Why is my cover not higher, and what would raise it?',
-  'Explain my blood pressure trend',
-  'What should I eat this week for my results?',
-  'How has my company community helped?',
-  'ನನ್ನ ರಕ್ತ ಯಾರಿಗೆ ಸಹಾಯ ಮಾಡಿತು?',
+  'When can I donate next?',
+  'What do you remember about me?',
 ];
+
+const MARKER_NAMES: Record<string, string> = { bp: 'Blood pressure', hb: 'Haemoglobin', hba1c: 'HbA1c', ldl: 'LDL cholesterol', tg: 'Triglycerides', ferritin: 'Ferritin' };
+
+function ChartCard({ marker, points }: { marker: string; points: ChartPoint[] }) {
+  return (
+    <div className="dcard" style={{ width: '100%', padding: 12 }}>
+      <div className="dcard-head"><span>Chart · {MARKER_NAMES[marker] || marker}</span></div>
+      <div style={{ height: 150, marginTop: 8 }}>
+        <ResponsiveContainer>
+          <LineChart data={points.map((p) => ({ ...p, label: fmtDate(p.date) }))} margin={{ top: 6, right: 8, left: -24, bottom: 0 }}>
+            <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" />
+            <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'var(--muted)' }} />
+            <YAxis tick={{ fontSize: 10, fill: 'var(--muted)' }} domain={['auto', 'auto']} />
+            <Tooltip contentStyle={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, fontSize: 12 }} />
+            <Line type="monotone" dataKey="value" name={marker === 'bp' ? 'Top' : MARKER_NAMES[marker]} stroke="#c8102e" strokeWidth={2} dot={{ r: 3 }} />
+            {marker === 'bp' && <Line type="monotone" dataKey="value2" name="Bottom" stroke="#1d4ed8" strokeWidth={2} dot={{ r: 3 }} />}
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="tiny faint">Donation visits{points.some((p) => p.source !== 'donation') ? ' and readings you added' : ''}.</div>
+    </div>
+  );
+}
 
 export default function Copilot({ donorId, go }: { donorId: string; go: (s: Screen) => void }) {
   const [open, setOpen] = useState(false);
@@ -42,9 +72,15 @@ export default function Copilot({ donorId, go }: { donorId: string; go: (s: Scre
   const [history, setHistory] = useState<unknown[] | null>(null);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
+  const [view, setView] = useState<DropView | null>(null);
+  const [memoryOpen, setMemoryOpen] = useState(false);
   const body = useRef<HTMLDivElement>(null);
+  const sendRef = useRef<(text: string) => void>(() => {});
 
   useEffect(() => { body.current?.scrollTo({ top: body.current.scrollHeight, behavior: 'smooth' }); }, [turns, busy]);
+
+  const reloadView = () => api.drop(donorId).then(setView).catch(() => {});
+  const changed = () => window.dispatchEvent(new CustomEvent('drop:changed'));
 
   async function send(text: string) {
     const message = text.trim();
@@ -55,42 +91,113 @@ export default function Copilot({ donorId, go }: { donorId: string; go: (s: Scre
     try {
       const r = await api.copilot(donorId, message, history);
       if (r.history) setHistory(r.history);
+      setTurns((t) => [...t, { role: 'ai', text: r.reply, steps: r.steps, offline: r.offline, actions: r.actions }]);
       const nav = r.actions.find((a) => a.type === 'navigate');
-      setTurns((t) => [...t, { role: 'ai', text: r.reply, steps: r.steps, offline: r.offline, navigatedTo: nav?.screen }]);
-      if (nav) go(nav.screen as Screen);
+      if (nav?.screen) go(nav.screen as Screen);
+      if (r.actions.some((a) => a.type !== 'navigate')) {
+        await reloadView();
+        changed();
+      }
     } catch (e) {
       setTurns((t) => [...t, { role: 'ai', text: `Sorry, something went wrong: ${(e as Error).message}` }]);
     } finally {
       setBusy(false);
     }
   }
+  sendRef.current = send;
+
+  // Other parts of the app ask Drop things: a chip on a Card, or the line at the top of a screen
+  useEffect(() => {
+    const onAsk = (e: Event) => { setOpen(true); reloadView(); sendRef.current(String((e as CustomEvent).detail)); };
+    const onOpen = (e: Event) => {
+      const { text, questions } = (e as CustomEvent).detail as { text: string; questions: string[] };
+      setOpen(true);
+      reloadView();
+      setTurns((t) => [...t, { role: 'ai', text: `${text} What would you like to know?`, questions }]);
+    };
+    const onChanged = () => reloadView();
+    window.addEventListener('drop:ask', onAsk);
+    window.addEventListener('drop:open', onOpen);
+    window.addEventListener('drop:changed', onChanged);
+    return () => {
+      window.removeEventListener('drop:ask', onAsk);
+      window.removeEventListener('drop:open', onOpen);
+      window.removeEventListener('drop:changed', onChanged);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [donorId]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    reloadView();
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && !memoryOpen && setOpen(false);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, memoryOpen]);
+
+  async function act(p: Promise<DropView>) {
+    try {
+      setView(await p);
+      changed();
+    } catch (e) {
+      setTurns((t) => [...t, { role: 'ai', text: (e as Error).message }]);
+    }
+  }
+
+  function renderAction(a: CopilotAction, key: number) {
+    if (a.type === 'chart' && a.points) return <ChartCard key={key} marker={a.marker || 'bp'} points={a.points} />;
+    if (a.type === 'memory') {
+      const live = view?.memReceipt === a.text;
+      return <div key={key} className="drop-memline" style={{ width: '100%' }}><Icon name="info" size={15} /><span>{a.text}</span>{live && <button onClick={() => act(api.dropMemoryUndo(donorId))}>Undo</button>}</div>;
+    }
+    if (a.type === 'receipt') return <div key={key} className="drop-receipt" style={{ width: '100%' }}><Icon name="check" size={16} /><span>{a.text}</span></div>;
+    if (a.type === 'card' && a.cardId && view) {
+      const card = view.open.find((c) => c.id === a.cardId);
+      if (!card) {
+        const done = [...view.receipts, ...view.earlier].find((r) => r.id === a.cardId);
+        return done ? <div key={key} className="drop-receipt" style={{ width: '100%' }}><Icon name="check" size={16} /><span>{done.receipt}</span></div> : null;
+      }
+      return (
+        <div key={key} style={{ width: '100%' }}>
+          <DropCardView card={card} busy={busy} onAnswer={(value) => act(api.dropAnswer(donorId, card.id, value))}
+            onSnooze={(o) => act(api.dropSnooze(donorId, card.id, o))} onHide={() => act(api.dropHide(donorId, card.id))}
+            onStory={() => {}} onUpload={() => go('home')} onAsk={send} />
+        </div>
+      );
+    }
+    return null;
+  }
 
   if (!open) {
     return (
-      <button className="fab" onClick={() => setOpen(true)} aria-label="Ask Drop, your AI assistant">
-        <Icon name="sparkles" size={20} /> Ask Drop
+      <button className="fab" onClick={() => setOpen(true)} aria-label="Ask Drop, your assistant">
+        <Icon name="drop" size={20} /> Ask Drop
       </button>
     );
   }
 
   return (
-    <div className="chat fade-in" role="dialog" aria-label="Drop AI assistant">
+    <div className="chat fade-in" role="dialog" aria-label="Drop, your TraceDrop assistant">
       <div className="chat-head">
         <div className="row">
-          <span className="brand-mark" style={{ background: 'var(--ai)' }}><Icon name="sparkles" size={16} /></span>
+          <span className="drop-avatar"><Icon name="drop" size={18} stroke={2.2} /></span>
           <div>
-            <div className="bold">Drop <AIBadge label="Agent" /></div>
-            <div className="tiny muted">Answers from your real records · any language</div>
+            <div className="bold">Drop</div>
+            <div className="tiny muted">Answers from your real records</div>
           </div>
         </div>
-        <button className="btn btn-ghost btn-sm" onClick={() => setOpen(false)} aria-label="Close"><Icon name="x" /></button>
+        <div className="row" style={{ gap: 4 }}>
+          <button className="btn btn-ghost btn-sm" style={{ minHeight: 40 }} onClick={() => setMemoryOpen(true)}>What I remember</button>
+          <button className="btn btn-ghost btn-sm" style={{ minHeight: 40, minWidth: 40 }} onClick={() => setOpen(false)} aria-label="Close"><Icon name="x" /></button>
+        </div>
       </div>
       <div className="chat-body" ref={body}>
         {turns.length === 0 && (
           <div className="stack">
-            <div className="msg msg-ai">Hi! I'm Drop. I can trace your blood, explain your results, work out how to raise your health cover, or take you anywhere in the app. Ask in English, ಕನ್ನಡ, हिंदी, தமிழ் or తెలుగు.</div>
+            <div className="msg msg-ai">Hi, I'm Drop. Ask me about your results, your blood's journey, your Plan or when you can donate. I'll answer in a sentence or two, and show you a card when it helps.</div>
             <div className="suggestions">
-              {SUGGESTIONS.map((s) => <button key={s} className="suggestion" onClick={() => send(s)}>{s}</button>)}
+              {SUGGESTIONS.map((s) => <button key={s} className="suggestion" style={{ minHeight: 36 }} onClick={() => send(s)}>{s}</button>)}
             </div>
           </div>
         )}
@@ -99,16 +206,22 @@ export default function Copilot({ donorId, go }: { donorId: string; go: (s: Scre
             <div className={`msg ${t.role === 'user' ? 'msg-user' : 'msg-ai'}`} style={t.role === 'ai' ? { whiteSpace: 'normal' } : undefined}>
               {t.role === 'ai' ? <Rich text={t.text} /> : t.text}
             </div>
-            {t.navigatedTo && <span className="pill pill-ai"><Icon name="arrow" size={12} /> Opened {t.navigatedTo}</span>}
+            {(t.actions || []).filter((a) => a.type !== 'navigate').slice(0, 2).map(renderAction)}
+            {t.actions?.some((a) => a.type === 'navigate') && <span className="pill pill-ai"><Icon name="arrow" size={12} /> Opened {t.actions.find((a) => a.type === 'navigate')?.screen}</span>}
+            {t.questions && <div className="suggestions">{t.questions.map((q) => <button key={q} className="suggestion" style={{ minHeight: 36 }} onClick={() => send(q)}>{q}</button>)}</div>}
+            {t.offline && <span className="tiny faint">AI offline: answered by rules</span>}
             {t.steps && t.steps.length > 0 && <div style={{ width: '100%' }}><AgentTrace steps={t.steps} title="Tools Drop used" /></div>}
           </div>
         ))}
         {busy && <Thinking label="Drop is checking your records…" />}
       </div>
       <form className="chat-input" onSubmit={(e) => { e.preventDefault(); send(input); }}>
-        <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask anything about your donations, health or cover" aria-label="Message" />
-        <button className="btn btn-ai" disabled={busy || !input.trim()} aria-label="Send"><Icon name="send" size={16} /></button>
+        <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask Drop anything" aria-label="Message" />
+        <button className="btn btn-ai" disabled={busy || !input.trim()} aria-label="Send" style={{ minWidth: 44 }}><Icon name="send" size={16} /></button>
       </form>
+      {memoryOpen && view && (
+        <MemorySheet memory={view.memory} onForget={(id) => act(api.dropForget(donorId, id))} onForgetAll={() => act(api.dropForget(donorId))} onClose={() => setMemoryOpen(false)} />
+      )}
     </div>
   );
 }

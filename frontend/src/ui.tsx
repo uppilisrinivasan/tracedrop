@@ -48,6 +48,7 @@ const TOOL_LABELS: Record<string, string> = {
   get_health_score: 'Read health score', get_protocol: 'Looked up clinical protocol', get_lifestyle_guidance: 'Retrieved evidence-based guidance',
   get_insurance_cover: 'Checked insurance cover', simulate_cover: 'Simulated cover', get_donation_impact: 'Traced blood components',
   get_stakeholder_impact: 'Read institutional impact', get_communities: 'Read communities', find_care_slots: 'Searched care slots', navigate: 'Opened a screen',
+  show_chart: 'Showed a chart', offer_care_slots: 'Offered check-up slots', offer_reminder: 'Offered a reminder', remember: 'Remembered something', log_reading: 'Saved a reading',
 };
 
 /** "How the agent decided" panel: each tool call, its input and result. */

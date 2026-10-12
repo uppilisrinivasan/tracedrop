@@ -12,6 +12,16 @@
 .drop-who { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0; text-align: left; }
 .drop-avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--ai-soft); color: var(--ai); display: grid; place-items: center; flex: none; }
 .drop-who b { font-size: 16px; }
+.drop-lang { display: inline-flex; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-left: auto; }
+.drop-lang button { min-height: 36px; padding: 0 10px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.drop-lang button[aria-pressed='true'] { background: var(--ai-soft); color: var(--ai); }
+.drop-lang + .drop-link { margin-left: 0; }
+.drop-line { display: flex; align-items: center; gap: 10px; background: var(--ai-soft); color: var(--text); border: 1px solid color-mix(in srgb, var(--ai) 25%, transparent); border-radius: 12px; padding: 4px 4px 4px 12px; margin-bottom: 18px; }
+.drop-line .icon { color: var(--ai); flex: none; }
+.drop-line .txt { flex: 1; text-align: left; min-height: 40px; font-size: 14.5px; display: flex; align-items: center; gap: 8px; }
+.drop-line .txt:hover span { text-decoration: underline; }
+.drop-line .x { min-width: 40px; min-height: 40px; border-radius: 10px; color: var(--muted); font-size: 18px; }
+.drop-line .x:hover { background: color-mix(in srgb, var(--ai) 10%, transparent); }
 .drop-link { color: var(--ai); font-size: 13px; font-weight: 600; min-height: 44px; padding: 0 4px; margin-left: auto; }
 .drop-link:hover { text-decoration: underline; }
 

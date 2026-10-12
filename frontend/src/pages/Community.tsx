@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { api } from '../api';
 import type { PageProps } from '../App';
 import { ErrorNote, Icon, Loading, Section, useLoad } from '../ui';
+import DropLine from '../components/drop/DropLine';
 
 const KIND_ICON: Record<string, string> = { family: 'home', friends: 'users', workplace: 'landmark' };
 
@@ -23,6 +24,7 @@ export default function Community({ donorId, version }: PageProps) {
           <div className="page-sub">See what your family, friends and colleagues achieve together — without anyone's health data being shared.</div>
         </div>
       </div>
+      <DropLine donorId={donorId} screen="community" version={version} />
 
       <div className="tabs">
         {data.map((x, i) => <button key={x.id} className={`tab ${i === active ? 'active' : ''}`} onClick={() => setActive(i)}><Icon name={KIND_ICON[x.kind] || 'users'} size={14} /> {x.name}</button>)}

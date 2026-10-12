@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { api, fmtDate, type Journey, type Stakeholder, type Story } from '../api';
 import type { PageProps } from '../App';
 import { AIBadge, ErrorNote, Icon, Loading, OfflineNote, Section, Thinking, useLoad } from '../ui';
+import DropLine from '../components/drop/DropLine';
 
 const KIND_STYLE: Record<string, { bg: string; fg: string; short: string }> = {
   PRBC: { bg: '#fde2e5', fg: '#9b0c23', short: 'RBC' },
@@ -43,6 +44,7 @@ export default function Impact({ donorId, version }: PageProps) {
           <button className={`tab ${tab === 'institutions' ? 'active' : ''}`} onClick={() => setTab('institutions')}>Who benefited</button>
         </div>
       </div>
+      <DropLine donorId={donorId} screen="impact" version={version} />
 
       <div className="grid grid-4">
         <Stat value={s.patientsHelped} label="patients treated" />

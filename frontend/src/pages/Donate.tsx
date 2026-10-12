@@ -4,6 +4,7 @@ import type { PageProps } from '../App';
 import BookingChat from '../BookingChat';
 import { requestCalendarAccess } from '../calendarAuth';
 import { ErrorNote, Icon, Loading, Section, useLoad } from '../ui';
+import DropLine from '../components/drop/DropLine';
 
 export default function Donate({ donorId, go, version, refresh, clientId }: PageProps) {
   const { data, error, loading, reload } = useLoad(() => api.slots(donorId), [donorId, version]);
@@ -58,6 +59,7 @@ export default function Donate({ donorId, go, version, refresh, clientId }: Page
           <div className="page-sub">Every donation includes free screening and a lab panel from the same sample.</div>
         </div>
       </div>
+      <DropLine donorId={donorId} screen="donate" version={version} />
 
       {result && (
         <div className={`callout ${result.status === 'completed' ? '' : 'callout-warn'}`} style={result.status === 'completed' ? { background: 'var(--good-soft)' } : undefined}>

@@ -129,3 +129,41 @@ test("Meera's report with Hb 12.6 clears her deferral and brings the goal card a
   drop.undo('D-002');
   assert.equal(health.eligibility('D-002').eligibleNow, false, 'undo removes the uploaded result');
 });
+
+const tools = require('../src/ai/tools');
+const screenLines = require('../src/domain/screenLines');
+const { keepsFacts } = require('../src/ai/dropWriter');
+
+test('chat memory: preferences are kept, health facts are refused', () => {
+  assert.ok(tools.run('remember', { fact: 'I take my BP tablet at night' }, 'D-001').error);
+  const out = tools.run('remember', { fact: 'Weekday evenings suit you', replaces: 'Saturday' }, 'D-001');
+  assert.match(out._ui.text, /replaces "Saturdays suit you"/);
+});
+
+test('a reading told in chat lands in Health and moves the BP goal line', () => {
+  drop.answer('D-001', (advance(DAY), card('D-001', 'results', 'results')).id, 'ok');
+  drop._state('D-001').plan = { goals: [{ marker: 'bp', label: 'BP under 135/85' }], activity: null, notes: [] };
+  tools.run('log_reading', { systolic: 141, diastolic: 90 }, 'D-001');
+  assert.match(screenLines.line('D-001', 'health').text, /^BP 141\/90 on .*, down from 148/);
+  assert.throws(() => tools.run('log_reading', { systolic: 60, diastolic: 90 }, 'D-001'), /out of range/);
+});
+
+test('every screen has a true line for every demo Persona', () => {
+  for (const id of ['D-001', 'D-002', 'D-003', 'D-017', 'D-050', 'D-033']) {
+    for (const screen of Object.keys(screenLines.SCREENS)) assert.ok(screenLines.line(id, screen).text.length > 10, `${id} ${screen}`);
+  }
+});
+
+test('switching language clears AI wording so open Cards are rewritten', () => {
+  const c = card('D-001', 'impact');
+  drop.setAi('D-001', c.id, { text: 'AI text with 3 Oct', labels: null });
+  assert.equal(card('D-001', 'impact').text, 'AI text with 3 Oct');
+  drop.setLanguage('D-001', 'kn');
+  assert.notEqual(card('D-001', 'impact').text, 'AI text with 3 Oct');
+  assert.throws(() => drop.setLanguage('D-001', 'xx'), /Unsupported/);
+});
+
+test('AI wording must keep every number from the rule wording', () => {
+  assert.ok(keepsFacts('BP 148/94, up (132, 136, 148).', 'Your BP was 148/94: 132, 136 then 148.'));
+  assert.ok(!keepsFacts('BP 148/94, up (132, 136, 148).', 'Your BP went up to 148.'));
+});

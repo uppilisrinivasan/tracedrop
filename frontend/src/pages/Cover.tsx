@@ -3,6 +3,7 @@ import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YA
 import { api, fmtDate, rupees } from '../api';
 import type { PageProps } from '../App';
 import { ErrorNote, Icon, Loading, Section, useLoad } from '../ui';
+import DropLine from '../components/drop/DropLine';
 
 const LADDER = [500000, 600000, 700000, 800000];
 
@@ -39,6 +40,7 @@ export default function Cover({ donorId, go, version, refresh }: PageProps) {
           <div className="page-sub">Like a credit limit that rises with good behaviour: stay healthy and your sum insured steps up — for the same premium.</div>
         </div>
       </div>
+      <DropLine donorId={donorId} screen="cover" version={version} />
 
       <div className="grid grid-2">
         <div className="card">

@@ -19,7 +19,14 @@ async function runAgent({ feature, system, messages, donorId, toolNames, maxToke
   const actions = [];
 
   for (let i = 0; i < MAX_STEPS; i += 1) {
-    const response = await llm.call({ feature, system, messages: convo, tools: toolDefs, maxTokens, effort, outputSchema });
+    let response;
+    try {
+      response = await llm.call({ feature, system, messages: convo, tools: toolDefs, maxTokens, effort, outputSchema });
+    } catch (error) {
+      // Gemini sometimes ends with no text right after a tool call; the tools' work still stands
+      if (i > 0 && !outputSchema && /no content/.test(error.message)) return { text: '', steps, actions, messages: convo };
+      throw error;
+    }
     if (response.stop_reason === 'max_tokens') throw new llm.LLMUnavailable('Response cut off');
 
     const result = outputSchema ? llm.submitted(response) : null;
@@ -49,7 +56,14 @@ async function runAgent({ feature, system, messages, donorId, toolNames, maxToke
       }
       steps.push({ tool: call.name, input: call.input, ms: Date.now() - started, summary: summarise(call.name, output) });
       if (call.name === 'navigate') actions.push({ type: 'navigate', screen: call.input.screen, reason: call.input.reason });
-      return { type: 'tool_result', tool_use_id: call.id, name: call.name, content: JSON.stringify(output), ...(isError ? { is_error: true } : {}) };
+      // Tools can put something on screen (a Drop Card, a chart, a memory line); the model only sees the facts
+      let modelOutput = output;
+      if (output && output._ui) {
+        actions.push(output._ui);
+        const { _ui, ...rest } = output;
+        modelOutput = rest;
+      }
+      return { type: 'tool_result', tool_use_id: call.id, name: call.name, content: JSON.stringify(modelOutput), ...(isError ? { is_error: true } : {}) };
     }));
     convo.push({ role: 'user', content: results });
   }
@@ -69,6 +83,11 @@ function summarise(name, output) {
     case 'get_protocol': return output.name;
     case 'get_lifestyle_guidance': return output.title;
     case 'navigate': return `Opened ${output.screen}`;
+    case 'show_chart': return `Chart of ${output.marker} (${output.points.length} points)`;
+    case 'offer_care_slots': return `Offered ${output.slots.length} check-up slots`;
+    case 'offer_reminder': return 'Offered a reminder';
+    case 'remember': return `Remembered: ${output.remembered}`;
+    case 'log_reading': return output.saved;
     default: return 'OK';
   }
 }

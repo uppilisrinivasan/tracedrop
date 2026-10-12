@@ -10,6 +10,11 @@ const health = require('../domain/health');
 const cover = require('../domain/cover');
 const impact = require('../domain/impact');
 const community = require('../domain/community');
+const drop = require('../domain/drop');
+
+// Never kept as memory: health facts belong in the Plan; some topics are never stored at all
+const NOT_MEMORY = /\b(bp|blood pressure|hb|haemoglobin|hemoglobin|tablets?|medicines?|medication|pills?|diabet\w*|sugar|cholesterol|thyroid|religion|religious|caste|income|salary|hindu|muslim|christian|sikh|jain)\b/i;
+const escapeRe = (t) => String(t).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const obj = (properties, required = []) => ({ type: 'object', properties, required, additionalProperties: false });
 
@@ -73,6 +78,31 @@ const DEFINITIONS = [
     name: 'find_care_slots',
     description: 'Available free primary-care visits (Ayushman Arogya Mandir) and partner clinic slots near the donor in the next N days.',
     input_schema: obj({ within_days: { type: 'integer', minimum: 0, maximum: 60 } }, ['within_days']),
+  },
+  {
+    name: 'show_chart',
+    description: 'Show the donor a small trend chart card in the chat. Use when they ask how a marker is going. Markers: bp (includes readings they added), hb, hba1c, ldl, tg, ferritin.',
+    input_schema: obj({ marker: { type: 'string', enum: ['bp', 'hb', 'hba1c', 'ldl', 'tg', 'ferritin'] } }, ['marker']),
+  },
+  {
+    name: 'offer_care_slots',
+    description: 'Show a card with free check-up slots (Ayushman Arogya Mandir) the donor can book with one tap. Use when they want a check-up or a finding needs a doctor.',
+    input_schema: obj({}),
+  },
+  {
+    name: 'offer_reminder',
+    description: 'Show a card offering a daily reminder the donor asked for, e.g. a tablet their doctor started. label = what to remind them about.',
+    input_schema: obj({ label: { type: 'string' } }, ['label']),
+  },
+  {
+    name: 'remember',
+    description: 'Remember a lasting preference or life detail the donor told you: days or times that suit, work pattern, area, language, food habits. Never health facts (readings, medicines, conditions, results), never religion, caste, income, family members\' health or anything about recipients. If it contradicts an older memory, set replaces to a word from that memory (e.g. "Saturday").',
+    input_schema: obj({ fact: { type: 'string', description: 'Short, second person, e.g. "Weekday evenings suit you"' }, replaces: { type: 'string' } }, ['fact']),
+  },
+  {
+    name: 'log_reading',
+    description: 'Save a blood pressure reading the donor tells you, e.g. "141/90 at the pharmacy today".',
+    input_schema: obj({ systolic: { type: 'integer' }, diastolic: { type: 'integer' } }, ['systolic', 'diastolic']),
   },
   {
     name: 'navigate',
@@ -165,6 +195,27 @@ function run(name, input, donorId) {
       return community.forDonor(donorId).map(({ name, kind, memberCount, totals, participation, contexts }) => ({ name, kind, memberCount, totals, participation, topUses: contexts.slice(0, 3) }));
     case 'find_care_slots':
       return careSlots(donor, input.within_days);
+    case 'show_chart': {
+      const points = drop.chartPoints(donorId, input.marker);
+      return { marker: input.marker, points: points.slice(-8), _ui: { type: 'chart', marker: input.marker, points } };
+    }
+    case 'offer_care_slots': {
+      const card = drop.offerCard(donorId, 'care_slots');
+      return { shown: card.text, slots: card.chips.map((c) => c.label), _ui: { type: 'card', cardId: card.id } };
+    }
+    case 'offer_reminder': {
+      const card = drop.offerCard(donorId, 'reminder', { label: input.label });
+      return { shown: card.text, _ui: { type: 'card', cardId: card.id } };
+    }
+    case 'remember': {
+      if (NOT_MEMORY.test(input.fact)) return { error: 'Not stored. Health facts go in the Plan, and some topics are never kept.' };
+      const v = drop.rememberText(donorId, input.fact, input.replaces ? escapeRe(input.replaces) : null);
+      return { remembered: input.fact, _ui: { type: 'memory', text: v.memReceipt } };
+    }
+    case 'log_reading': {
+      const receipt = drop.logReading(donorId, { s: input.systolic, d: input.diastolic });
+      return { saved: receipt, _ui: { type: 'receipt', text: receipt } };
+    }
     case 'navigate':
       return { ok: true, screen: input.screen };
     default:

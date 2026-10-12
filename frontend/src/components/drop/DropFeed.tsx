@@ -12,6 +12,8 @@ import MemorySheet from './MemorySheet';
 import './drop.css';
 
 /** Ask Drop a question in the side panel (the Copilot listens for this). */
+const LANGUAGE_NAMES: Record<string, string> = { en: 'English', hi: 'हिंदी', kn: 'ಕನ್ನಡ', ta: 'தமிழ்', te: 'తెలుగు', ml: 'മലയാളം' };
+
 export function askDrop(question: string) {
   window.dispatchEvent(new CustomEvent('drop:ask', { detail: question }));
 }
@@ -32,6 +34,12 @@ export default function DropFeed({ donorId, version, refresh, calmLine }: { dono
     setView(null);
     api.dropReopen(donorId).then((v) => alive && setView(v)).catch((e: Error) => alive && setError(e.message));
     return () => { alive = false; };
+  }, [donorId]);
+  // A Card opened or answered in the Drop panel shows up here too
+  useEffect(() => {
+    const reload = () => api.drop(donorId).then(setView).catch(() => {});
+    window.addEventListener('drop:changed', reload);
+    return () => window.removeEventListener('drop:changed', reload);
   }, [donorId]);
   useEffect(() => {
     if (!version) return;
@@ -65,6 +73,13 @@ export default function DropFeed({ donorId, version, refresh, calmLine }: { dono
           <span className="drop-avatar"><Icon name="drop" size={18} stroke={2.2} /></span>
           <span><b>Drop</b><br /><span className="tiny muted">Your TraceDrop assistant</span></span>
         </button>
+        {view.preferredLanguage !== 'en' && LANGUAGE_NAMES[view.preferredLanguage] && (
+          <div className="drop-lang" role="group" aria-label="Drop's language">
+            {['en', view.preferredLanguage].map((code) => (
+              <button key={code} aria-pressed={view.language === code} disabled={busy} onClick={() => run(api.dropLanguage(donorId, code).then(() => api.drop(donorId)))}>{LANGUAGE_NAMES[code]}</button>
+            ))}
+          </div>
+        )}
         <button className="drop-link" onClick={() => setMemoryOpen(true)}>What do you remember about me?</button>
       </div>
 

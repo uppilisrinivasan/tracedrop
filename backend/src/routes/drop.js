@@ -7,6 +7,8 @@
 const express = require('express');
 const store = require('../data/store');
 const drop = require('../domain/drop');
+const dropWriter = require('../ai/dropWriter');
+const screenLines = require('../domain/screenLines');
 
 const router = express.Router({ mergeParams: true });
 
@@ -26,8 +28,18 @@ const act = (fn) => (req, res) => {
   }
 };
 
-router.get('/', act((donorId) => drop.view(donorId)));
-router.post('/reopen', act((donorId) => drop.reopen(donorId)));
+/** Reading the conversation lets the AI phrase any new open Cards first (rule wording if it can't). */
+router.get('/', async (req, res) => {
+  await dropWriter.tryWrite(req.params.donorId);
+  act((donorId) => drop.view(donorId))(req, res);
+});
+router.post('/reopen', async (req, res) => {
+  drop.reopen(req.params.donorId);
+  await dropWriter.tryWrite(req.params.donorId);
+  act((donorId) => drop.view(donorId))(req, res);
+});
+router.post('/language', act((donorId, req) => drop.setLanguage(donorId, req.body.language)));
+router.get('/line/:screen', act((donorId, req) => screenLines.line(donorId, req.params.screen)));
 router.post('/cards/:cardId/answer', act((donorId, req) => drop.answer(donorId, req.params.cardId, req.body.value)));
 router.post('/cards/:cardId/snooze', act((donorId, req) => drop.snooze(donorId, req.params.cardId, req.body.option)));
 router.post('/cards/:cardId/hide', act((donorId, req) => drop.hide(donorId, req.params.cardId)));

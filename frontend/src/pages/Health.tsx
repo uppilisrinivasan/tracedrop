@@ -3,6 +3,9 @@ import { CartesianGrid, Line, LineChart, ReferenceArea, ResponsiveContainer, Too
 import { api, fmtDate, type CarePlan, type Extraction, type HealthData } from '../api';
 import type { PageProps, Screen } from '../App';
 import { AgentTrace, AIBadge, ErrorNote, Icon, Loading, OfflineNote, Section, Thinking, severityPill, useLoad } from '../ui';
+import DropLine from '../components/drop/DropLine';
+import { PlanSection, ReadingsSection } from '../components/drop/HealthDrop';
+import type { DropReading, DropView } from '../api';
 
 const MARKERS: { key: string; label: string; unit: string; good?: [number, number] }[] = [
   { key: 'bp', label: 'Blood pressure', unit: 'mmHg', good: [90, 120] },
@@ -16,6 +19,8 @@ const MARKERS: { key: string; label: string; unit: string; good?: [number, numbe
 
 export default function Health({ donorId, go, version, refresh, focus }: PageProps & { focus: Screen }) {
   const { data, error, loading } = useLoad(() => api.health(donorId), [donorId, version]);
+  const [dropView, setDropView] = useState<DropView | null>(null);
+  useEffect(() => { api.drop(donorId).then(setDropView).catch(() => setDropView(null)); }, [donorId, version]);
   const planRef = useRef<HTMLDivElement>(null);
   const labsRef = useRef<HTMLDivElement>(null);
 
@@ -37,6 +42,7 @@ export default function Health({ donorId, go, version, refresh, focus }: PagePro
         </div>
         <button className="btn" onClick={() => go('labs')}><Icon name="upload" size={16} /> Add a lab report</button>
       </div>
+      <DropLine donorId={donorId} screen="health" version={version} />
 
       <div className="grid split">
         <div className="card">
@@ -70,7 +76,9 @@ export default function Health({ donorId, go, version, refresh, focus }: PagePro
         </Section>
       </div>
 
-      <Trends data={data} />
+      <PlanSection view={dropView} />
+      <Trends data={data} added={dropView?.readings || []} />
+      <ReadingsSection donorId={donorId} view={dropView} data={data} onChange={(v) => { setDropView(v); refresh(); }} />
 
       <div ref={planRef}><CarePlanCard donorId={donorId} version={version} /></div>
       <div ref={labsRef}><LabReader donorId={donorId} onSaved={refresh} /></div>
@@ -78,17 +86,22 @@ export default function Health({ donorId, go, version, refresh, focus }: PagePro
   );
 }
 
-function Trends({ data }: { data: HealthData }) {
+function Trends({ data, added }: { data: HealthData; added: DropReading[] }) {
   const [marker, setMarker] = useState('bp');
   const def = MARKERS.find((m) => m.key === marker)!;
   let points: { date: string; value: number; value2?: number; source?: string }[] = [];
-  if (marker === 'bp') points = data.vitals.map((v) => ({ date: v.date, value: v.systolic, value2: v.diastolic }));
+  if (marker === 'bp') {
+    points = [
+      ...data.vitals.map((v) => ({ date: v.date, value: v.systolic, value2: v.diastolic, source: 'donation' })),
+      ...added.filter((r) => r.marker === 'bp').map((r) => ({ date: r.date, value: r.s!, value2: r.d!, source: 'yours' })),
+    ].sort((a, b) => a.date.localeCompare(b.date));
+  }
   else if (marker === 'weight') points = data.vitals.map((v) => ({ date: v.date, value: v.weightKg }));
   else points = (data.labs[marker] || []).map((o) => ({ date: o.date, value: o.value, source: o.source }));
   const available = MARKERS.filter((m) => m.key === 'bp' || m.key === 'weight' || (data.labs[m.key] || []).length);
 
   return (
-    <Section title={<><Icon name="trend" size={18} /> Trends across your donations</>} sub="Each point is one donation visit (or an uploaded report)"
+    <Section title={<><Icon name="trend" size={18} /> Trends across your donations</>} sub="Each point is one donation visit, an uploaded report or a reading you added"
       right={<div className="tabs">{available.map((m) => <button key={m.key} className={`tab ${marker === m.key ? 'active' : ''}`} onClick={() => setMarker(m.key)}>{m.label}</button>)}</div>}>
       <div style={{ height: 260 }}>
         <ResponsiveContainer>
@@ -131,8 +144,8 @@ function CarePlanCard({ donorId, version }: { donorId: string; version: number }
 
   const urgencyPill = { routine: 'pill-good', soon: 'pill-warn', urgent: 'pill-bad' };
   return (
-    <Section title={<><Icon name="sparkles" size={18} /> Your care plan <AIBadge label="Agent" /></>}
-      sub="An AI agent studies your results, trends and clinical protocols together, then writes a plan with evidence for every step."
+    <Section title={<><Icon name="sparkles" size={18} /> Detailed analysis <AIBadge label="Agent" /></>}
+      sub="An AI agent studies your results, trends and clinical protocols together and explains each step with evidence. Your Plan above is what Drop follows up."
       right={plan ? <button className="btn btn-sm" onClick={() => run(true)} disabled={busy}><Icon name="refresh" size={14} /> Regenerate</button> : null}>
       {!plan && !busy && <button className="btn btn-ai" onClick={() => run()}><Icon name="sparkles" size={16} /> Analyse my results and build a plan</button>}
       {busy && <Thinking label="Agent is reviewing trends, protocols, guidance and your cover…" />}

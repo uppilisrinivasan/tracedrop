@@ -473,7 +473,7 @@ function words(st, c) {
       return { text: `Had a blood test lately? Add the report and I'll update your goal (Hb ${goal?.target || 12.5} or more). Last: ${lastHb}.`, upload: true, main: { label: 'Add a report', value: 'upload' }, out: { label: 'Not yet', value: 'none' } };
     }
     case 'reminder:setup':
-      return { text: 'Want a daily reminder for your tablet?', chips: [{ label: '9 pm', value: { time: '21:00' } }, { label: '10 pm', value: { time: '22:00' } }], out: { label: 'No thanks', value: 'none' } };
+      return { text: `Want a daily reminder${d.label ? ` for "${d.label}"` : ' for your tablet'}?`, chips: [{ label: '9 pm', value: { time: '21:00' } }, { label: '10 pm', value: { time: '22:00' } }], out: { label: 'No thanks', value: 'none' } };
     case 'reminder:due':
       return { text: d.label, chips: [{ label: 'Taken', value: 'taken' }, { label: 'Skipped', value: 'skipped' }] };
     case 'report:week':
@@ -591,8 +591,9 @@ function answer(donorId, cardId, value) {
       break;
     case 'reminder:setup':
       if (value && value.time) {
-        st.reminders.push({ id: id('r'), label: 'BP tablet', time: value.time });
-        done(`Reminder set: BP tablet at ${time12(value.time)} daily · in your Plan`);
+        const reminderLabel = c.data.label || 'BP tablet';
+        st.reminders.push({ id: id('r'), label: reminderLabel, time: value.time });
+        done(`Reminder set: ${reminderLabel} at ${time12(value.time)} daily · in your Plan`);
       } else done('No reminder. You can set one any time.');
       if (st.plan) st.plan.nextCheckin = { date: addDays(today, CHECKIN_DAYS), marker: 'bp' };
       break;
@@ -749,9 +750,13 @@ function hideResult(donorId, observationId) {
 
 function cardView(st, c) {
   const w = words(st, c);
+  const l = c.aiLabels || {};
+  const relabel = (a, name) => (a && name ? { ...a, label: name } : a || null);
   return {
     id: c.id, type: c.type, variant: c.variant, label: w.label || label(c), urgent: c.urgent, counted: c.counted, createdOn: c.createdOn,
-    text: c.aiText || w.text, ruleText: w.text, main: w.main || null, out: w.out || null, chips: w.chips || [], wheel: w.wheel || null,
+    text: c.aiText || w.text, ruleText: w.text, byAi: Boolean(c.aiText),
+    main: relabel(w.main, l.main), out: relabel(w.out, l.out),
+    chips: (w.chips || []).map((chip, i) => relabel(chip, l.chips?.[i])), wheel: w.wheel || null,
     upload: Boolean(w.upload), story: w.story || null, snoozes: c.snoozes,
   };
 }
@@ -765,6 +770,7 @@ function view(donorId) {
   return {
     clock: store.clock(),
     language: st.language,
+    preferredLanguage: store.getDonor(donorId).language,
     open: open.map((c) => cardView(st, c)),
     receipts: st.cards.filter((c) => c.status === 'answered' && c.fresh).map((c) => ({ id: c.id, receipt: c.receipt, undo: st.undo?.cardId === c.id })),
     earlier: st.cards.filter((c) => c.status === 'answered' && !c.fresh).sort((a, z) => z.created - a.created).slice(0, 30).map((c) => ({ id: c.id, label: label(c), receipt: c.receipt, on: c.answeredOn })),
@@ -786,12 +792,83 @@ function view(donorId) {
 /** Facts for the AI writer and the copilot: the open Cards with their data and rule wording. */
 function openForWriting(donorId) {
   const st = get(donorId);
-  return st.cards.filter((c) => c.status === 'open' && !c.aiText).map((c) => ({ card: c, words: words(st, c) }));
+  return st.cards.filter((c) => c.status === 'open' && !c.aiText && !c.aiTried).map((c) => ({ card: c, words: words(st, c) }));
 }
 
-function setAiText(donorId, cardId, text) {
+function setAi(donorId, cardId, { text, labels }) {
   const c = get(donorId).cards.find((x) => x.id === cardId);
-  if (c && text) c.aiText = text;
+  if (!c || !text) return;
+  c.aiText = text;
+  c.aiLabels = labels || null;
+}
+
+/* ------------------------------------------------------------------ chat helpers */
+
+const LANGUAGES = ['en', 'hi', 'kn', 'ta', 'te', 'ml'];
+
+/** Which language Drop writes in for this Donor (English or their own). Open Cards are rewritten. */
+function setLanguage(donorId, language) {
+  if (!LANGUAGES.includes(language)) throw new Error('Unsupported language');
+  const st = get(donorId);
+  st.language = language;
+  st.cards.filter((c) => c.status === 'open').forEach((c) => { c.aiText = null; c.aiLabels = null; c.aiTried = false; });
+  return view(donorId);
+}
+
+/** A Card the Donor asked for in chat (slots or a reminder offer): outside the budget, also shown on Home. */
+function offerCard(donorId, kind, data = {}) {
+  const st = get(donorId);
+  const spec = { care_slots: ['slots', 'care', { purpose: 'care' }], reminder: ['reminder', 'setup', { label: data.label || null }] }[kind];
+  if (!spec) throw new Error(`Unknown card kind ${kind}`);
+  const existing = st.cards.find((c) => c.status === 'open' && c.type === spec[0] && c.variant === spec[1]);
+  const card = existing || pushCard(st, spec[0], spec[1], spec[2]);
+  log(st, `Opened ${label(card)} from the chat (outside the budget).`);
+  return cardView(st, card);
+}
+
+/** A reading the Donor typed in chat ("my BP was 141/90 today"). */
+function logReading(donorId, { s, d }) {
+  const st = get(donorId);
+  const sys = Math.round(Number(s));
+  const dia = Math.round(Number(d));
+  if (!(sys >= 70 && sys <= 250 && dia >= 40 && dia <= 150 && sys > dia)) throw new Error('That reading looks out of range');
+  const today = store.today();
+  st.readings.push({ id: id('rd'), marker: 'bp', s: sys, d: dia, date: today });
+  if (sys < BP_GOAL.s && dia < BP_GOAL.d) addEvent(st, { key: `goal:bp:${today}`, kind: 'goal', at: addDays(today, 1), prompted: true, data: { marker: 'bp', s: sys, d: dia } });
+  log(st, `BP ${sys}/${dia} saved from the chat.`);
+  return `${sys}/${dia} saved to Health`;
+}
+
+/** Facts Drop reads on every chat turn: what it remembers and the Plan. */
+function chatContext(donorId) {
+  const st = get(donorId);
+  const plan = st.plan ? [...(st.plan.goals || []).map((g) => g.label), st.plan.activity?.label, ...(st.plan.notes || [])].filter(Boolean) : [];
+  const last = latestReading(st, 'bp');
+  return {
+    language: st.language,
+    memory: st.memory.map((m) => m.text),
+    plan,
+    reminders: st.reminders.map((r) => `${r.label} at ${time12(r.time)}`),
+    latestReading: last ? `BP ${last.s}/${last.d} on ${last.date}` : null,
+    openCards: st.cards.filter((c) => c.status === 'open').map((c) => label(c)),
+  };
+}
+
+/** Points for a Chart Card: donation-day readings plus the ones the Donor added. */
+function chartPoints(donorId, marker) {
+  const st = get(donorId);
+  if (marker === 'bp') {
+    return [
+      ...health.vitalsSeries(donorId).map((v) => ({ date: v.date, value: v.systolic, value2: v.diastolic, source: 'donation' })),
+      ...st.readings.filter((r) => r.marker === 'bp').map((r) => ({ date: r.date, value: r.s, value2: r.d, source: 'yours' })),
+    ].sort((a, z) => a.date.localeCompare(z.date));
+  }
+  if (marker === 'hb') {
+    const fromVisits = health.vitalsSeries(donorId).map((v) => ({ date: v.date, value: v.haemoglobin, source: 'donation' }));
+    const fromReports = store.getObservations(donorId).filter((o) => o.key === 'hb' && o.source === 'uploaded_report').map((o) => ({ date: o.date, value: o.value, source: 'report' }));
+    return [...fromVisits, ...fromReports].sort((a, z) => a.date.localeCompare(z.date));
+  }
+  return (health.labSeries(donorId)[marker] || []).map((o) => ({ date: o.date, value: o.value, source: o.source }));
 }
 
 /* ------------------------------------------------------------------ demo clock */
@@ -821,7 +898,7 @@ function nextEvent() {
 
 module.exports = {
   get, view, answer, undo, snooze, hide, reopen, forget, undoMemory, deleteReading, hideResult, nextEvent,
-  openForWriting, setAiText, words, label,
+  openForWriting, setAi, words, label, setLanguage, offerCard, logReading, chatContext, chartPoints, readinessOf: (donorId) => readiness(get(donorId)),
   rememberText: (donorId, text, replacesPattern) => { const st = get(donorId); remember(st, text, replacesPattern ? new RegExp(replacesPattern, 'i') : null); return view(donorId); },
   BUDGETS, PRIORITY, BP_GOAL,
   _state: get, _addEvent: (donorId, ev) => addEvent(get(donorId), ev), _deliver: (donorId) => deliver(get(donorId)),

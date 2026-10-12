@@ -41,7 +41,7 @@ export interface Overview {
 export interface Eligibility { eligibleNow: boolean; nextEligibleDate: string | null; gapDays: number; lastDonationDate: string | null; blockers: string[] }
 
 export interface ScorePart { name: string; weight: number; points: number; value: string }
-export interface LabPoint { date: string; value: number; unit: string; low: number | null; high: number | null; name: string; source: string }
+export interface LabPoint { id: string; date: string; value: number; unit: string; low: number | null; high: number | null; name: string; source: string }
 export interface HealthData {
   findings: Finding[];
   scores: { date: string; score: number; parts: ScorePart[] }[];
@@ -91,8 +91,11 @@ export interface Extraction { labName: string; reportDate: string; results: Extr
 export interface Story { headline: string; story: string; shareText: string; generatedBy: string; aiUnavailable?: string }
 export interface Insight { title: string; message: string; cta: string; generatedBy: string; considered: string[]; aiUnavailable?: string }
 
+export interface ChartPoint { date: string; value: number; value2?: number; source: string }
+/** Something a Drop reply puts on screen: a navigation, a live Card, a chart, a memory line or a receipt. */
+export interface CopilotAction { type: 'navigate' | 'card' | 'chart' | 'memory' | 'receipt'; screen?: string; reason?: string; cardId?: string; marker?: string; points?: ChartPoint[]; text?: string }
 export interface CopilotReply {
-  reply: string; steps: AgentStep[]; actions: { type: string; screen: string; reason: string }[];
+  reply: string; steps: AgentStep[]; actions: CopilotAction[];
   history: unknown[] | null; offline?: boolean; aiUnavailable?: string;
 }
 
@@ -148,7 +151,7 @@ export type DropCardType = 'results' | 'urgent' | 'checkin' | 'slots' | 'reminde
 export interface DropAction { label: string; value: unknown; story?: boolean; ask?: string }
 export interface DropCard {
   id: string; type: DropCardType; variant: string; label: string; urgent: boolean; counted: boolean; createdOn: string;
-  text: string; ruleText: string; main: DropAction | null; out: DropAction | null; chips: DropAction[];
+  text: string; ruleText: string; byAi: boolean; main: DropAction | null; out: DropAction | null; chips: DropAction[];
   wheel: { kind: 'bp'; s: number; d: number } | null; upload: boolean; story: string[] | null; snoozes: number;
 }
 export interface DropReading { id: string; marker: 'bp' | 'hb'; date: string; s?: number; d?: number; value?: number; observationId?: string }
@@ -157,7 +160,7 @@ export interface DropPlan {
   nextCheckin?: { date: string; marker: string }; reminders: { id: string; label: string; time: string }[];
 }
 export interface DropView {
-  clock: DemoClock; language: string;
+  clock: DemoClock; language: string; preferredLanguage: string;
   open: DropCard[]; receipts: { id: string; receipt: string; undo: boolean }[]; earlier: { id: string; label: string; receipt: string; on: string }[];
   memory: { id: string; text: string }[]; memReceipt: string | null; plan: DropPlan | null; readings: DropReading[]; hiddenResults: string[];
   bookings: { id: string; kind: string; date: string; time: string; place: string }[];
@@ -240,6 +243,8 @@ export const api = {
   dropForget: (id: string, memoryId?: string) => request<DropView>(`/donors/${id}/drop/memory${memoryId ? `/${memoryId}` : ''}`, { method: 'DELETE' }),
   dropDeleteReading: (id: string, readingId: string) => request<DropView>(`/donors/${id}/drop/readings/${readingId}`, { method: 'DELETE' }),
   dropHideResult: (id: string, observationId: string) => post<DropView>(`/donors/${id}/drop/results/${observationId}/hide`),
+  dropLanguage: (id: string, language: string) => post<DropView>(`/donors/${id}/drop/language`, { language }),
+  dropLine: (id: string, screen: string) => request<{ screen: string; text: string; questions: string[]; date: string }>(`/donors/${id}/drop/line/${screen}`),
   demoClock: () => request<DemoClock>('/demo'),
   demoAdvance: (parts: number) => post<DemoClock>('/demo/advance', { parts }),
   demoNext: () => post<DemoClock>('/demo/next'),

@@ -93,7 +93,7 @@ router.get('/:donorId/health', (req, res) => {
     findings: health.findings(id),
     scores: health.scoreHistory(id),
     vitals: health.vitalsSeries(id),
-    labs: Object.fromEntries(Object.entries(labs).map(([k, list]) => [k, list.map(({ date, value, unit, low, high, name, source }) => ({ date, value, unit, low, high, name, source }))])),
+    labs: Object.fromEntries(Object.entries(labs).map(([k, list]) => [k, list.map(({ id, date, value, unit, low, high, name, source }) => ({ id, date, value, unit, low, high, name, source }))])),
     eligibility: health.eligibility(id),
     bmi: Number(health.bmi(req.donor, health.vitalsSeries(id).slice(-1)[0]?.weightKg || 60).toFixed(1)),
   });
@@ -155,7 +155,7 @@ router.post('/:donorId/appointments/:appointmentId/checkin', (req, res) => {
 router.post('/:donorId/copilot', (req, res) => {
   const { message, history } = req.body;
   if (!message || typeof message !== 'string') return fail(res, 400, 'message is required');
-  return withFallback(res, () => copilot.chat({ donorId: req.donor.id, history, message: message.slice(0, 2000) }), () => copilot.fallback(message));
+  return withFallback(res, () => copilot.chat({ donorId: req.donor.id, history, message: message.slice(0, 2000) }), () => copilot.fallback(req.donor.id, message));
 });
 
 router.post('/:donorId/care-plan', (req, res) => withFallback(res, async () => {
