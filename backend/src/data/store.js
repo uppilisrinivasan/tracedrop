@@ -55,8 +55,8 @@ function loadRecords() {
 }
 loadRecords();
 
-// Demo clock: a date plus a part of the day
-const PARTS = ['morning', 'afternoon', 'night'];
+// Demo clock: a date plus a part of the day (8 am, 2 pm, 7 pm, 9 pm; 9 pm starts quiet hours)
+const PARTS = ['morning', 'afternoon', 'evening', 'night'];
 const START = { date: institutions.asOf, part: 0 };
 let clock = { ...START };
 const listeners = { step: [], reset: [] };
@@ -84,7 +84,7 @@ module.exports = {
   clock: () => ({ date: clock.date, part: clock.part, partName: PARTS[clock.part], start: START.date }),
   /** Move the clock forward one part of the day, then let listeners (Drop) react. */
   stepClock() {
-    clock = clock.part === 2 ? { date: addDays(clock.date, 1), part: 0 } : { date: clock.date, part: clock.part + 1 };
+    clock = clock.part === PARTS.length - 1 ? { date: addDays(clock.date, 1), part: 0 } : { date: clock.date, part: clock.part + 1 };
     listeners.step.forEach((fn) => fn(clock));
   },
   /** Put the clock and all demo-session writes back to the start. */
@@ -111,6 +111,10 @@ module.exports = {
   hospital: (id) => institutions.hospitals.find((h) => h.id === id),
   centre: (id) => institutions.bloodCentres.find((c) => c.id === id),
   readDemo,
+  removeObservation(donorId, id) {
+    const list = observationsByDonor.get(donorId) || [];
+    observationsByDonor.set(donorId, list.filter((o) => o.id !== id));
+  },
 
   addDonation(donation) {
     if (!donationsByDonor.has(donation.donorId)) donationsByDonor.set(donation.donorId, []);

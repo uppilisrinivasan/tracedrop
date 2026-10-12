@@ -8,7 +8,7 @@ const express = require('express');
 const store = require('../data/store');
 
 const router = express.Router();
-const MAX_STEPS = 3 * 60; // two months, in parts of a day
+const MAX_STEPS = 4 * 60; // two months, in parts of a day
 
 const ok = (res, data) => res.json({ success: true, data });
 
@@ -20,7 +20,7 @@ router.use((req, res, next) => (enabled() ? next() : res.status(404).json({ succ
 
 router.get('/', (req, res) => ok(res, store.clock()));
 
-/** Move forward by a number of parts of a day (3 = one day). */
+/** Move forward by a number of parts of a day (4 = one day). */
 router.post('/advance', (req, res) => {
   const parts = Math.max(1, Math.min(MAX_STEPS, Math.round(Number(req.body.parts) || 1)));
   for (let i = 0; i < parts; i += 1) store.stepClock();

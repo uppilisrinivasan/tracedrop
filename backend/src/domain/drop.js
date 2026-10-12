@@ -1,0 +1,826 @@
+/**
+ * Drop engine: turns Events about a Donor into Cards, under the Message budget.
+ *
+ * Terms are defined in CONTEXT.md. The rules here are the ones agreed in the
+ * redesign (cards, budget, quiet hours, snooze, memory, demo clock): they are
+ * code, so the same history always gives the same Cards. The AI layer only
+ * rewrites the wording of open Cards; it never decides what is sent or when.
+ *
+ * State lives in memory per Donor, starts from data/demo/drop-seed.json and
+ * resets with the demo clock. Pending after the demo: move it to Firestore.
+ */
+
+const store = require('../data/store');
+const health = require('./health');
+const impact = require('./impact');
+const donation = require('./donation');
+
+const PRIORITY = { urgent: 1, results: 2, donate: 3, checkin: 4, plan: 4, goal: 5, impact: 6, fold: 7 };
+const BUDGETS = {
+  goal: { perDay: 1, perWeek: 2, report: 'week' },
+  healthy: { perDay: 1, perWeek: 1, report: 'month' },
+};
+const PARTS = 4; // morning 8 am, afternoon 2 pm, evening 7 pm, night 9 pm (quiet hours)
+const NIGHT = 3;
+const EXPIRY_DAYS = 7;
+const MAX_SNOOZES = 3;
+const CHECKIN_DAYS = 14;
+const BP_GOAL = { s: 135, d: 85 };
+
+const states = new Map();
+let seed = null;
+let seq = 1;
+
+/* ------------------------------------------------------------------ dates */
+
+const DAY = 864e5;
+const dayNum = (iso) => Math.round(Date.parse(`${iso}T00:00:00Z`) / DAY);
+const addDays = (iso, n) => new Date(Date.parse(`${iso}T00:00:00Z`) + n * DAY).toISOString().slice(0, 10);
+const dow = (iso) => new Date(`${iso}T00:00:00Z`).getUTCDay();
+const weekStart = (iso) => addDays(iso, -((dow(iso) + 6) % 7));
+const tickOf = (iso, part = 0) => dayNum(iso) * PARTS + part;
+const nowTick = () => tickOf(store.clock().date, store.clock().part);
+const fmt = (iso) => new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
+const clone = (x) => JSON.parse(JSON.stringify(x));
+const id = (prefix) => `${prefix}${seq++}`;
+const partOfTime = (hhmm) => { const h = Number(String(hhmm).slice(0, 2)); return h < 12 ? 0 : h < 17 ? 1 : h < 21 ? 2 : 3; };
+const time12 = (hhmm) => { const [h, m] = String(hhmm).split(':').map(Number); const hr = ((h + 11) % 12) + 1; return `${hr}${m ? `:${String(m).padStart(2, '0')}` : ''} ${h < 12 ? 'am' : 'pm'}`; };
+
+/* ------------------------------------------------------------------ state */
+
+function seedFor(donorId) {
+  if (!seed) seed = store.readDemo('drop-seed.json') || {};
+  return seed[donorId] || null;
+}
+
+function log(st, text) {
+  st.log.unshift({ at: `${store.clock().date} ${store.clock().partName}`, text });
+  st.log.length = Math.min(st.log.length, 40);
+}
+
+function create(donorId) {
+  const s = seedFor(donorId) || {};
+  // Seeded Personas start at the demo start date, however late they are first opened
+  const today = seedFor(donorId) ? store.clock().start : store.today();
+  const findings = health.findings(donorId);
+  const st = {
+    donorId, createdOn: today, lastDate: today,
+    language: s.language || 'en',
+    budgetKind: s.budget || (findings.some((f) => f.severity !== 'watch') ? 'goal' : 'healthy'),
+    cards: [], events: [], keys: {}, sentByDay: {}, sentByWeek: {}, reports: {},
+    memory: (s.memory || []).map((text) => ({ id: id('m'), text, createdOn: today })),
+    plan: s.plan ? clone(s.plan) : null,
+    reminders: clone(s.reminders || []),
+    reminderLog: [], readings: [], bookings: [], hiddenResults: [],
+    undo: null, memReceipt: null, created: 0, log: [],
+  };
+  if (st.plan && !st.plan.nextCheckin && st.plan.goals?.[0]) st.plan.nextCheckin = { date: addDays(today, CHECKIN_DAYS), marker: st.plan.goals[0].marker };
+  for (const e of s.earlier || []) {
+    st.cards.push({ id: id('c'), type: e.type, variant: e.type, status: 'answered', fresh: false, receipt: e.receipt, answeredOn: e.date, created: tickOf(e.date), createdOn: e.date, data: {} });
+  }
+  for (const o of s.open || []) openFromSeed(st, o);
+  st.cards.filter((c) => c.status === 'open').forEach((c) => { c.created = tickOf(today); c.createdOn = today; });
+  // Seeded open Cards were sent today
+  const counted = st.cards.filter((c) => c.status === 'open' && c.counted).length;
+  if (counted) { st.sentByDay[today] = counted; st.sentByWeek[weekStart(today)] = counted; }
+  log(st, `Demo starts ${fmt(today)}.`);
+  deliver(st);
+  return st;
+}
+
+function openFromSeed(st, o) {
+  const donorId = st.donorId;
+  if (o.type === 'impact') {
+    const component = store.getComponents(donorId).find((c) => c.id === o.componentId);
+    st.keys[`impact:${component.donationId}`] = true;
+    pushCard(st, 'impact', 'impact', { componentId: o.componentId }, { counted: true });
+  } else if (o.type === 'checkin') {
+    pushCard(st, 'checkin', o.marker, { marker: o.marker, mode: o.mode || null }, { counted: true });
+  } else if (o.type === 'slots') {
+    const el = health.eligibility(donorId);
+    st.keys[`donate:${el.nextEligibleDate}`] = true;
+    pushCard(st, 'slots', 'donate', { purpose: 'donate', reason: o.reason }, { counted: true });
+  } else if (o.type === 'urgent') {
+    const f = health.findings(donorId).find((x) => x.id === o.finding) || health.findings(donorId).find((x) => x.severity === 'urgent');
+    st.keys[`urgent:${f.id}:${f.date}`] = true;
+    pushCard(st, 'urgent', 'urgent', { findingId: f.id, date: f.date }, { urgent: true });
+  }
+}
+
+function get(donorId) {
+  if (!states.has(donorId)) states.set(donorId, create(donorId));
+  return states.get(donorId);
+}
+
+function pushCard(st, type, variant, data, opts = {}) {
+  const card = {
+    id: id('c'), type, variant, data, status: 'open', fresh: false,
+    created: nowTick(), createdOn: store.today(), counted: Boolean(opts.counted), urgent: Boolean(opts.urgent),
+    snoozes: 0, eventKey: opts.eventKey || null, aiText: null,
+  };
+  st.cards.push(card);
+  st.created += 1;
+  return card;
+}
+
+/* ------------------------------------------------------------------ events */
+
+function addEvent(st, ev) {
+  if (st.keys[ev.key]) return;
+  st.keys[ev.key] = true;
+  st.events.push({ status: 'pending', priority: PRIORITY[ev.kind] || 6, ...ev });
+}
+
+/** Facts about the Donor that are new since their Drop state started. */
+function detect(st) {
+  const { donorId, createdOn } = st;
+  const today = store.today();
+
+  // Results arrive (a visit's lab panel becomes visible)
+  for (const v of store.getDonations(donorId)) {
+    const obs = store.getObservations(donorId).filter((o) => o.visitId === v.id);
+    if (!obs.length) continue;
+    const arrived = obs.reduce((max, o) => ((o.availableOn || o.date) > max ? (o.availableOn || o.date) : max), '');
+    if (arrived >= createdOn) addEvent(st, { key: `results:${v.id}`, kind: 'results', at: arrived, data: { visitId: v.id } });
+  }
+
+  // Urgent findings
+  for (const f of health.findings(donorId).filter((x) => x.severity === 'urgent')) {
+    if (f.date >= createdOn) addEvent(st, { key: `urgent:${f.id}:${f.date}`, kind: 'urgent', at: f.date, data: { findingId: f.id, date: f.date } });
+  }
+
+  // Blood reaching patients: first unit per donation gets a Card, the rest go in the report
+  const byDonation = {};
+  for (const c of store.getComponents(donorId)) {
+    const t = c.events.find((e) => e.type === 'transfused');
+    if (!t || t.date > today || t.date < createdOn) continue;
+    (byDonation[c.donationId] = byDonation[c.donationId] || []).push({ c, date: t.date });
+  }
+  for (const [donationId, list] of Object.entries(byDonation)) {
+    list.sort((a, b) => a.date.localeCompare(b.date));
+    list.forEach(({ c, date }, i) => {
+      if (i === 0 && !st.keys[`impact:${donationId}`]) addEvent(st, { key: `impact:${donationId}`, kind: 'impact', at: date, data: { componentId: c.id } });
+      else if (st.keys[`impact:${donationId}`]) {
+        addEvent(st, { key: `impact_more:${c.id}`, kind: 'fold', foldOnly: true, at: date, data: { componentId: c.id } });
+      }
+    });
+  }
+
+  // Getting ready to donate: three weeks before they can
+  const ready = readiness(st);
+  if (ready) {
+    const at = addDays(ready, -21) > createdOn ? addDays(ready, -21) : createdOn;
+    if (at <= today) addEvent(st, { key: `donate:${ready}`, kind: 'donate', at, data: { from: ready } });
+  }
+
+  // Check-ins on the Plan's goal
+  const next = st.plan && st.plan.nextCheckin;
+  if (next && next.date <= today) addEvent(st, { key: `checkin:${next.marker}:${next.date}`, kind: 'checkin', at: next.date, data: { marker: next.marker } });
+}
+
+/** The date the Donor can next donate, as Drop sees it (a goal met at home counts until the next visit decides). */
+function readiness(st) {
+  const el = health.eligibility(st.donorId);
+  if (el.nextEligibleDate) return el.nextEligibleDate;
+  const blockers = health.findings(st.donorId).filter((f) => ['urgent', 'high'].includes(f.severity) || ['HB_LOW', 'HB_SEVERE', 'BP_GRADE1'].includes(f.id));
+  const onlyBp = blockers.length && blockers.every((f) => f.id === 'BP_GRADE1');
+  const bp = latestReading(st, 'bp');
+  if (onlyBp && bp && bp.s < BP_GOAL.s && bp.d < BP_GOAL.d && el.lastDonationDate) {
+    const date = addDays(el.lastDonationDate, el.gapDays);
+    return date > store.today() ? date : store.today();
+  }
+  return null;
+}
+
+function latestReading(st, marker) {
+  const list = st.readings.filter((r) => r.marker === marker);
+  return list[list.length - 1] || null;
+}
+
+/* ------------------------------------------------------------------ delivery */
+
+function budgetOf(st) {
+  const b = BUDGETS[st.budgetKind];
+  const today = store.today();
+  return { ...b, kind: st.budgetKind, today: st.sentByDay[today] || 0, week: st.sentByWeek[weekStart(today)] || 0, weekOf: weekStart(today) };
+}
+
+function isReportDay(st, iso) {
+  if (dow(iso) !== 0) return false;
+  return BUDGETS[st.budgetKind].report === 'week' || Number(iso.slice(8, 10)) <= 7;
+}
+
+/** Run at every point of the demo clock. */
+function deliver(st) {
+  const { date: today, part } = store.clock();
+  const now = nowTick();
+
+  if (st.lastDate !== today) {
+    // Yesterday's unanswered Reminders become "no answer"; hidden Cards come back on a new day
+    st.cards.filter((c) => c.type === 'reminder' && c.variant === 'due' && c.status === 'open' && c.data.day < today).forEach((c) => {
+      c.status = 'gone';
+      st.reminderLog.push({ day: c.data.day, reminderId: c.data.reminderId, answer: 'no answer' });
+      log(st, `${fmt(c.data.day)}: "${c.data.label}" got no answer.`);
+    });
+    st.cards.filter((c) => c.status === 'hidden').forEach((c) => { c.status = 'open'; });
+    st.lastDate = today;
+  }
+
+  st.cards.filter((c) => c.status === 'snoozed' && c.until <= now).forEach((c) => {
+    c.status = 'open';
+    log(st, `${label(c)} came back from snooze (not counted again).`);
+  });
+
+  detect(st);
+  const due = st.events.filter((e) => e.status === 'pending' && e.at <= today);
+
+  // Urgent findings go straight through, any time of day
+  due.filter((e) => e.kind === 'urgent').forEach((e) => send(st, e, { counted: false }));
+
+  // The Donor's own Reminders, at the part of the day they chose (allowed in quiet hours)
+  for (const r of st.reminders) {
+    if (partOfTime(r.time) !== part) continue;
+    if (st.cards.some((c) => c.type === 'reminder' && c.variant === 'due' && c.data.reminderId === r.id && c.data.day === today)) continue;
+    pushCard(st, 'reminder', 'due', { reminderId: r.id, label: r.label, time: r.time, day: today });
+  }
+
+  if (part === NIGHT) {
+    const waiting = due.filter((e) => e.status === 'pending' && !e.foldOnly);
+    if (waiting.length) log(st, `Quiet hours: ${waiting.length} waiting until morning.`);
+    return;
+  }
+
+  // Cards left unanswered for a week fold into the next report
+  st.cards.filter((c) => c.status === 'open' && !c.urgent && c.type !== 'reminder' && c.type !== 'report' && dayNum(today) - dayNum(c.createdOn) >= EXPIRY_DAYS).forEach((c) => {
+    c.status = 'folded';
+    c.foldReason = 'unanswered for a week';
+    log(st, `${label(c)} was unanswered for a week: it moves into the next report.`);
+  });
+
+  if (part === 1 && isReportDay(st, today) && !st.reports[today]) buildReport(st);
+
+  // Cards that follow up on something the Donor did skip the budget
+  due.filter((e) => e.status === 'pending' && e.prompted).forEach((e) => send(st, e, { counted: false }));
+
+  const sendable = due.filter((e) => e.status === 'pending' && !e.foldOnly && e.kind !== 'urgent').sort((a, b) => a.priority - b.priority);
+  if (!sendable.length) return;
+  const b = budgetOf(st);
+  if (b.today < b.perDay && b.week < b.perWeek) {
+    send(st, sendable[0], { counted: true });
+    if (sendable.length > 1) log(st, `${sendable.length - 1} more waiting: 1 new card a day.`);
+  } else if (!sendable[0].loggedWait) {
+    sendable[0].loggedWait = true;
+    log(st, `"${eventName(sendable[0])}" is waiting: ${b.today >= b.perDay ? 'already 1 new card today' : `already ${b.perWeek} this week`}.`);
+  }
+}
+
+function send(st, e, { counted }) {
+  e.status = 'delivered';
+  const map = {
+    results: ['results', 'results'], plan: ['results', 'plan'], goal: ['results', 'goal'], urgent: ['urgent', 'urgent'],
+    impact: ['impact', 'impact'], donate: ['slots', 'donate'], checkin: ['checkin', e.data?.marker], postvisit: ['checkin', 'visit'],
+  };
+  const [type, variant] = map[e.kind];
+  pushCard(st, type, variant, { ...(e.data || {}), purpose: e.kind === 'donate' ? 'donate' : e.data?.purpose }, { counted, urgent: e.kind === 'urgent', eventKey: e.key });
+  if (counted) {
+    const today = store.today();
+    st.sentByDay[today] = (st.sentByDay[today] || 0) + 1;
+    st.sentByWeek[weekStart(today)] = (st.sentByWeek[weekStart(today)] || 0) + 1;
+  }
+  // Results with something to act on lead to a Plan the next day
+  if (e.kind === 'results' && !st.plan && planFindings(st.donorId).length) addEvent(st, { key: `plan:${e.data.visitId}`, kind: 'plan', at: addDays(store.today(), 1), data: { visitId: e.data.visitId } });
+  log(st, `Sent "${eventName(e)}"${counted ? '' : ' (outside the budget)'}.`);
+}
+
+function buildReport(st) {
+  const today = store.today();
+  st.reports[today] = true;
+  const period = BUDGETS[st.budgetKind].report;
+  const from = addDays(today, period === 'week' ? -6 : -27);
+  const inPeriod = (d) => d >= from && d <= today;
+  st.cards.filter((c) => c.type === 'report' && c.status === 'open').forEach((c) => { c.status = 'answered'; c.receipt = 'Report (replaced by a newer one)'; });
+
+  const folded = st.events.filter((e) => e.status === 'pending' && e.at <= today && e.kind !== 'urgent');
+  folded.forEach((e) => { e.status = 'folded'; });
+  const foldedCards = st.cards.filter((c) => c.status === 'folded' && !c.reported);
+  foldedCards.forEach((c) => { c.reported = true; });
+
+  const slides = [];
+  if (st.reminders.length) {
+    const answers = st.reminderLog.filter((r) => inPeriod(r.day));
+    const taken = answers.filter((r) => r.answer === 'taken').length;
+    if (answers.length) slides.push(`Reminders: "taken" on ${taken} of ${answers.length} days.`);
+  }
+  if (st.plan && st.plan.activity) {
+    let minutes = 0;
+    for (let i = 0; i <= dayNum(today) - dayNum(from); i += 1) minutes += activityMinutes(st.donorId, addDays(from, i));
+    const target = st.plan.activity.minutesPerWeek * (period === 'week' ? 1 : 4);
+    slides.push(`Active minutes: ${minutes} of your ${target} goal (from your phone's step data, simulated).`);
+  }
+  const bp = st.readings.filter((r) => r.marker === 'bp' && inPeriod(r.date)).pop();
+  if (bp) slides.push(`Your latest BP: ${bp.s}/${bp.d}. Goal: under ${BP_GOAL.s}/${BP_GOAL.d}.`);
+  for (const e of folded.filter((x) => x.foldOnly)) slides.push(impactLine(st.donorId, e.data.componentId));
+  for (const c of foldedCards) slides.push(`You put this off: ${words(st, c).text}`);
+  const totals = impact.summarise(impact.donorJourneys(st.donorId));
+  slides.push(`You have helped ${totals.patientsHelped} patients so far.`);
+  const ready = readiness(st);
+  if (ready) slides.push(ready <= today ? 'You can donate now.' : `${dayNum(ready) - dayNum(today)} days until you can donate again.`);
+
+  const waiting = folded.filter((e) => !e.foldOnly).map((e) => ({ key: e.key, name: eventName(e) }));
+  pushCard(st, 'report', period, { slides, waiting, period });
+  log(st, `${period === 'week' ? 'Weekly' : 'Monthly'} report sent: ${slides.length} slides, ${folded.length + foldedCards.length} item(s) folded in.`);
+}
+
+function activityMinutes(donorId, iso) {
+  let h = 0;
+  for (const ch of `${donorId}${iso}`) h = (h * 31 + ch.charCodeAt(0)) % 9973;
+  return 8 + (h % 28);
+}
+
+function impactLine(donorId, componentId) {
+  const j = impact.donorJourneys(donorId).find((x) => x.id === componentId);
+  if (!j || !j.recipient) return 'Another part of your donation reached a patient.';
+  return `Your ${j.name.toLowerCase()} from ${fmt(j.donationDate)} helped a patient: ${j.recipient.context.toLowerCase()} (${j.recipient.place}).`;
+}
+
+function eventName(e) {
+  return {
+    results: 'Results are in', plan: 'Your Plan is ready', goal: 'Goal reached', urgent: 'Urgent finding', impact: 'Your blood reached a patient',
+    donate: 'Get ready to donate', checkin: 'Check-in', postvisit: 'How did the check-up go?', fold: 'More of your blood was used',
+  }[e.kind] || e.kind;
+}
+
+/* ------------------------------------------------------------------ wording (rule-based; the AI may rewrite the text) */
+
+function planFindings(donorId) {
+  return health.findings(donorId).filter((f) => ['hypertension', 'anemia'].includes(f.concept) && f.severity !== 'watch');
+}
+
+function careSlots(st, { urgent } = {}) {
+  const today = store.today();
+  const evenings = st.memory.some((m) => /evening/i.test(m.text));
+  const place = 'Ayushman Arogya Mandir (free), near you';
+  if (urgent) return [{ id: `care-${today}-1830`, date: today, time: '18:30', place }, { id: `care-${addDays(today, 1)}-1000`, date: addDays(today, 1), time: '10:00', place }];
+  const out = [];
+  for (let i = 1; out.length < 3 && i < 21; i += 1) {
+    const d = addDays(today, i);
+    if (evenings ? [2, 4].includes(dow(d)) : dow(d) === 6) {
+      (evenings ? ['18:30'] : ['10:00', '11:30']).forEach((t) => out.length < 3 && out.push({ id: `care-${d}-${t.replace(':', '')}`, date: d, time: t, place }));
+    }
+  }
+  return out;
+}
+
+function donateSlots(st) {
+  const prefersSaturday = st.memory.some((m) => /saturday/i.test(m.text));
+  const list = donation.slots(st.donorId).slots;
+  const pick = prefersSaturday ? list.filter((s) => dow(s.date) === 6) : list;
+  return (pick.length ? pick : list).slice(0, 3);
+}
+
+const slotLabel = (s) => `${fmt(s.date)} · ${s.time}`;
+
+function label(c) {
+  return {
+    'results:results': 'Results', 'results:plan': 'Your Plan', 'results:goal': 'Goal reached', 'urgent:urgent': 'Urgent',
+    'impact:impact': 'Impact', 'slots:donate': 'Donate', 'slots:care': 'Free check-up', 'checkin:bp': 'Check-in · BP goal',
+    'checkin:hb': 'Check-in · Hb goal', 'checkin:visit': 'Check-in', 'reminder:setup': 'Reminder', 'reminder:due': `Reminder · ${time12(c.data?.time || '21:00')}`,
+    'report:week': 'Weekly report', 'report:month': 'Monthly report',
+  }[`${c.type}:${c.variant}`] || c.type;
+}
+
+/** What a Card says and offers, from its data. */
+function words(st, c) {
+  const donorId = st.donorId;
+  const donor = store.getDonor(donorId);
+  const d = c.data || {};
+  const hi = st.language === 'hi';
+  switch (`${c.type}:${c.variant}`) {
+    case 'impact:impact': {
+      const j = impact.donorJourneys(donorId).find((x) => x.id === d.componentId);
+      const total = impact.summarise(impact.donorJourneys(donorId)).patientsHelped;
+      const r = j.recipient;
+      return {
+        text: `Your ${j.name.toLowerCase()} from ${fmt(j.donationDate)} helped a patient: ${r.context.toLowerCase()} (${r.patient.toLowerCase()}, ${r.place}).`,
+        main: { label: 'Watch the story', value: 'seen', story: true },
+        story: [
+          `${fmt(j.donationDate)}. You gave blood at ${j.centre}.`,
+          `It was separated into parts. One of them: your ${j.name.toLowerCase()}. ${j.role}.`,
+          `Your ${j.name.toLowerCase()} went to ${r.place.startsWith('A ') ? r.place.toLowerCase() : `a ${r.place.toLowerCase()}`}.`,
+          `It helped ${r.patient.toLowerCase()}: ${r.context.toLowerCase()}. You have now helped ${total} patients.`,
+        ],
+      };
+    }
+    case 'results:results': {
+      const visit = store.getDonations(donorId).find((v) => v.id === d.visitId);
+      const series = health.vitalsSeries(donorId).filter((v) => v.date <= visit.date).slice(-3).map((v) => v.systolic);
+      const rising = series.length === 3 && series[0] < series[1] && series[1] < series[2];
+      const acts = health.findings(donorId).filter((f) => f.severity !== 'watch');
+      const others = health.findings(donorId).filter((f) => f.severity === 'watch' && f.concept !== 'hypertension').map((f) => f.title.toLowerCase());
+      if (!acts.length) return { text: `Your results from ${fmt(visit.date)} are in. All in the healthy range${others.length ? `, apart from ${others.join(' and ')} to watch` : ''}. Nothing to do.`, main: { label: 'Got it', value: 'ok' } };
+      return {
+        text: `Your results from ${fmt(visit.date)} are in. BP ${visit.vitals.systolic}/${visit.vitals.diastolic}${rising ? `, up for the third donation in a row (${series.join(', ')})` : ''}. ${acts.length > 1 ? `Also: ${acts.filter((f) => f.concept !== 'hypertension').map((f) => f.title.toLowerCase()).join(', ')}. ` : ''}Nothing scary, but worth a free check-up. Want me to book one?`,
+        main: { label: 'Book a free check-up', value: 'book' },
+        chips: [{ label: 'Explain my results', value: 'explain', ask: 'Can you explain my latest results?' }],
+      };
+    }
+    case 'results:plan': {
+      const p = draftPlan(st);
+      return { text: `Your Plan is ready: ${p.goals.map((g) => g.label).join('; ')}, plus ${p.activity.label.toLowerCase()}.`, main: { label: 'Save my Plan', value: 'save' } };
+    }
+    case 'results:goal': {
+      if (d.marker === 'hb') return { text: `Hb ${d.value}. You did it: that's above ${d.target}, so you can donate again.`, main: { label: 'Book a slot', value: 'book' }, out: { label: 'Later', value: 'ok' } };
+      return { text: `BP ${d.s}/${d.d}. You hit your goal of under ${BP_GOAL.s}/${BP_GOAL.d}. Your next donation will confirm it.`, main: { label: 'Nice', value: 'ok' } };
+    }
+    case 'urgent:urgent': {
+      const f = health.findings(donorId).find((x) => x.id === d.findingId) || { detail: '' };
+      return {
+        text: `${f.title}: ${f.detail}${d.date ? ` on ${fmt(d.date)}` : ''}. Please see a doctor today. Free care near you:`,
+        chips: [...careSlots(st, { urgent: true }).map((s) => ({ label: slotLabel(s), value: { slotId: s.id } })), { label: 'Call the clinic', value: 'call' }],
+      };
+    }
+    case 'slots:care': {
+      const evenings = st.memory.some((m) => /evening/i.test(m.text));
+      const saturdays = st.memory.some((m) => /saturday/i.test(m.text));
+      return {
+        text: `Free check-up at Ayushman Arogya Mandir, near you. ${evenings ? 'Weekday evenings:' : saturdays ? 'These suit your Saturdays:' : 'Next free slots:'}`,
+        chips: [...careSlots(st).map((s) => ({ label: slotLabel(s), value: { slotId: s.id } })), ...(evenings ? [] : [{ label: 'Weekday evenings instead', value: 'evenings' }])],
+      };
+    }
+    case 'slots:donate': {
+      const slots = donateSlots(st);
+      const shortage = d.reason === 'shortage';
+      const from = d.from && d.from > store.today() ? d.from : null;
+      if (hi) {
+        return { text: `आप फिर से रक्तदान कर सकते हैं। कौन-सा समय ठीक रहेगा?`, chips: slots.map((s) => ({ label: slotLabel(s), value: { slotId: s.id } })), label: 'रक्तदान' };
+      }
+      return {
+        text: `${shortage ? `${donor.bloodGroup} is running short at ${slots[0]?.centre || 'your blood centre'}. ` : ''}${from ? `You can donate from ${fmt(from)}.` : 'You can donate now.'} Book a slot?`,
+        chips: slots.map((s) => ({ label: `${slotLabel(s)} · ${s.centre.replace(' Blood Centre', '').replace(' Community Blood Bank', '')}`, value: { slotId: s.id } })),
+      };
+    }
+    case 'checkin:visit':
+      return { text: 'How did the check-up go? Did the doctor start you on anything?', chips: [{ label: 'Started a tablet', value: 'tablet' }, { label: 'No tablet, just walking', value: 'walking' }, { label: "Didn't go", value: 'missed' }] };
+    case 'checkin:bp': {
+      const last = latestReading(st, 'bp') || lastVisitBp(donorId);
+      return { text: `Got a BP reading this week? A pharmacy machine is fine. Last: ${last.s}/${last.d}.`, wheel: { kind: 'bp', s: last.s, d: last.d }, main: { label: 'Save reading', value: 'wheel' }, out: { label: 'No reading this week', value: 'none' } };
+    }
+    case 'checkin:hb': {
+      const goal = (st.plan?.goals || []).find((g) => g.marker === 'hb');
+      const visits = health.vitalsSeries(donorId);
+      const lastHb = latestReading(st, 'hb')?.value || visits[visits.length - 1]?.haemoglobin;
+      return { text: `Had a blood test lately? Add the report and I'll update your goal (Hb ${goal?.target || 12.5} or more). Last: ${lastHb}.`, upload: true, main: { label: 'Add a report', value: 'upload' }, out: { label: 'Not yet', value: 'none' } };
+    }
+    case 'reminder:setup':
+      return { text: 'Want a daily reminder for your tablet?', chips: [{ label: '9 pm', value: { time: '21:00' } }, { label: '10 pm', value: { time: '22:00' } }], out: { label: 'No thanks', value: 'none' } };
+    case 'reminder:due':
+      return { text: d.label, chips: [{ label: 'Taken', value: 'taken' }, { label: 'Skipped', value: 'skipped' }] };
+    case 'report:week':
+    case 'report:month':
+      return {
+        text: `Your ${d.period}, in ${d.slides.length} taps.`,
+        main: { label: `Watch your ${d.period}`, value: 'seen', story: true },
+        story: d.slides,
+        chips: (d.waiting || []).map((w) => ({ label: `Still waiting: ${w.name}`, value: { pull: w.key } })),
+      };
+    default:
+      return { text: c.receipt || '' };
+  }
+}
+
+function lastVisitBp(donorId) {
+  const v = health.vitalsSeries(donorId).pop();
+  return { s: v.systolic, d: v.diastolic };
+}
+
+function draftPlan(st) {
+  const fs = planFindings(st.donorId);
+  const goals = [];
+  if (fs.some((f) => f.concept === 'hypertension')) goals.push({ marker: 'bp', label: `BP under ${BP_GOAL.s}/${BP_GOAL.d} by your next donation`, target: BP_GOAL });
+  if (fs.some((f) => f.concept === 'anemia')) goals.push({ marker: 'hb', label: 'Haemoglobin 12.5 or more, so you can donate again', target: 12.5, direction: 'up' });
+  const watch = health.findings(st.donorId).filter((f) => f.severity === 'watch' && !['hypertension', 'anemia'].includes(f.concept)).map((f) => `${f.title}: recheck at your next donation`);
+  return { goals, activity: { label: '150 minutes of brisk walking a week', minutesPerWeek: 150 }, notes: watch, createdOn: store.today() };
+}
+
+/* ------------------------------------------------------------------ answers */
+
+function findCard(st, cardId) {
+  const c = st.cards.find((x) => x.id === cardId);
+  if (!c) throw new Error('Card not found');
+  return c;
+}
+
+function answer(donorId, cardId, value) {
+  const st = get(donorId);
+  const c = findCard(st, cardId);
+  if (c.status !== 'open') throw new Error('That card is no longer open');
+  const snapshot = clone({ ...st, undo: null });
+  const effects = [];
+  const done = (receipt) => { c.status = 'answered'; c.fresh = true; c.receipt = receipt; c.answeredOn = store.today(); };
+  const today = store.today();
+
+  switch (`${c.type}:${c.variant}`) {
+    case 'impact:impact': done('Story watched · kept in Impact'); break;
+    case 'report:week':
+    case 'report:month':
+      if (value && value.pull) {
+        const e = st.events.find((x) => x.key === value.pull);
+        if (e) { e.status = 'pending'; e.prompted = true; send(st, e, { counted: false }); }
+        c.data.waiting = (c.data.waiting || []).filter((w) => w.key !== value.pull);
+        return finish(st, null, null);
+      }
+      done(`${c.variant === 'week' ? 'Weekly' : 'Monthly'} report seen`);
+      break;
+    case 'results:results':
+      if (value === 'book') { done('Booking a free check-up…'); pushCard(st, 'slots', 'care', { purpose: 'care' }); } else done('Results seen · in Health');
+      break;
+    case 'results:plan': {
+      st.plan = draftPlan(st);
+      const first = st.plan.goals[0];
+      if (first) st.plan.nextCheckin = { date: addDays(today, CHECKIN_DAYS), marker: first.marker };
+      done('Plan saved · in Health');
+      break;
+    }
+    case 'results:goal':
+      if (value === 'book') { done('Goal reached · in your Plan'); pushCard(st, 'slots', 'donate', { purpose: 'donate' }); } else done('Goal reached · in your Plan');
+      break;
+    case 'slots:care':
+      if (value === 'evenings') {
+        remember(st, 'Weekday evenings suit you', /saturday|evening|weekend/i);
+        return finish(st, null, null);
+      }
+      {
+        const slot = careSlots(st).find((s) => s.id === value?.slotId);
+        if (!slot) throw new Error('That slot is not available');
+        const booking = { id: id('b'), kind: 'care', ...slot };
+        st.bookings.push(booking);
+        addEvent(st, { key: `postvisit:${booking.id}`, kind: 'postvisit', at: addDays(slot.date, 1), prompted: true, data: { bookingId: booking.id } });
+        done(`Booked ${slotLabel(slot)} · ${slot.place}`);
+      }
+      break;
+    case 'slots:donate': {
+      const appointment = donation.book(donorId, { slotId: value?.slotId });
+      effects.push({ appointment: appointment.id });
+      st.bookings.push({ id: appointment.id, kind: 'donate', date: appointment.date, time: appointment.time, place: appointment.centre });
+      done(`Booked to donate: ${slotLabel(appointment)} · ${appointment.centre}`);
+      break;
+    }
+    case 'urgent:urgent':
+      if (value === 'call') done('Calling the clinic…');
+      else {
+        const slot = careSlots(st, { urgent: true }).find((s) => s.id === value?.slotId);
+        if (!slot) throw new Error('That slot is not available');
+        st.bookings.push({ id: id('b'), kind: 'care', ...slot });
+        done(`Booked ${slotLabel(slot)} · please go today`);
+      }
+      break;
+    case 'checkin:visit':
+      if (value === 'tablet') {
+        st.plan = st.plan || draftPlan(st);
+        st.plan.notes = [...(st.plan.notes || []), 'Started a BP tablet from your doctor'];
+        pushCard(st, 'reminder', 'setup', {});
+        done('Saved to your Plan: started a BP tablet');
+      } else if (value === 'missed') {
+        pushCard(st, 'slots', 'care', { purpose: 'care' });
+        done('No problem. Pick a new time.');
+      } else {
+        if (st.plan) st.plan.nextCheckin = { date: addDays(today, CHECKIN_DAYS), marker: 'bp' };
+        done('Saved to your Plan: walking, no tablet');
+      }
+      break;
+    case 'reminder:setup':
+      if (value && value.time) {
+        st.reminders.push({ id: id('r'), label: 'BP tablet', time: value.time });
+        done(`Reminder set: BP tablet at ${time12(value.time)} daily · in your Plan`);
+      } else done('No reminder. You can set one any time.');
+      if (st.plan) st.plan.nextCheckin = { date: addDays(today, CHECKIN_DAYS), marker: 'bp' };
+      break;
+    case 'reminder:due':
+      st.reminderLog.push({ day: c.data.day, reminderId: c.data.reminderId, answer: value });
+      done(`${value === 'taken' ? 'Taken' : 'Skipped'} · logged in your Plan`);
+      break;
+    case 'checkin:bp':
+      if (value === 'none') {
+        if (st.plan) st.plan.nextCheckin = { date: addDays(today, CHECKIN_DAYS), marker: 'bp' };
+        done("Okay. I'll ask again in 2 weeks.");
+      } else {
+        const s = Math.round(Number(value.s));
+        const d = Math.round(Number(value.d));
+        if (!(s >= 70 && s <= 250 && d >= 40 && d <= 150)) throw new Error('That reading looks out of range');
+        st.readings.push({ id: id('rd'), marker: 'bp', s, d, date: today });
+        if (s < BP_GOAL.s && d < BP_GOAL.d) addEvent(st, { key: `goal:bp:${today}`, kind: 'goal', at: addDays(today, 1), prompted: true, data: { marker: 'bp', s, d } });
+        else if (st.plan) st.plan.nextCheckin = { date: addDays(today, CHECKIN_DAYS), marker: 'bp' };
+        done(`${s}/${d} saved to Health`);
+      }
+      break;
+    case 'checkin:hb':
+      if (value === 'none') {
+        if (st.plan) st.plan.nextCheckin = { date: addDays(today, CHECKIN_DAYS), marker: 'hb' };
+        done("Okay. I'll ask again in 2 weeks.");
+      } else {
+        const v = Number(value.value);
+        if (!(v >= 3 && v <= 25)) throw new Error('That Hb value looks out of range');
+        const obsId = `OBS-${donorId}-DROP-${seq++}`;
+        store.addObservations(donorId, [{ id: obsId, donorId, visitId: null, code: '718-7', key: 'hb', name: 'Haemoglobin', value: v, unit: 'g/dL', low: 12, high: 15.5, date: value.date || today, source: 'uploaded_report', labId: null }]);
+        effects.push({ observation: obsId });
+        st.readings.push({ id: id('rd'), marker: 'hb', value: v, date: value.date || today, observationId: obsId });
+        const target = (st.plan?.goals || []).find((g) => g.marker === 'hb')?.target || 12.5;
+        if (v >= target) addEvent(st, { key: `goal:hb:${today}`, kind: 'goal', at: today, prompted: true, data: { marker: 'hb', value: v, target } });
+        done(`Hb ${v} saved to Health${value.source ? ` (from ${value.source})` : ''}`);
+      }
+      break;
+    default:
+      done('Done');
+  }
+  return finish(st, { cardId: c.id, snapshot, effects }, c);
+}
+
+function finish(st, undo, card) {
+  st.undo = undo;
+  if (card) log(st, `${label(card)} answered: ${card.receipt}`);
+  deliver(st); // follow-ups the answer made due (e.g. Meera's goal card) appear straight away
+  return view(st.donorId);
+}
+
+function undo(donorId) {
+  const st = get(donorId);
+  if (!st.undo) throw new Error('Nothing to undo');
+  for (const e of st.undo.effects) {
+    if (e.observation) store.removeObservation(donorId, e.observation);
+    if (e.appointment) {
+      const list = store.session.appointments.get(donorId) || [];
+      store.session.appointments.set(donorId, list.filter((a) => a.id !== e.appointment));
+    }
+  }
+  const restored = st.undo.snapshot;
+  restored.undo = null;
+  states.set(donorId, restored);
+  log(restored, 'Undone.');
+  return view(donorId);
+}
+
+/* ------------------------------------------------------------------ snooze, hide, memory, readings */
+
+function snooze(donorId, cardId, option) {
+  const st = get(donorId);
+  const c = findCard(st, cardId);
+  const { date: today, part } = store.clock();
+  if (c.urgent && option !== 'hour') throw new Error('Urgent cards can only wait an hour');
+  const now = nowTick();
+  const until = { hour: now + 1, tonight: part < 2 ? tickOf(today, 2) : now + 1, tomorrow: tickOf(addDays(today, 1), 0), week: tickOf(addDays(today, 7), 0) }[option];
+  if (until == null) throw new Error('Unknown snooze option');
+  c.snoozes += 1;
+  st.undo = null;
+  if (c.snoozes >= MAX_SNOOZES && !c.urgent) {
+    c.status = 'folded';
+    c.foldReason = 'snoozed three times';
+    log(st, `${label(c)} snoozed three times: it moves into the next report.`);
+  } else {
+    c.status = 'snoozed';
+    c.until = until;
+    log(st, `${label(c)} snoozed (${option}).`);
+  }
+  return view(donorId);
+}
+
+function hide(donorId, cardId) {
+  const st = get(donorId);
+  const c = findCard(st, cardId);
+  if (c.urgent) throw new Error("Urgent cards can't be hidden");
+  c.status = 'hidden';
+  st.undo = null;
+  log(st, `${label(c)} hidden for now.`);
+  return view(donorId);
+}
+
+/** Closing and reopening the app brings hidden Cards back. */
+function reopen(donorId) {
+  const st = get(donorId);
+  st.cards.filter((c) => c.status === 'hidden').forEach((c) => { c.status = 'open'; });
+  return view(donorId);
+}
+
+function remember(st, text, replaces) {
+  const old = replaces ? st.memory.filter((m) => replaces.test(m.text)) : [];
+  st.memory = st.memory.filter((m) => !old.includes(m));
+  st.memory.push({ id: id('m'), text, createdOn: store.today() });
+  st.memory = st.memory.slice(-20);
+  st.memReceipt = { text: `Remembered: ${text.charAt(0).toLowerCase()}${text.slice(1)}${old.length ? ` (replaces "${old.map((m) => m.text).join('", "')}")` : ''}`, previous: old };
+  log(st, st.memReceipt.text);
+}
+
+function forget(donorId, memoryId) {
+  const st = get(donorId);
+  st.memory = memoryId ? st.memory.filter((m) => m.id !== memoryId) : [];
+  st.memReceipt = null;
+  log(st, memoryId ? 'A memory was deleted.' : 'All memories deleted.');
+  return view(donorId);
+}
+
+/** Undo for the "Remembered: …" line. */
+function undoMemory(donorId) {
+  const st = get(donorId);
+  if (!st.memReceipt) throw new Error('Nothing to undo');
+  const added = st.memory[st.memory.length - 1];
+  st.memory = [...st.memory.slice(0, -1), ...st.memReceipt.previous];
+  st.memReceipt = null;
+  log(st, `Forgot: ${added.text}`);
+  return view(donorId);
+}
+
+function deleteReading(donorId, readingId) {
+  const st = get(donorId);
+  const r = st.readings.find((x) => x.id === readingId);
+  if (!r) throw new Error('Reading not found');
+  if (r.observationId) store.removeObservation(donorId, r.observationId);
+  st.readings = st.readings.filter((x) => x.id !== readingId);
+  log(st, 'A reading you added was deleted.');
+  return view(donorId);
+}
+
+function hideResult(donorId, observationId) {
+  const st = get(donorId);
+  if (!st.hiddenResults.includes(observationId)) st.hiddenResults.push(observationId);
+  return view(donorId);
+}
+
+/* ------------------------------------------------------------------ views */
+
+function cardView(st, c) {
+  const w = words(st, c);
+  return {
+    id: c.id, type: c.type, variant: c.variant, label: w.label || label(c), urgent: c.urgent, counted: c.counted, createdOn: c.createdOn,
+    text: c.aiText || w.text, ruleText: w.text, main: w.main || null, out: w.out || null, chips: w.chips || [], wheel: w.wheel || null,
+    upload: Boolean(w.upload), story: w.story || null, snoozes: c.snoozes,
+  };
+}
+
+function view(donorId) {
+  const st = get(donorId);
+  const b = budgetOf(st);
+  const ready = readiness(st);
+  const today = store.today();
+  const open = st.cards.filter((c) => c.status === 'open').sort((a, z) => (z.urgent - a.urgent) || (z.created - a.created));
+  return {
+    clock: store.clock(),
+    language: st.language,
+    open: open.map((c) => cardView(st, c)),
+    receipts: st.cards.filter((c) => c.status === 'answered' && c.fresh).map((c) => ({ id: c.id, receipt: c.receipt, undo: st.undo?.cardId === c.id })),
+    earlier: st.cards.filter((c) => c.status === 'answered' && !c.fresh).sort((a, z) => z.created - a.created).slice(0, 30).map((c) => ({ id: c.id, label: label(c), receipt: c.receipt, on: c.answeredOn })),
+    memory: st.memory.map(({ id: mid, text }) => ({ id: mid, text })),
+    memReceipt: st.memReceipt ? st.memReceipt.text : null,
+    plan: st.plan ? { ...st.plan, reminders: st.reminders } : (st.reminders.length ? { goals: [], activity: null, notes: [], reminders: st.reminders } : null),
+    readings: st.readings,
+    hiddenResults: st.hiddenResults,
+    bookings: st.bookings,
+    donate: { from: ready, daysTo: ready ? Math.max(0, dayNum(ready) - dayNum(today)) : null },
+    budget: { kind: b.kind, today: b.today, perDay: b.perDay, week: b.week, perWeek: b.perWeek, weekOf: b.weekOf, report: b.report, quiet: store.clock().part === NIGHT },
+    waiting: st.events.filter((e) => e.status === 'pending' && e.at <= today).map((e) => ({ name: eventName(e), foldOnly: Boolean(e.foldOnly) })),
+    later: st.cards.filter((c) => ['snoozed', 'hidden', 'folded'].includes(c.status)).map((c) => ({ label: label(c), status: c.status, snoozes: c.snoozes, reason: c.foldReason || null })),
+    upcoming: st.events.filter((e) => e.status === 'pending' && e.at > today).sort((a, z) => a.at.localeCompare(z.at)).slice(0, 4).map((e) => ({ name: eventName(e), on: e.at })),
+    log: st.log.slice(0, 10),
+  };
+}
+
+/** Facts for the AI writer and the copilot: the open Cards with their data and rule wording. */
+function openForWriting(donorId) {
+  const st = get(donorId);
+  return st.cards.filter((c) => c.status === 'open' && !c.aiText).map((c) => ({ card: c, words: words(st, c) }));
+}
+
+function setAiText(donorId, cardId, text) {
+  const c = get(donorId).cards.find((x) => x.id === cardId);
+  if (c && text) c.aiText = text;
+}
+
+/* ------------------------------------------------------------------ demo clock */
+
+store.onStep(() => {
+  for (const st of states.values()) {
+    // Time moved on: fresh receipts fold into "Earlier this cycle", the memory line and Undo go away
+    st.cards.filter((c) => c.fresh).forEach((c) => { c.fresh = false; });
+    st.memReceipt = null;
+    st.undo = null;
+    deliver(st);
+  }
+});
+store.onReset(() => { states.clear(); seed = null; seq = 1; });
+
+/** Demo "Next event": move the clock until some Donor gets a new Card (max two months). */
+function nextEvent() {
+  const before = [...states.values()].reduce((n, st) => n + st.created, 0);
+  for (let i = 0; i < PARTS * 60; i += 1) {
+    store.stepClock();
+    const after = [...states.values()].reduce((n, st) => n + st.created, 0);
+    if (after > before) break;
+  }
+  return store.clock();
+}
+
+module.exports = {
+  get, view, answer, undo, snooze, hide, reopen, forget, undoMemory, deleteReading, hideResult, nextEvent,
+  openForWriting, setAiText, words, label,
+  rememberText: (donorId, text, replacesPattern) => { const st = get(donorId); remember(st, text, replacesPattern ? new RegExp(replacesPattern, 'i') : null); return view(donorId); },
+  BUDGETS, PRIORITY, BP_GOAL,
+  _state: get, _addEvent: (donorId, ev) => addEvent(get(donorId), ev), _deliver: (donorId) => deliver(get(donorId)),
+};

@@ -85,14 +85,17 @@ function findings(donorId) {
   // Haemoglobin and iron
   const hbMin = donor.sex === 'F' ? 12.5 : 13.0;
   const ferritin = latest(labs, 'ferritin');
-  if (last.haemoglobin < 7) {
+  // A lab report newer than the last visit (e.g. an uploaded one) gives the current Hb
+  const labHb = latest(labs, 'hb');
+  const hb = labHb && labHb.date > last.date ? { value: labHb.value, date: labHb.date } : { value: last.haemoglobin, date: last.date };
+  if (hb.value < 7) {
     add({ id: 'HB_SEVERE', title: 'Severe anaemia', severity: 'urgent', protocolId: 'HB-SEV', concept: 'anemia',
-          detail: `Haemoglobin ${last.haemoglobin} g/dL`, evidence: [`Hb ${last.haemoglobin} on ${last.date}`] });
-  } else if (last.haemoglobin < hbMin) {
-    const ev = [`Hb ${last.haemoglobin} g/dL on ${last.date} (donor minimum ${hbMin})`];
+          detail: `Haemoglobin ${hb.value} g/dL`, evidence: [`Hb ${hb.value} on ${hb.date}`] });
+  } else if (hb.value < hbMin) {
+    const ev = [`Hb ${hb.value} g/dL on ${hb.date} (donor minimum ${hbMin})`];
     if (ferritin) ev.push(`Ferritin ${ferritin.value} ng/mL`);
     add({ id: 'HB_LOW', title: 'Haemoglobin below donation level', severity: 'moderate', protocolId: 'HB-DEF', concept: 'anemia',
-          detail: `${last.haemoglobin} g/dL (needs ${hbMin}+)`, evidence: ev });
+          detail: `${hb.value} g/dL (needs ${hbMin}+)`, evidence: ev });
   }
   if (ferritin && ferritin.value < 15) {
     add({ id: 'IRON_LOW', title: 'Iron stores depleted', severity: 'moderate', protocolId: 'HB-DEF', concept: 'anemia',
