@@ -35,9 +35,15 @@ test('healthy donor has no findings, a top score and top cover', () => {
 });
 
 test('rising blood pressure trend is caught before it becomes hypertension', () => {
-  const ids = health.findings('D-001').map((f) => f.id);
+  const ids = health.findings('D-050').map((f) => f.id); // Karthik: 126 -> 132 -> 138
   assert.ok(ids.includes('BP_RISING'));
   assert.ok(!ids.includes('BP_GRADE1'));
+});
+
+test("Arjun's 3 Oct donation (demo overlay) shows stage 1 BP on top of the rising trend", () => {
+  const ids = health.findings('D-001').map((f) => f.id);
+  assert.ok(ids.includes('BP_RISING'));
+  assert.ok(ids.includes('BP_GRADE1'));
 });
 
 test('cover never goes below base and never above the cap', () => {

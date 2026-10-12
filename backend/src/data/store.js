@@ -40,11 +40,17 @@ const policies = new Map(read('policies.json').map((p) => [p.id, p]));
 const protocols = new Map(readOntology('protocols.json').map((p) => [p.id, p]));
 const lifestyle = readOntology('lifestyle-recommendations.json');
 
-/** (Re)load the records that demo sessions can change. */
+function readDemo(name) {
+  const file = path.join(DATA_DIR, 'demo', name);
+  return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : null;
+}
+
+/** (Re)load the records that demo sessions can change, plus the demo overlay (e.g. Arjun's 3 Oct donation). */
 function loadRecords() {
-  donationsByDonor = groupBy(read('donations.json'), 'donorId');
-  observationsByDonor = groupBy(read('observations.json'), 'donorId');
-  componentsByDonor = groupBy(read('components.json'), 'donorId');
+  const overlay = readDemo('overlay.json') || {};
+  donationsByDonor = groupBy([...read('donations.json'), ...(overlay.donations || [])], 'donorId');
+  observationsByDonor = groupBy([...read('observations.json'), ...(overlay.observations || [])], 'donorId');
+  componentsByDonor = groupBy([...read('components.json'), ...(overlay.components || [])], 'donorId');
   for (const list of donationsByDonor.values()) list.sort((a, b) => a.date.localeCompare(b.date));
 }
 loadRecords();
@@ -94,7 +100,8 @@ module.exports = {
   getDonor: (id) => donors.get(id) || null,
   allDonors: () => [...donors.values()],
   getDonations: (donorId) => donationsByDonor.get(donorId) || [],
-  getObservations: (donorId) => observationsByDonor.get(donorId) || [],
+  // Lab results stay hidden until the demo clock reaches the day they arrive
+  getObservations: (donorId) => (observationsByDonor.get(donorId) || []).filter((o) => !o.availableOn || o.availableOn <= clock.date),
   getComponents: (donorId) => componentsByDonor.get(donorId) || [],
   allComponents: () => [...componentsByDonor.values()].flat(),
   allDonations: () => [...donationsByDonor.values()].flat(),
@@ -103,6 +110,7 @@ module.exports = {
   getPolicy: (id) => policies.get(id) || null,
   hospital: (id) => institutions.hospitals.find((h) => h.id === id),
   centre: (id) => institutions.bloodCentres.find((c) => c.id === id),
+  readDemo,
 
   addDonation(donation) {
     if (!donationsByDonor.has(donation.donorId)) donationsByDonor.set(donation.donorId, []);
