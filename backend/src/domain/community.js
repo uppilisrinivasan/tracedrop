@@ -21,7 +21,7 @@ function summary(communityId, viewerId) {
   const c = store.getCommunity(communityId);
   if (!c) return null;
   const members = c.memberIds.map((id) => ({ donor: store.getDonor(id), stats: memberStats(id) }));
-  const yearAgo = new Date(new Date(store.TODAY).getTime() - 365 * 864e5).toISOString().slice(0, 10);
+  const yearAgo = new Date(new Date(store.today()).getTime() - 365 * 864e5).toISOString().slice(0, 10);
   const totals = members.reduce((t, m) => ({
     donations: t.donations + m.stats.donations,
     patientsHelped: t.patientsHelped + m.stats.patientsHelped,

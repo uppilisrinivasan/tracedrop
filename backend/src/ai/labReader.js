@@ -102,7 +102,7 @@ function validate(donorId, parsed) {
 
 /** Save confirmed results into the donor's timeline. */
 function save(donorId, { reportDate, labName, results }) {
-  const date = /^\d{4}-\d{2}-\d{2}$/.test(reportDate || '') ? reportDate : store.TODAY;
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(reportDate || '') ? reportDate : store.today();
   const visitId = `EXT-${Date.now()}`;
   const observations = results.filter((r) => r.plausible !== false && MARKERS[r.marker]).map((r) => ({
     id: `OBS-${visitId}-${r.marker}`, donorId, visitId, code: MARKERS[r.marker].loinc, key: r.marker,

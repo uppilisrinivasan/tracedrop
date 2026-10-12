@@ -189,9 +189,9 @@ function eligibility(donorId) {
   const lastDonation = [...visits].reverse().find((v) => v.status === 'completed');
   const gapDays = donor.sex === 'F' ? 120 : 90;
   const blockers = findings(donorId).filter((f) => ['urgent', 'high'].includes(f.severity) || ['HB_LOW', 'HB_SEVERE', 'BP_GRADE1'].includes(f.id));
-  let nextDate = lastDonation ? addDays(lastDonation.date, gapDays) : store.TODAY;
-  if (nextDate < store.TODAY) nextDate = store.TODAY;
-  const eligibleNow = !blockers.length && nextDate <= store.TODAY;
+  let nextDate = lastDonation ? addDays(lastDonation.date, gapDays) : store.today();
+  if (nextDate < store.today()) nextDate = store.today();
+  const eligibleNow = !blockers.length && nextDate <= store.today();
   return {
     eligibleNow,
     nextEligibleDate: blockers.length ? null : nextDate,

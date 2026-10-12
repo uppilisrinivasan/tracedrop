@@ -63,7 +63,7 @@ function checkIn(donorId, appointmentId, vitalsInput = {}) {
 
   const visitNo = store.getDonations(donorId).length + 1;
   const visitId = `${donorId}-V${visitNo}`;
-  const date = store.TODAY;
+  const date = store.today();
   store.addDonation({ id: visitId, donorId, date, status, deferralReason: reasons.join('; ') || null, centreId: appointment.centreId,
     volumeMl: vitals.weightKg >= 55 ? 450 : 350, bagId: `BAG-${date.replace(/-/g, '').slice(2)}-${Math.floor(1000 + Math.random() * 9000)}`, vitals, confidentialFollowUp: false });
 

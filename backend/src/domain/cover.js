@@ -48,7 +48,7 @@ function evaluate(donorId) {
   const base = policy.baseCover;
   const history = health.scoreHistory(donorId);
   const current = history.length ? history[history.length - 1].score : 60;
-  const yearAgo = health.addDays(store.TODAY, -365);
+  const yearAgo = health.addDays(store.today(), -365);
   const recentVisits = store.getDonations(donorId).filter((v) => v.date >= yearAgo);
 
   const consistent = recentVisits.length >= 2;
@@ -69,7 +69,7 @@ function evaluate(donorId) {
   }
 
   const missing = [];
-  if (!consistent) missing.push(`one more monitored visit in the next ${Math.max(1, 365 - health.daysBetween(recentVisits[0]?.date || yearAgo, store.TODAY))} days (needs 2 in 12 months)`);
+  if (!consistent) missing.push(`one more monitored visit in the next ${Math.max(1, 365 - health.daysBetween(recentVisits[0]?.date || yearAgo, store.today()))} days (needs 2 in 12 months)`);
   if (!consented) missing.push('consent to share your health score with the insurer');
   const toReachNext = !nextStep ? 'You are at the top step.'
     : [pointsToNext ? `raise your health score by ${pointsToNext} point(s) to ${current + pointsToNext}` : null, ...missing].filter(Boolean).join(' AND ');

@@ -61,7 +61,7 @@ router.get('/:donorId/overview', (req, res) => {
   const c = cover.evaluate(id);
   ok(res, {
     donor: { ...req.donor, policyId: undefined },
-    today: store.TODAY,
+    today: store.today(),
     donations: { completed: visits.filter((v) => v.status === 'completed').length, deferred: visits.filter((v) => v.status === 'deferred').length,
       firstDate: visits.length ? visits[0].date : null, litres: Number((visits.filter((v) => v.status === 'completed').reduce((s, v) => s + v.volumeMl, 0) / 1000).toFixed(2)) },
     impact: impact.summarise(journeys),

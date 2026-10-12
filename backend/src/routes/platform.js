@@ -14,6 +14,7 @@ const llm = require('../ai/llm');
 const router = express.Router();
 
 let networkCache = null;
+store.onReset(() => { networkCache = null; });
 
 function network() {
   if (networkCache) return networkCache;
@@ -49,7 +50,7 @@ function network() {
   const repeat = donors.filter((d) => store.getDonations(d.id).filter((v) => v.status === 'completed').length >= 2).length;
 
   networkCache = {
-    asOf: store.TODAY,
+    asOf: store.today(),
     donors: donors.length,
     donations: completed.length,
     deferrals: donations.length - completed.length,

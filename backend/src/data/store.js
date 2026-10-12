@@ -2,8 +2,10 @@
  * In-memory data store backed by the synthetic data in data/synthetic/.
  *
  * Loads once at startup, indexes by donor, and keeps demo-session writes
- * (new donations, uploaded lab reports, care plans) in memory. "Today" is the
- * simulation date from institutions.json so every view is consistent.
+ * (new donations, uploaded lab reports, care plans) in memory. "Today" is a
+ * demo clock that starts at the simulation date in institutions.json and can be
+ * moved forward (morning, afternoon, night) so Drop's behaviour over days and
+ * weeks can be shown. Reset puts the clock and every demo-session write back.
  */
 
 const fs = require('fs');
@@ -30,17 +32,32 @@ function groupBy(items, key) {
 
 const institutions = read('institutions.json');
 const donors = new Map(read('donors.json').map((d) => [d.id, d]));
-const donationsByDonor = groupBy(read('donations.json'), 'donorId');
-const observationsByDonor = groupBy(read('observations.json'), 'donorId');
-const componentsByDonor = groupBy(read('components.json'), 'donorId');
+let donationsByDonor;
+let observationsByDonor;
+let componentsByDonor;
 const communities = new Map(read('communities.json').map((c) => [c.id, c]));
 const policies = new Map(read('policies.json').map((p) => [p.id, p]));
 const protocols = new Map(readOntology('protocols.json').map((p) => [p.id, p]));
 const lifestyle = readOntology('lifestyle-recommendations.json');
 
-for (const list of donationsByDonor.values()) list.sort((a, b) => a.date.localeCompare(b.date));
+/** (Re)load the records that demo sessions can change. */
+function loadRecords() {
+  donationsByDonor = groupBy(read('donations.json'), 'donorId');
+  observationsByDonor = groupBy(read('observations.json'), 'donorId');
+  componentsByDonor = groupBy(read('components.json'), 'donorId');
+  for (const list of donationsByDonor.values()) list.sort((a, b) => a.date.localeCompare(b.date));
+}
+loadRecords();
 
-const TODAY = institutions.asOf;
+// Demo clock: a date plus a part of the day
+const PARTS = ['morning', 'afternoon', 'night'];
+const START = { date: institutions.asOf, part: 0 };
+let clock = { ...START };
+const listeners = { step: [], reset: [] };
+
+function addDays(isoDate, days) {
+  return new Date(new Date(`${isoDate}T00:00:00Z`).getTime() + days * 864e5).toISOString().slice(0, 10);
+}
 
 // Demo-session state (resets on restart)
 const session = {
@@ -51,12 +68,28 @@ const session = {
 
 module.exports = {
   DATA_DIR,
-  TODAY,
   institutions,
   protocols,
   lifestyle,
   policies,
   session,
+
+  today: () => clock.date,
+  clock: () => ({ date: clock.date, part: clock.part, partName: PARTS[clock.part], start: START.date }),
+  /** Move the clock forward one part of the day, then let listeners (Drop) react. */
+  stepClock() {
+    clock = clock.part === 2 ? { date: addDays(clock.date, 1), part: 0 } : { date: clock.date, part: clock.part + 1 };
+    listeners.step.forEach((fn) => fn(clock));
+  },
+  /** Put the clock and all demo-session writes back to the start. */
+  resetDemo() {
+    clock = { ...START };
+    loadRecords();
+    Object.values(session).forEach((map) => map.clear());
+    listeners.reset.forEach((fn) => fn());
+  },
+  onStep: (fn) => listeners.step.push(fn),
+  onReset: (fn) => listeners.reset.push(fn),
 
   getDonor: (id) => donors.get(id) || null,
   allDonors: () => [...donors.values()],

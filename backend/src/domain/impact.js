@@ -65,11 +65,15 @@ function publicRecipient(c) {
   };
 }
 
+/** A component's journey as of the demo clock: later steps haven't happened yet. */
 function publicJourney(c, donation) {
   const withheld = donation.confidentialFollowUp;
+  const today = store.today();
+  const happened = c.events.filter((e) => e.date <= today);
   const events = withheld
-    ? c.events.filter((e) => ['collected', 'separated', 'tested'].includes(e.type)).concat([{ type: 'withheld', date: c.events[c.events.length - 1].date }])
-    : c.events;
+    ? happened.filter((e) => ['collected', 'separated', 'tested'].includes(e.type)).concat([{ type: 'withheld', date: happened[happened.length - 1].date }])
+    : happened;
+  const transfused = happened.some((e) => e.type === 'transfused');
   const lastType = events[events.length - 1].type;
   return {
     id: c.id,
@@ -81,7 +85,7 @@ function publicJourney(c, donation) {
     statusLabel: STAGE_LABELS[lastType],
     helped: ['transfused', 'outcome'].includes(lastType) || lastType === 'products_released',
     events: events.map((e) => ({ type: e.type, label: STAGE_LABELS[e.type], when: ['transfused', 'outcome', 'issued'].includes(e.type) ? month(e.date) : e.date })),
-    recipient: withheld ? null : publicRecipient(c),
+    recipient: withheld || !transfused ? null : publicRecipient(c),
     fractionation: withheld ? null : c.fractionation,
     withheld,
   };
@@ -89,7 +93,9 @@ function publicJourney(c, donation) {
 
 function donorJourneys(donorId) {
   const donations = new Map(store.getDonations(donorId).map((d) => [d.id, d]));
-  return store.getComponents(donorId).map((c) => publicJourney(c, donations.get(c.donationId)));
+  return store.getComponents(donorId)
+    .filter((c) => c.events.length && c.events[0].date <= store.today())
+    .map((c) => publicJourney(c, donations.get(c.donationId)));
 }
 
 /** Patients helped: one per transfused unit; plasma pools count as a share. */

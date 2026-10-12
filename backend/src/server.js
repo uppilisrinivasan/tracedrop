@@ -27,6 +27,7 @@ app.get('/api/health', (req, res) => {
 
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/donors', requireAuth, require('./routes/donors'));
+app.use('/api/demo', requireAuth, require('./routes/demo'));
 app.use('/api', requireAuth, require('./routes/platform'));
 
 app.use('/api', (req, res) => {

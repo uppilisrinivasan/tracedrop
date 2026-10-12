@@ -72,7 +72,7 @@ async function generate(donorId) {
   const result = await runAgent({
     feature: 'care_plan',
     system: SYSTEM,
-    messages: [{ role: 'user', content: `Write the care plan for donor ${donor.name} (${donorId}). Today is ${store.TODAY}.` }],
+    messages: [{ role: 'user', content: `Write the care plan for donor ${donor.name} (${donorId}). Today is ${store.today()}.` }],
     donorId,
     toolNames: ['get_profile', 'get_health_findings', 'get_health_score', 'get_trend', 'get_protocol', 'get_lifestyle_guidance', 'get_insurance_cover', 'simulate_cover', 'find_care_slots'],
     maxTokens: 6000,

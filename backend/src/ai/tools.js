@@ -88,7 +88,7 @@ const MARKER_KEYS = { haemoglobin: 'hb' };
 
 function careSlots(donor, withinDays) {
   // Deterministic synthetic slots so the demo is reproducible
-  const base = new Date(store.TODAY);
+  const base = new Date(store.today());
   const places = [
     { name: `Ayushman Arogya Mandir, ${donor.district}`, kind: 'Free government primary care', cost: 0 },
     { name: `Partner clinic, ${donor.district}`, kind: 'Insurer network clinic (cashless)', cost: 0 },
@@ -113,7 +113,7 @@ function run(name, input, donorId) {
         name: donor.name, age: donor.age, sex: donor.sex, bloodGroup: donor.bloodGroup, language: donor.language,
         district: donor.district, smoker: donor.smoker, familyHistory: donor.familyHistory,
         donations: visits.filter((v) => v.status === 'completed').length, deferrals: visits.filter((v) => v.status === 'deferred').length,
-        eligibility: health.eligibility(donorId), today: store.TODAY,
+        eligibility: health.eligibility(donorId), today: store.today(),
       };
     }
     case 'get_health_findings':

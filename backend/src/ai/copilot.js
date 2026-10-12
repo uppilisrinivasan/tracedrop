@@ -29,7 +29,7 @@ How to work:
 async function chat({ donorId, history, message }) {
   const donor = store.getDonor(donorId);
   const language = LANGUAGE_NAMES[donor.language] || 'English';
-  const context = `Signed-in donor: ${donor.name} (${donorId}). Preferred language: ${language}. Today: ${store.TODAY}.`;
+  const context = `Signed-in donor: ${donor.name} (${donorId}). Preferred language: ${language}. Today: ${store.today()}.`;
 
   // History arrives from the client as prior API-format messages; first user turn carries the context line
   const messages = history && history.length
