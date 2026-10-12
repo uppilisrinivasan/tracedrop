@@ -52,7 +52,7 @@ export default function Impact({ donorId, version }: PageProps) {
       </div>
 
       {tab === 'units' ? (
-        <div className="grid" style={{ gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.25fr)', alignItems: 'start' }}>
+        <div className="grid split">
           <div className="stack" style={{ gap: 12 }}>
             {byDonation.map(([date, units]) => (
               <div key={date} className="card" style={{ padding: 14 }}>

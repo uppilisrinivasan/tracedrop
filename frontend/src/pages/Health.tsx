@@ -38,7 +38,7 @@ export default function Health({ donorId, go, version, refresh, focus }: PagePro
         <button className="btn" onClick={() => go('labs')}><Icon name="upload" size={16} /> Add a lab report</button>
       </div>
 
-      <div className="grid" style={{ gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.6fr)' }}>
+      <div className="grid split">
         <div className="card">
           <div className="stat-label">Health score</div>
           <div className="row" style={{ alignItems: 'baseline' }}><span className="stat-value" style={{ fontSize: 44 }}>{latest?.score ?? '—'}</span><span className="muted">/100</span></div>
