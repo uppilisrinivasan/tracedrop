@@ -1,8 +1,12 @@
-/** Privacy policy and terms. Public: Google's consent screen links here before anyone signs in. */
+/**
+ * Privacy policy and terms. Public: Google's consent screen links here before anyone signs in.
+ * A mock policy for the demo, clearly marked as one, that says the same as Drop's Intro and the
+ * "Your data" screen: what is kept where and for how long, the Choices, and how to delete it.
+ */
 import { Icon } from './ui';
 
 const CONTACT = 'sandeepsamant1702@gmail.com';
-const UPDATED = '11 October 2026';
+const UPDATED = '14 October 2026';
 
 export const LEGAL_PATHS = ['/privacy', '/terms'];
 
@@ -14,24 +18,60 @@ export function LegalLinks() {
   );
 }
 
+function DemoNote() {
+  return (
+    <div className="callout callout-warn small legal-demo">
+      <Icon name="info" size={16} />
+      <span><b>Demo policy.</b> TraceDrop is a hackathon demo with made-up blood donation records. This page says what the demo really does with your data, in plain words. It has not had a legal review.</span>
+    </div>
+  );
+}
+
 function Privacy() {
   return (
     <>
       <h1>Privacy Policy</h1>
       <p className="tiny muted">Last updated {UPDATED}</p>
-      <h2>What we collect</h2>
-      <p>When you sign in with Google we receive your name, email address, profile picture and Google account ID. We store these with the time of each sign-in and your browser's user agent, so we know who used TraceDrop and when.</p>
-      <p>We also keep the information you enter into TraceDrop, such as donor records and lab report photos you upload.</p>
-      <h2>How we use it</h2>
-      <p>We use your Google profile only to sign you in and to keep a record of access. We do not sell your data, show ads, or share it with anyone except the services that run TraceDrop.</p>
-      <h2>Where it is stored</h2>
-      <p>TraceDrop runs on Google Cloud in India (asia-south1). Sign-in records are kept in Google Cloud Firestore. AI features send the relevant text to Google Vertex AI (Gemini) to produce an answer; Google does not use this to train its models.</p>
-      <h2>Sessions</h2>
-      <p>A session lasts 1 day and is held in a secure cookie. After that you sign in again. TraceDrop sets no other cookies; Google's sign-in button follows Google's own privacy policy.</p>
-      <h2>Calendar and location</h2>
-      <p>If you book a donation, you can connect Google Calendar and allow this device to share an approximate location. We use that only to hide times you are busy, rank nearby blood centres, add the appointment to your calendar, and email you a confirmation and reminders. The Google access token is not stored. You can skip both and pick a slot yourself.</p>
+      <DemoNote />
+
+      <h2>What we keep, where, and for how long</h2>
+      <p><b>With your Google account</b>, in a Google Cloud database (Firestore):</p>
+      <ul>
+        <li>your name, email address and profile photo from Google sign-in;</li>
+        <li>your sign-in history: the time and browser of each sign-in;</li>
+        <li>when donating suits you: the days, times and place you choose (if you let this device share your location, it is rounded to about 1 km);</li>
+        <li>your donation bookings, including cancelled ones (cancelling keeps the record).</li>
+      </ul>
+      <p>These stay until you delete them, or your account, in Your data.</p>
+
+      <p><b>In your own Google account</b>, only if you connect Google Calendar when you book: a Calendar event for each booking, and a confirmation email sent from your Gmail to yourself. TraceDrop can remove its Calendar events when you allow Calendar access again, but it can't read or delete your email.</p>
+
+      <p><b>With the demo donor you are viewing</b>, in TraceDrop's server memory: your Choices, things you ask Drop to remember (never health facts, religion, caste or income), readings you add, and values read from lab reports. Demo donors are shared by everyone trying the demo, so others can see and change the same things, and all of it resets when the demo restarts. Lab report photos are not kept: they are sent to the AI to read, then discarded.</p>
+
+      <p><b>Sent to Google's Gemini AI</b> (Google Cloud Vertex AI): what you type to Drop, lab report photos, and the demo donor's records Drop needs to answer. It never gets your name or email. Google doesn't train its AI on it. Google may keep it in memory for up to 24 hours to answer faster, and for up to 90 days if its automated checks flag it for possible abuse. We don't promise which country this processing happens in.</p>
+
+      <p><b>Server logs</b> (Google Cloud Logging): the pages and actions you used, your IP address and browser, kept for 30 days to find errors and stop misuse, then deleted automatically.</p>
+
+      <p><b>This browser</b> remembers which demo donor you viewed and Drop lines you hid. A sign-in cookie keeps you signed in for 1 day, or until you sign out. TraceDrop sets no other cookies; Google's sign-in button follows Google's own privacy policy.</p>
+
       <h2>Your choices</h2>
-      <p>To see or delete the data we hold about you, email <a href={`mailto:${CONTACT}`}>{CONTACT}</a>. You can also remove TraceDrop's access at any time from your Google Account under Security, Third-party connections.</p>
+      <p>Three switches, which you can change any time in Your data, Health cover or Community:</p>
+      <ul>
+        <li><b>Share my health score with my insurer</b> (off unless you turn it on). Only the score, never your results. It can raise your cover at the same premium. In this demo no insurer receives anything.</li>
+        <li><b>Show me on my Circles' leaderboards</b> (on). Your first name, donations and patients helped.</li>
+        <li><b>Count my donations in my Circles' totals</b> (on). Anonymous numbers only; off, you are left out of every total.</li>
+      </ul>
+
+      <h2>How we use it</h2>
+      <p>To sign you in, show you where your blood went and what your results mean, help you book, and keep a record of access. We don't sell your data, show ads, or share it with anyone except the Google services that run TraceDrop.</p>
+
+      <h2>Deleting your data</h2>
+      <p>Open <b>Your data</b> in the account menu. Delete any item with its button (you have a few seconds to undo), or delete your whole account: your profile, sign-in history, donation preferences and bookings go straight away (upcoming bookings are cancelled first), and you can also remove the Calendar events TraceDrop added. Gemini's copies and server logs delete themselves (within 24 hours or 90 days, and 30 days). You delete the confirmation emails in your Gmail yourself, and you can remove TraceDrop's access in your Google Account under Security, Third-party connections.</p>
+      <p>To get a copy of your data, email <a href={`mailto:${CONTACT}`}>{CONTACT}</a>.</p>
+
+      <h2>Where it runs</h2>
+      <p>TraceDrop runs on Google Cloud. Its app server runs in India (asia-south1). We make no promise about the country where the database keeps your data or where Google processes the AI requests and keeps its copies.</p>
+
       <h2>Contact</h2>
       <p><a href={`mailto:${CONTACT}`}>{CONTACT}</a></p>
     </>
@@ -43,16 +83,19 @@ function Terms() {
     <>
       <h1>Terms of Service</h1>
       <p className="tiny muted">Last updated {UPDATED}</p>
+      <DemoNote />
       <h2>Using TraceDrop</h2>
-      <p>TraceDrop is a demonstration platform for tracing blood donations. You need a Google account to sign in. Use it lawfully and do not try to access data or accounts that are not yours.</p>
+      <p>TraceDrop is a demonstration of tracing blood donations and following up on the health check that comes with each one. You need a Google account to sign in. Use it lawfully and do not try to access data or accounts that are not yours.</p>
+      <h2>Demo donors</h2>
+      <p>The donors you can view are made up, apart from the New donor, which stands for you as a new user. Everyone trying the demo shares them, so what you enter for a demo donor can be seen and changed by others, and it all resets when the demo restarts. Don't enter anything about a demo donor that you wouldn't want others to see.</p>
       <h2>Your content</h2>
-      <p>You are responsible for the information you enter. Do not upload real medical records or personal data of other people without their consent.</p>
+      <p>You are responsible for what you enter. Do not upload real medical records, or anyone else's personal data without their consent.</p>
       <h2>No medical advice</h2>
-      <p>AI answers and screening suggestions are for information only. They are not medical advice and must not replace a qualified professional's judgement.</p>
+      <p>Drop's answers and the health findings are for information only. They are not medical advice and do not replace a doctor. In this demo, bookings, insurance cover and health records are illustrations: no blood centre, clinic or insurer receives anything.</p>
       <h2>Availability</h2>
-      <p>TraceDrop is provided as is, without warranty. It may change, pause, or stop at any time, and we may end access for anyone who misuses it.</p>
+      <p>TraceDrop is provided as is, without warranty. It may change, pause or stop at any time, and we may end access for anyone who misuses it.</p>
       <h2>Privacy</h2>
-      <p>How we handle your data is described in the <a href="/privacy">Privacy Policy</a>.</p>
+      <p>How we handle your data is described in the <a href="/privacy">Privacy Policy</a>, and you can see and delete it in Your data.</p>
       <h2>Contact</h2>
       <p><a href={`mailto:${CONTACT}`}>{CONTACT}</a></p>
     </>

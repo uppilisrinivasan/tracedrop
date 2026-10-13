@@ -4,6 +4,14 @@ One entry per commit, newest first, so any change can be traced or reverted: the
 To revert one: find it with `git log --oneline --grep "<commit title>"`, then `git revert <hash>`.
 The design behind these changes is in `CONTEXT.md` (vocabulary) and the build plan.
 
+## 2026-10-14 · Onboarding step 8: mock privacy policy and terms, and the team guide
+
+- **What and why:**
+  - `frontend/src/Legal.tsx`: a mock privacy policy and terms, clearly marked as a demo ("has not had a legal review"), that say the same as the Intro and Your data: what is kept where and for how long (Google account in Firestore; your own Google Calendar and Gmail; the shared demo donor in server memory; Gemini up to 24 hours, up to 90 days if flagged; server logs 30 days; this browser and a 1-day cookie), the three Choices, shared demo donors, lab report photos not kept, how to delete (Your data, Delete my account, what deletes itself, what you delete yourself), and "email us" for a copy. It no longer claims everything runs in India: only the app server's region is stated, and it makes no promise about where the database or the AI keep or process data. The terms explain shared demo donors and that no blood centre, clinic or insurer receives anything.
+  - `docs/drop/index.html` (team guide): a section on the New donor's Intro (the 8 steps and the tile each lights up, questions, Skip, coming back, Replay), Choices and Your data; seven new test scripts (the Intro start to finish; Skip, Welcome back, Replay and Reset; languages; Choices as Arjun; empty states; Your data deletes and Undo; Delete my account, including the live-site check with a spare Google account) and an AI-off step for the Intro. Brought up to date where Sandeep's Home changes made it stale: the donor switcher is in the account menu, impact and weekly stories are chips above Home's chat, Home's chat is inline (no panel to open or close), the demo bar is on Home only, booking runs in the chat, the snooze test uses the Results card, and the run command checks out `main`.
+- **Files:** `frontend/src/Legal.tsx`, `frontend/src/styles.css`, `docs/drop/index.html`.
+- **Revert:** safe to revert on its own.
+
 ## 2026-10-14 · Onboarding step 7: "Your data" and Delete my account
 
 - **What and why:** a real "Your data" screen (account menu → Your data, `#data`), rewritten from the prototype's variant A, so a person can see what TraceDrop keeps, where, for how long, and delete it.
