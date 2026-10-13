@@ -55,7 +55,7 @@ function script() {
     { id: 'data', title: 'Your data', picture: 'data',
       text: ['Here is what TraceDrop keeps about you, and where.'],
       after: ['You can see and delete any of it in Your data, in the account menu.'],
-      buttons: [{ label: 'Got it', value: 'next', primary: true }] },
+      buttons: [{ label: 'Got it', value: 'next', primary: true }, { label: 'Open Your data', value: 'open-data' }] },
     { id: 'choices', title: 'Your choices', picture: 'choices',
       text: ['Three choices. You can change them any time in Your data.'],
       buttons: [{ label: 'Save my choices', value: 'save', primary: true }] },

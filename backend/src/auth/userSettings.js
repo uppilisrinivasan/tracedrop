@@ -1,4 +1,4 @@
-/** Booking preferences saved against the signed-in Google account. */
+/** Booking preferences and appointments saved against the signed-in Google account (in memory with sign-in off). */
 const { authDisabled } = require('./policy');
 
 const memory = new Map();
@@ -48,4 +48,29 @@ async function saveAppointment(user, appointment) {
   return appointment;
 }
 
-module.exports = { getPreferences, savePreferences, listAppointments, saveAppointment };
+async function deletePreferences(user) {
+  if (local(user)) {
+    memory.delete('local');
+    return;
+  }
+  const { FieldValue } = require('@google-cloud/firestore');
+  await firestore().collection('users').doc(user.sub).set({ booking: FieldValue.delete() }, { merge: true });
+}
+
+/** Every appointment the account made, for any demo donor. */
+async function allAppointments(user) {
+  const { session } = require('../data/store');
+  if (local(user)) return [...session.appointments.values()].flat().filter((item) => item.sub === 'local' || !item.sub);
+  const snap = await firestore().collection('appointments').where('sub', '==', user.sub).get();
+  return snap.docs.map((doc) => doc.data());
+}
+
+/** Remove an appointment record for good (cancel it first if it is still booked). */
+async function deleteAppointment(user, appointment) {
+  const store = require('../data/store');
+  const list = store.session.appointments.get(appointment.donorId) || [];
+  store.session.appointments.set(appointment.donorId, list.filter((item) => item.id !== appointment.id));
+  if (!local(user)) await firestore().collection('appointments').doc(appointment.id).delete();
+}
+
+module.exports = { getPreferences, savePreferences, deletePreferences, listAppointments, allAppointments, saveAppointment, deleteAppointment };

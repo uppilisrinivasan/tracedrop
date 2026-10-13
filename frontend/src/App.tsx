@@ -13,8 +13,10 @@ import Community from './pages/Community';
 import Donate from './pages/Donate';
 import Ecosystem from './pages/Ecosystem';
 import AIConsole from './pages/AIConsole';
+import YourData, { AccountDeletedView } from './pages/YourData';
+import type { AccountDeleted } from './api';
 
-export type Screen = 'home' | 'donate' | 'impact' | 'health' | 'cover' | 'community' | 'plan' | 'labs' | 'checkups' | 'ecosystem' | 'ai';
+export type Screen = 'home' | 'donate' | 'impact' | 'health' | 'cover' | 'community' | 'plan' | 'labs' | 'checkups' | 'ecosystem' | 'ai' | 'data';
 
 const NAV: { id: Screen; label: string; icon: string; mobile?: boolean }[] = [
   { id: 'home', label: 'Home', icon: 'home', mobile: true },
@@ -41,7 +43,7 @@ function personaLabel(p: { name: string; bloodGroup: string | null }) {
 
 function initialScreen(): Screen {
   const hash = window.location.hash.replace('#', '') as Screen;
-  return NAV.some((n) => n.id === hash) || hash === 'plan' || hash === 'labs' || hash === 'checkups' || hash === 'ai' ? hash : 'home';
+  return NAV.some((n) => n.id === hash) || ['plan', 'labs', 'checkups', 'ai', 'data'].includes(hash) ? hash : 'home';
 }
 
 export default function App({ user, clientId, onSignOut }: { user: AuthUser; clientId: string; onSignOut: () => void }) {
@@ -50,6 +52,7 @@ export default function App({ user, clientId, onSignOut }: { user: AuthUser; cli
   const [screen, setScreen] = useState<Screen>(initialScreen);
   const [personas, setPersonas] = useState<{ id: string; name: string; bloodGroup: string | null; newUser?: boolean }[]>([]);
   const [version, setVersion] = useState(0); // bump to refresh data after a donation or upload
+  const [deleted, setDeleted] = useState<AccountDeleted | null>(null);
 
   useEffect(() => { api.personas().then(setPersonas).catch(() => setPersonas([])); }, []);
   useEffect(() => {
@@ -85,6 +88,9 @@ export default function App({ user, clientId, onSignOut }: { user: AuthUser; cli
     ? () => api.introReplay(donorId).then(() => { go('home'); introChanged(donorId); }).catch(() => go('home'))
     : undefined;
 
+  // After "Delete my account" the session is gone: say what happened, then back to sign in
+  if (deleted) return <AccountDeletedView result={deleted} onDone={() => (deleted.local ? window.location.assign('/') : onSignOut())} />;
+
   return (
     <div className="shell">
       <aside className="sidebar">
@@ -95,14 +101,14 @@ export default function App({ user, clientId, onSignOut }: { user: AuthUser; cli
           </button>
         ))}
         <div className="sidebar-foot">
-          <AccountMenu user={user} donorPicker={personaPicker} donorLabel={donorLabel} onSignOut={onSignOut} onReplayIntro={replayIntro} />
+          <AccountMenu user={user} donorPicker={personaPicker} donorLabel={donorLabel} onSignOut={onSignOut} onReplayIntro={replayIntro} onYourData={() => go('data')} />
         </div>
       </aside>
 
       <main className="main">
         <div className="mobile-top">
           <div className="brand" style={{ padding: 0 }}><span className="brand-mark"><Icon name="drop" size={18} stroke={2.4} /></span>TraceDrop</div>
-          <AccountMenu user={user} donorPicker={personaPicker} donorLabel={donorLabel} onSignOut={onSignOut} onReplayIntro={replayIntro} compact />
+          <AccountMenu user={user} donorPicker={personaPicker} donorLabel={donorLabel} onSignOut={onSignOut} onReplayIntro={replayIntro} onYourData={() => go('data')} compact />
         </div>
         {screen === 'home' && <DemoBar donorId={donorId} onChange={refresh} />}
         {screen === 'home' && <Home key={donorId} {...page} user={user} />}
@@ -113,6 +119,7 @@ export default function App({ user, clientId, onSignOut }: { user: AuthUser; cli
         {screen === 'donate' && <Donate {...page} />}
         {screen === 'ecosystem' && <Ecosystem {...page} />}
         {screen === 'ai' && <AIConsole />}
+        {screen === 'data' && <YourData {...page} user={user} donorName={donor?.name || 'this donor'} onAccountDeleted={setDeleted} />}
       </main>
 
       <nav className="bottom-nav">

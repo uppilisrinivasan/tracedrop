@@ -142,6 +142,7 @@ export function useIntro(donorId: string, enabled: boolean, { go, onBook }: { go
   async function press(step: IntroStep, button: IntroButton) {
     if (busy || !view) return;
     if (button.value === 'story') { setStory(step); return; }
+    if (button.value === 'open-data') { go('data'); return; } // the Intro waits on this step; Home picks it up again
     if (step.id === 'choices' && button.value === 'save') return submit(step, choices, button.label);
     if (step.id === 'donate' && button.value === 'save') {
       const picture = step.pictureData as DaysPicture;

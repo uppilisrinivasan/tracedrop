@@ -191,6 +191,20 @@ router.post('/:donorId/labs/save', (req, res) => {
   ok(res, result);
 });
 
+/** Values read from lab report photos (the photos are not kept); a Drop reading's own value is listed with the readings. */
+function uploadedValues(donorId) {
+  const fromReadings = new Set(require('../domain/drop').view(donorId).readings.map((r) => r.observationId).filter(Boolean));
+  return store.getObservations(donorId).filter((o) => o.source === 'uploaded_report' && !fromReadings.has(o.id))
+    .map(({ id, name, value, unit, date, labId }) => ({ id, name, value, unit, date, lab: labId }));
+}
+router.get('/:donorId/labs/uploaded', (req, res) => ok(res, uploadedValues(req.donor.id)));
+router.delete('/:donorId/labs/:observationId', (req, res) => {
+  if (!uploadedValues(req.donor.id).some((o) => o.id === req.params.observationId)) return fail(res, 404, 'No value read from a lab report with that id');
+  store.removeObservation(req.donor.id, req.params.observationId);
+  store.session.carePlans.delete(req.donor.id); // the plan must reflect what is left
+  return ok(res, uploadedValues(req.donor.id));
+});
+
 router.post('/:donorId/impact/:componentId/story', (req, res) => {
   const journey = impact.donorJourneys(req.donor.id).find((j) => j.id === req.params.componentId);
   if (!journey || !journey.recipient) return fail(res, 404, 'No patient story for this unit yet');

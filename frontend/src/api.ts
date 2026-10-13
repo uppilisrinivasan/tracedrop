@@ -177,6 +177,16 @@ export interface AuthUser {
   local?: boolean;
 }
 
+/** What "Your data" shows about the Google account: profile, sign-in history and every booking. */
+export interface AccountBooking { id: string; donorId: string; date: string; time: string; centre: string; district: string; status: string; calendar: boolean }
+export interface AccountData {
+  local: boolean; name: string; email: string; picture: string;
+  firstSeen: string | null; signIns: number; lastSignIn: string | null; lastBrowser: string | null; bookings: AccountBooking[];
+}
+export interface AccountDeleted { bookings: number; calendarRemoved: number; calendarFailed: number; signIns: number; local: boolean }
+/** A value read from a lab report photo (the photo itself is not kept). */
+export interface UploadedValue { id: string; name: string; value: number; unit: string; date: string; lab: string }
+
 export interface DemoClock { date: string; part: number; partName: 'morning' | 'afternoon' | 'evening' | 'night'; start: string }
 
 export type DropCardType = 'results' | 'urgent' | 'checkin' | 'slots' | 'reminder' | 'impact' | 'report' | 'chart';
@@ -273,6 +283,13 @@ export const api = {
   logout: () => post<{ signedOut: boolean }>('/auth/logout'),
   preferences: () => request<BookingPreferences | null>('/auth/preferences'),
   savePreferences: (preferences: Partial<BookingPreferences>) => request<BookingPreferences>('/auth/preferences', { method: 'PUT', body: JSON.stringify(preferences) }),
+  deletePreferences: () => request<null>('/auth/preferences', { method: 'DELETE' }),
+  accountData: () => request<AccountData>('/auth/data'),
+  deleteSignIns: () => request<{ deleted: number }>('/auth/signins', { method: 'DELETE' }),
+  deleteBooking: (id: string, accessToken?: string) => request<{ deleted: string }>(`/auth/bookings/${id}`, { method: 'DELETE', body: JSON.stringify({ accessToken }) }),
+  deleteAccount: (body: { accessToken?: string; removeCalendar: boolean }) => request<AccountDeleted>('/auth/account', { method: 'DELETE', body: JSON.stringify(body) }),
+  uploadedValues: (id: string) => request<UploadedValue[]>(`/donors/${id}/labs/uploaded`),
+  deleteUploadedValue: (id: string, observationId: string) => request<UploadedValue[]>(`/donors/${id}/labs/${observationId}`, { method: 'DELETE' }),
   bookingTurn: (preferences?: Partial<BookingPreferences>, answer?: { step: string; value: string | BookingPreferences['location'] }) =>
     post<BookingTurn>('/auth/booking/turn', { preferences, answer }),
   personas: () => request<{ id: string; name: string; bloodGroup: string | null; language: string; newUser: boolean }[]>('/donors'),

@@ -4,6 +4,7 @@ const session = require('../auth/session');
 const { verifyGoogleCredential } = require('../auth/google');
 const { recordSignIn } = require('../auth/accessLog');
 const settings = require('../auth/userSettings');
+const accountData = require('../auth/accountData');
 const { turn, normalise } = require('../domain/bookingChat');
 
 const router = express.Router();
@@ -35,6 +36,35 @@ router.put('/preferences', async (req, res) => {
   preferences.onboardingSkipped = Boolean(req.body && req.body.onboardingSkipped);
   return ok(res, await settings.savePreferences(user, preferences));
 });
+
+router.delete('/preferences', async (req, res) => {
+  const user = actor(req);
+  if (!user) return fail(res, 401, 'Sign in with Google');
+  await settings.deletePreferences(user);
+  return ok(res, null);
+});
+
+/** Run a "Your data" read or delete for the signed-in account. */
+const forAccount = (fn) => async (req, res) => {
+  const user = actor(req);
+  if (!user) return fail(res, 401, 'Sign in with Google');
+  try {
+    return ok(res, await fn(user, req, res));
+  } catch (error) {
+    console.error(`[your data] ${error.message}`);
+    return fail(res, error.status || 400, error.message);
+  }
+};
+
+// "Your data": what is kept with the Google account, and deleting it item by item or all at once
+router.get('/data', forAccount((user) => accountData.read(user)));
+router.delete('/signins', forAccount((user) => accountData.deleteSignIns(user)));
+router.delete('/bookings/:bookingId', forAccount((user, req) => accountData.deleteBooking(user, req.params.bookingId, { accessToken: req.body && req.body.accessToken })));
+router.delete('/account', forAccount(async (user, req, res) => {
+  const result = await accountData.deleteAccount(user, { accessToken: req.body && req.body.accessToken, removeCalendar: Boolean(req.body && req.body.removeCalendar) });
+  session.clearCookie(res);
+  return result;
+}));
 
 router.post('/booking/turn', (req, res) => {
   if (!actor(req)) return fail(res, 401, 'Sign in with Google');
