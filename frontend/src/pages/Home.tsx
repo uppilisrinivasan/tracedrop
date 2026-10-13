@@ -41,8 +41,8 @@ export default function Home({ donorId, go, version, refresh, clientId }: PagePr
 
       <div className="drop-board">
         <div className="drop-main">
-          <DropFeed donorId={donorId} version={version} refresh={refresh} calmLine={`You have helped ${im.patientsHelped} patients so far.`} />
-          <Copilot key={donorId} donorId={donorId} go={go} clientId={clientId} inline />
+          <Copilot key={donorId} donorId={donorId} go={go} clientId={clientId} inline
+            top={<DropFeed donorId={donorId} version={version} refresh={refresh} calmLine={`You have helped ${im.patientsHelped} patients so far.`} storiesInChat />} />
         </div>
 
         <div className="drop-side">

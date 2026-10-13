@@ -1,10 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { api, fmtDate, type Journey, type Stakeholder, type Story } from '../api';
 import type { PageProps } from '../App';
 import { AIBadge, ErrorNote, Icon, Loading, OfflineNote, Section, Thinking, useLoad } from '../ui';
 import DropLine from '../components/drop/DropLine';
 import ShareBar from '../components/impact/ShareBar';
 import { ConcernForm, ConcernList } from '../components/impact/Concerns';
+import DonationCalendar from '../components/impact/DonationCalendar';
 
 const KIND_STYLE: Record<string, { bg: string; fg: string; short: string }> = {
   PRBC: { bg: '#fde2e5', fg: '#9b0c23', short: 'RBC' },
@@ -22,19 +23,30 @@ export default function Impact({ donorId, version }: PageProps) {
   const stake = useLoad(() => api.stakeholders(donorId), [donorId, version]);
   const concerns = useLoad(() => api.concerns(donorId), [donorId, version]);
   const [tab, setTab] = useState<'units' | 'institutions'>('units');
+  const [date, setDate] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [sharing, setSharing] = useState(false);
+  const top = useRef<HTMLDivElement>(null);
 
   const byDonation = useMemo(() => {
     const groups: Record<string, Journey[]> = {};
     for (const j of data?.journeys || []) (groups[j.donationDate] ||= []).push(j);
-    return Object.entries(groups).sort((a, b) => b[0].localeCompare(a[0]));
+    return groups;
   }, [data]);
 
   if (loading && !data) return <Loading />;
   if (error || !data) return <ErrorNote error={error || 'Could not load'} />;
-  const current = data.journeys.find((j) => j.id === selected) || data.journeys.filter((j) => j.recipient).slice(-1)[0] || data.journeys[0];
+  const dates = Object.keys(byDonation).sort();
+  const latest = dates[dates.length - 1];
+  const day = date && byDonation[date] ? date : latest;
+  const units = (day && byDonation[day]) || [];
+  const current = units.find((j) => j.id === selected) || units.find((j) => j.recipient) || units[0];
   const s = data.summary;
+  const pick = (d: string) => {
+    setDate(d);
+    setSelected(null);
+    top.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   return (
     <div className="stack fade-in">
@@ -46,7 +58,7 @@ export default function Impact({ donorId, version }: PageProps) {
         <div className="row wrap">
           <button className="btn btn-primary btn-sm" onClick={() => setSharing(!sharing)}><Icon name="share" size={15} /> Share my impact</button>
           <div className="tabs">
-            <button className={`tab ${tab === 'units' ? 'active' : ''}`} onClick={() => setTab('units')}>Each component</button>
+            <button className={`tab ${tab === 'units' ? 'active' : ''}`} onClick={() => setTab('units')}>My donations</button>
             <button className={`tab ${tab === 'institutions' ? 'active' : ''}`} onClick={() => setTab('institutions')}>Who benefited</button>
           </div>
         </div>
@@ -70,28 +82,37 @@ export default function Impact({ donorId, version }: PageProps) {
         <Stat value={s.medicineDosesShare} label="medicine doses (your plasma share)" />
       </div>
 
-      {tab === 'units' ? (
-        <div className="grid split">
-          <div className="stack" style={{ gap: 12 }}>
-            {byDonation.map(([date, units]) => (
-              <div key={date} className="card" style={{ padding: 14 }}>
-                <div className="row between" style={{ marginBottom: 10 }}>
-                  <div className="bold small">Donation · {fmtDate(date)}</div>
-                  <span className="tiny muted">{units[0].centre}</span>
+      {tab === 'units' && !day && <div className="empty">No donations yet. Your first one will appear here.</div>}
+      {tab === 'units' && day && (
+        <>
+          <div ref={top} className="card donation-card">
+            <div className="row between wrap">
+              <div>
+                <div className="row" style={{ gap: 8 }}>
+                  <span className="bold">Donation · {fmtDate(day)}</span>
+                  {day === latest && <span className="pill pill-info">Latest</span>}
                 </div>
-                <div className="stack" style={{ gap: 8 }}>
-                  {units.map((u) => <UnitRow key={u.id} unit={u} selected={current?.id === u.id} onClick={() => setSelected(u.id)} />)}
-                </div>
+                <div className="tiny muted">{units[0].centre} · {units.length} component{units.length === 1 ? '' : 's'}</div>
               </div>
-            ))}
+            </div>
+            <div className="unit-tabs mt-12" role="tablist" aria-label="Components from this donation">
+              {units.map((u) => <UnitRow key={u.id} unit={u} selected={current?.id === u.id} onClick={() => setSelected(u.id)} />)}
+            </div>
+            {current && <UnitDetail key={current.id} donorId={donorId} unit={current} onConcern={concerns.reload} />}
           </div>
-          <div style={{ position: 'sticky', top: 16 }}>{current && <UnitDetail key={current.id} donorId={donorId} unit={current} onConcern={concerns.reload} />}</div>
-        </div>
-      ) : (
-        <Institutions stake={stake.data} loading={stake.loading} />
-      )}
 
-      <ConcernList donorId={donorId} concerns={concerns.data || []} onChange={concerns.reload} />
+          <div className="impact-lower">
+            <div className="card cal-card">
+              <div className="card-title"><Icon name="calendar" size={17} /> Your donations</div>
+              <div className="card-sub">Pick a marked day to see that donation above.</div>
+              <div className="mt-12"><DonationCalendar dates={dates} selected={day} onPick={pick} /></div>
+            </div>
+            <ConcernList donorId={donorId} concerns={concerns.data || []} onChange={concerns.reload} />
+          </div>
+        </>
+      )}
+      {tab === 'institutions' && <Institutions stake={stake.data} loading={stake.loading} />}
+      {tab === 'institutions' && <ConcernList donorId={donorId} concerns={concerns.data || []} onChange={concerns.reload} />}
 
       <div className="callout callout-info small">
         <Icon name="lock" size={16} />
@@ -143,7 +164,7 @@ function UnitDetail({ donorId, unit, onConcern }: { donorId: string; unit: Journ
   }
 
   return (
-    <div className="card fade-in">
+    <div className="unit-detail fade-in">
       <div className="row between">
         <div className="row">
           <span className="unit-icon" style={{ background: style.bg, color: style.fg }}>{style.short}</span>

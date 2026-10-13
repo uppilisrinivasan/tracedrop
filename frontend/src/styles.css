@@ -320,10 +320,36 @@ label.chip { display: inline-flex; align-items: center; gap: 6px; cursor: pointe
 .section-toggle .card-sub { display: block; }
 .rot90 { transform: rotate(90deg); }
 
+/* Impact: one donation, then a calendar of all of them */
+.donation-card { display: grid; gap: 0; }
+.unit-tabs { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 8px; }
+.unit-tabs .unit-card { padding: 10px 12px; }
+.unit-detail { border-top: 1px solid var(--border); margin-top: 16px; padding-top: 16px; }
+.impact-lower { display: grid; gap: 16px; grid-template-columns: minmax(280px, 360px) minmax(0, 1fr); align-items: start; }
+@media (max-width: 860px) { .impact-lower { grid-template-columns: 1fr; } }
+.cal { max-width: 320px; }
+.cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.cal-nav { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; color: var(--muted); }
+.cal-nav:hover { background: var(--surface-2); }
+.flip { transform: rotate(180deg); }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
+.cal-wd { font-size: 11px; color: var(--faint); font-weight: 600; padding: 4px 0; }
+.cal-day { height: 36px; border-radius: 10px; font-size: 13px; color: var(--faint); display: grid; place-items: center; position: relative; }
+.cal-day:disabled { cursor: default; }
+.cal-day.today { outline: 1px dashed var(--border); }
+.cal-day.has { color: var(--text); font-weight: 700; background: var(--brand-soft); }
+.cal-day.has::after { content: ''; position: absolute; bottom: 3px; width: 5px; height: 5px; border-radius: 50%; background: var(--brand); }
+.cal-day.has:hover { box-shadow: inset 0 0 0 1px var(--brand); }
+.cal-day.sel { background: var(--brand); color: #fff; }
+.cal-day.sel::after { background: #fff; }
+
 /* Drop's chat inside Home's middle column */
-.drop-main { display: grid; gap: 14px; align-content: start; min-width: 0; }
-.chat.chat-inline { position: static; width: auto; max-width: none; height: auto; max-height: 720px; border-radius: var(--radius); box-shadow: var(--shadow); z-index: auto; }
-.chat.chat-inline .chat-body { min-height: 120px; }
+.drop-main { display: grid; min-width: 0; align-self: stretch; }
+.chat.chat-inline { position: static; width: auto; max-width: none; height: max(560px, calc(100vh - 190px)); border-radius: var(--radius); box-shadow: var(--shadow); z-index: auto; }
+.chat.chat-inline .chat-body { gap: 14px; }
+.chat.chat-inline .drop-feed { padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+@media (max-width: 860px) { .chat.chat-inline { height: auto; max-height: 82vh; border-radius: var(--radius); } }
+.suggestion-story { display: inline-flex; align-items: center; gap: 6px; border-color: var(--ai); color: var(--ai); background: var(--ai-soft); font-weight: 700; }
 .chat-flow { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px; }
 .suggestion-main { border-color: var(--brand); color: var(--brand-ink); background: var(--brand-soft); font-weight: 700; }
 

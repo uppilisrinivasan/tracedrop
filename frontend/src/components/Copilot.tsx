@@ -3,15 +3,16 @@
  * two sentences plus at most one Card (a chart, check-up slots or a reminder),
  * memory lines and receipts. Cards it opens also appear on Home.
  */
-import { useEffect, useRef, useState, type ReactElement } from 'react';
+import { useEffect, useRef, useState, type ReactElement, type ReactNode } from 'react';
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { api, fmtDate, type Appointment, type ChartPoint, type CopilotAction, type DropView } from '../api';
+import { api, fmtDate, type Appointment, type ChartPoint, type CopilotAction, type DropCard, type DropView } from '../api';
 import { Icon, Thinking } from '../ui';
 import type { Screen } from '../App';
 import DropCardView from './drop/DropCardView';
 import MemorySheet from './drop/MemorySheet';
 import BookingFlow from './BookingFlow';
 import AppointmentPass from './AppointmentPass';
+import StoryViewer from './drop/StoryViewer';
 import './drop/drop.css';
 
 interface Turn { role: 'user' | 'ai'; text: string; offline?: boolean; actions?: CopilotAction[]; questions?: string[]; booking?: boolean; appointment?: Appointment }
@@ -56,6 +57,14 @@ const SUGGESTIONS = [
   'What do you remember about me?',
 ];
 
+function StoryChip({ card, onClick }: { card: DropCard; onClick: () => void }) {
+  return (
+    <button className="suggestion suggestion-story" style={{ minHeight: 36 }} title={card.text} onClick={onClick}>
+      <Icon name="play" size={13} /> {card.type === 'impact' ? 'Watch my impact story' : card.main?.label}
+    </button>
+  );
+}
+
 const MARKER_NAMES: Record<string, string> = { bp: 'Blood pressure', hb: 'Haemoglobin', hba1c: 'HbA1c', ldl: 'LDL cholesterol', tg: 'Triglycerides', ferritin: 'Ferritin' };
 
 function ChartCard({ marker, points }: { marker: string; points: ChartPoint[] }) {
@@ -79,7 +88,7 @@ function ChartCard({ marker, points }: { marker: string; points: ChartPoint[] })
   );
 }
 
-export default function Copilot({ donorId, go, clientId, inline = false }: { donorId: string; go: (s: Screen) => void; clientId: string; inline?: boolean }) {
+export default function Copilot({ donorId, go, clientId, inline = false, top }: { donorId: string; go: (s: Screen) => void; clientId: string; inline?: boolean; top?: ReactNode }) {
   const [open, setOpen] = useState(inline);
   const [turns, setTurns] = useState<Turn[]>(() => conversations.get(donorId)?.turns || []);
   const [history, setHistory] = useState<unknown[] | null>(() => conversations.get(donorId)?.history || null);
@@ -88,11 +97,14 @@ export default function Copilot({ donorId, go, clientId, inline = false }: { don
   const [busy, setBusy] = useState(false);
   const [view, setView] = useState<DropView | null>(null);
   const [memoryOpen, setMemoryOpen] = useState(false);
+  const [story, setStory] = useState<DropCard | null>(null);
   const body = useRef<HTMLDivElement>(null);
   const sendRef = useRef<(text: string) => void>(() => {});
   const bookRef = useRef<() => void>(() => {});
 
-  useEffect(() => { body.current?.scrollTo({ top: body.current.scrollHeight, behavior: 'smooth' }); }, [turns, busy]);
+  useEffect(() => {
+    if (turns.length || busy) body.current?.scrollTo({ top: body.current.scrollHeight, behavior: 'smooth' });
+  }, [turns, busy]);
 
   const reloadView = () => api.drop(donorId).then(setView).catch(() => {});
   const changed = () => window.dispatchEvent(new CustomEvent('drop:changed'));
@@ -176,6 +188,19 @@ export default function Copilot({ donorId, go, clientId, inline = false }: { don
     }
   }
 
+  const stories = (view?.open || []).filter((c) => c.main?.story && c.story?.length);
+
+  function watch(card: DropCard) {
+    setTurns((t) => [...t, { role: 'user', text: card.main?.label || 'Watch the story' }, { role: 'ai', text: card.text }]);
+    setStory(card);
+  }
+
+  function storyDone() {
+    const card = story;
+    setStory(null);
+    if (card) act(api.dropAnswer(donorId, card.id, card.main?.value ?? 'seen'));
+  }
+
   function renderAction(a: CopilotAction, key: number) {
     if (a.type === 'chart' && a.points) return <ChartCard key={key} marker={a.marker || 'bp'} points={a.points} />;
     if (a.type === 'memory') {
@@ -193,7 +218,7 @@ export default function Copilot({ donorId, go, clientId, inline = false }: { don
         <div key={key} style={{ width: '100%' }}>
           <DropCardView card={card} busy={busy} onAnswer={(value) => act(api.dropAnswer(donorId, card.id, value))}
             onSnooze={(o) => act(api.dropSnooze(donorId, card.id, o))} onHide={() => act(api.dropHide(donorId, card.id))}
-            onStory={() => {}} onUpload={() => go('home')} onAsk={send} />
+            onStory={() => setStory(card)} onUpload={() => go('home')} onAsk={send} />
         </div>
       );
     }
@@ -224,10 +249,12 @@ export default function Copilot({ donorId, go, clientId, inline = false }: { don
         </div>
       </div>}
       <div className="chat-body" ref={body}>
+        {top}
         {turns.length === 0 && (
           <div className="stack">
             <div className="msg msg-ai">{inline ? 'Ask me anything, or book your next donation here.' : "Hi, I'm Drop. Ask me about your results, your blood's journey, your Plan or when you can donate. I'll answer in a sentence or two, and show you a card when it helps."}</div>
             <div className="suggestions">
+              {stories.map((c) => <StoryChip key={c.id} card={c} onClick={() => watch(c)} />)}
               {SUGGESTIONS.map((s) => <button key={s} className={`suggestion ${s === 'Book a donation' ? 'suggestion-main' : ''}`} style={{ minHeight: 36 }} onClick={() => send(s)}>{s}</button>)}
             </div>
           </div>
@@ -251,7 +278,11 @@ export default function Copilot({ donorId, go, clientId, inline = false }: { don
           </div>
         ))}
         {busy && <Thinking label="Drop is checking your records…" />}
+        {turns.length > 0 && stories.length > 0 && (
+          <div className="suggestions">{stories.map((c) => <StoryChip key={c.id} card={c} onClick={() => watch(c)} />)}</div>
+        )}
       </div>
+      {story?.story && <StoryViewer title={story.label} slides={story.story} onClose={storyDone} />}
       <form className="chat-input" onSubmit={(e) => { e.preventDefault(); send(input); }}>
         <input value={input} onChange={(e) => setInput(e.target.value)} placeholder={inline ? 'Ask Drop, or type "book a donation"' : 'Ask Drop anything'} aria-label="Message" />
         <button className="btn btn-ai" disabled={busy || !input.trim()} aria-label="Send" style={{ minWidth: 44 }}><Icon name="send" size={16} /></button>

@@ -20,7 +20,7 @@ export function askDrop(question: string) {
   window.dispatchEvent(new CustomEvent('drop:ask', { detail: question }));
 }
 
-export default function DropFeed({ donorId, version, refresh, calmLine }: { donorId: string; version: number; refresh: () => void; calmLine: string }) {
+export default function DropFeed({ donorId, version, refresh, calmLine, storiesInChat = false }: { donorId: string; version: number; refresh: () => void; calmLine: string; storiesInChat?: boolean }) {
   const [view, setView] = useState<DropView | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -68,7 +68,8 @@ export default function DropFeed({ donorId, version, refresh, calmLine }: { dono
 
   if (!view) return <div className="drop-feed">{error ? <ErrorNote error={error} /> : <div className="skeleton" style={{ height: 180 }} />}</div>;
 
-  const shown = showAll ? view.open : view.open.slice(0, 3);
+  const open = storiesInChat ? view.open.filter((c) => !c.main?.story) : view.open;
+  const shown = showAll ? open : open.slice(0, 3);
   const answer = (card: DropCard, value: unknown) => run(api.dropAnswer(donorId, card.id, value), true);
 
   return (
@@ -98,7 +99,7 @@ export default function DropFeed({ donorId, version, refresh, calmLine }: { dono
         </div>
       ))}
 
-      {view.open.length === 0 && <div className="drop-calm">Nothing needs you right now.<br />{calmLine}</div>}
+      {view.open.length === 0 && !storiesInChat && <div className="drop-calm">Nothing needs you right now.<br />{calmLine}</div>}
       {shown.map((card) => (
         <DropCardView
           key={card.id}
@@ -112,7 +113,7 @@ export default function DropFeed({ donorId, version, refresh, calmLine }: { dono
           onAsk={askDrop}
         />
       ))}
-      {view.open.length > 3 && !showAll && <button className="drop-more" onClick={() => setShowAll(true)}>{view.open.length - 3} more</button>}
+      {open.length > 3 && !showAll && <button className="drop-more" onClick={() => setShowAll(true)}>{open.length - 3} more</button>}
 
       {view.bookings.length > 0 && (
         <div className="drop-coming" aria-label="Coming up">
