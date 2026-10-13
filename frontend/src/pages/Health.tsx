@@ -6,6 +6,8 @@ import { AgentTrace, AIBadge, ErrorNote, Icon, Loading, OfflineNote, Section, Th
 import DropLine from '../components/drop/DropLine';
 import { PlanSection, ReadingsSection } from '../components/drop/HealthDrop';
 import type { DropReading, DropView } from '../api';
+import Checkup from '../components/drop/Checkup';
+import { bookCheckup } from '../components/Copilot';
 
 const MARKERS: { key: string; label: string; unit: string; good?: [number, number] }[] = [
   { key: 'bp', label: 'Blood pressure', unit: 'mmHg', good: [90, 120] },
@@ -21,11 +23,17 @@ export default function Health({ donorId, go, version, refresh, focus }: PagePro
   const { data, error, loading } = useLoad(() => api.health(donorId), [donorId, version]);
   const [dropView, setDropView] = useState<DropView | null>(null);
   useEffect(() => { api.drop(donorId).then(setDropView).catch(() => setDropView(null)); }, [donorId, version]);
+  useEffect(() => {
+    const reload = () => api.drop(donorId).then(setDropView).catch(() => {});
+    window.addEventListener('drop:changed', reload);
+    return () => window.removeEventListener('drop:changed', reload);
+  }, [donorId]);
   const planRef = useRef<HTMLDivElement>(null);
   const labsRef = useRef<HTMLDivElement>(null);
+  const checkupsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const target = focus === 'plan' ? planRef.current : focus === 'labs' ? labsRef.current : null;
+    const target = focus === 'plan' ? planRef.current : focus === 'labs' ? labsRef.current : focus === 'checkups' ? checkupsRef.current : null;
     if (target && data) setTimeout(() => target.scrollIntoView({ behavior: 'smooth', block: 'start' }), 120);
   }, [focus, data]);
 
@@ -76,6 +84,8 @@ export default function Health({ donorId, go, version, refresh, focus }: PagePro
         </Section>
       </div>
 
+      <div ref={checkupsRef}><CheckupsSection donorId={donorId} view={dropView} onChange={(v) => { setDropView(v); window.dispatchEvent(new CustomEvent('drop:changed')); }} /></div>
+
       <PlanSection view={dropView} />
       <Trends data={data} added={dropView?.readings || []} />
       <ReadingsSection donorId={donorId} view={dropView} data={data} onChange={(v) => { setDropView(v); refresh(); }} />
@@ -83,6 +93,38 @@ export default function Health({ donorId, go, version, refresh, focus }: PagePro
       <div ref={planRef}><CarePlanCard key={focus === 'plan' ? 'plan' : 'care'} donorId={donorId} version={version} startOpen={focus === 'plan'} /></div>
       <div ref={labsRef}><LabReader key={focus === 'labs' ? 'labs' : 'reader'} donorId={donorId} onSaved={refresh} focusLabs={focus === 'labs'} /></div>
     </div>
+  );
+}
+
+function CheckupsSection({ donorId, view, onChange }: { donorId: string; view: DropView | null; onChange: (v: DropView) => void }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  if (!view) return null;
+  const checkups = view.bookings.filter((b) => b.kind === 'care');
+
+  async function cancel(bookingId: string, reschedule: boolean) {
+    setBusy(true);
+    setError(null);
+    try {
+      onChange(await api.dropCancelBooking(donorId, bookingId, reschedule));
+      if (reschedule) bookCheckup();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Section title={<><Icon name="doctor" size={18} /> My doctor check-ups</>}
+      sub={checkups.length ? `${checkups.length} coming up` : 'Free at a government clinic near me'}
+      right={<button className="btn btn-sm" onClick={() => bookCheckup()}><Icon name="calendar" size={14} /> Book a check-up</button>}>
+      {checkups.length === 0 && <div className="small muted">No check-up booked. Book one and the doctor, clinic, address and time will show here and on Home.</div>}
+      <div className="stack" style={{ gap: 10 }}>
+        {checkups.map((b) => <Checkup key={b.id} booking={b} busy={busy} onChange={() => cancel(b.id, true)} onCancel={() => cancel(b.id, false)} />)}
+      </div>
+      {error && <ErrorNote error={error} />}
+    </Section>
   );
 }
 

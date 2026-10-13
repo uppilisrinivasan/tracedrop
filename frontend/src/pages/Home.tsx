@@ -1,8 +1,10 @@
+import { useEffect, useState } from 'react';
 import { api, fmtDate, rupees } from '../api';
 import type { PageProps } from '../App';
 import { ErrorNote, Icon, Loading, severityPill, useLoad } from '../ui';
 import DropFeed from '../components/drop/DropFeed';
-import Copilot, { startBooking } from '../components/Copilot';
+import Copilot, { bookCheckup, startBooking } from '../components/Copilot';
+import { fmtVisitDay } from '../components/drop/Checkup';
 
 /**
  * Drop-first Home: Drop's open Cards and its chat in the main column, the numbers
@@ -10,7 +12,13 @@ import Copilot, { startBooking } from '../components/Copilot';
  */
 export default function Home({ donorId, go, version, refresh, clientId }: PageProps) {
   const { data, error, loading } = useLoad(() => api.overview(donorId), [donorId, version]);
-  const drop = useLoad(() => api.drop(donorId), [donorId, version]);
+  const [dropTick, setDropTick] = useState(0);
+  const drop = useLoad(() => api.drop(donorId), [donorId, version, dropTick]);
+  useEffect(() => {
+    const bump = () => setDropTick((n) => n + 1);
+    window.addEventListener('drop:changed', bump);
+    return () => window.removeEventListener('drop:changed', bump);
+  }, []);
 
   if (loading && !data) return <Loading />;
   if (error || !data) return <ErrorNote error={error || 'Could not load'} />;
@@ -20,6 +28,7 @@ export default function Home({ donorId, go, version, refresh, clientId }: PagePr
   const scoreDelta = health.score != null && health.previousScore != null ? health.score - health.previousScore : 0;
   const daysTo = drop.data?.donate.daysTo;
   const from = drop.data?.donate.from;
+  const checkup = drop.data?.bookings.find((b) => b.kind === 'care');
 
   return (
     <div className="fade-in">
@@ -42,7 +51,7 @@ export default function Home({ donorId, go, version, refresh, clientId }: PagePr
       <div className="drop-board">
         <div className="drop-main">
           <Copilot key={donorId} donorId={donorId} go={go} clientId={clientId} inline
-            top={<DropFeed donorId={donorId} version={version} refresh={refresh} calmLine={`You have helped ${im.patientsHelped} patients so far.`} storiesInChat />} />
+            top={<DropFeed donorId={donorId} version={version} refresh={refresh} calmLine={`You have helped ${im.patientsHelped} patients so far.`} storiesInChat onDetails={() => go('checkups')} />} />
         </div>
 
         <div className="drop-side">
@@ -62,6 +71,22 @@ export default function Home({ donorId, go, version, refresh, clientId }: PagePr
               {health.findings.length === 0 && <span className="pill pill-good">All results in range</span>}
               {health.findings.slice(0, 2).map((f) => <span key={f.id} className={`pill ${severityPill[f.severity]}`}>{f.title}</span>)}
             </div>
+          </button>
+
+          <button className="card" style={{ textAlign: 'left' }} onClick={() => (checkup ? go('checkups') : bookCheckup())}>
+            <div className="row between"><span className="stat-label">Doctor check-up</span><Icon name="doctor" className="faint" /></div>
+            {checkup ? (
+              <>
+                <div className="bold mt-8">{fmtVisitDay(checkup.date)} · {checkup.time}</div>
+                <div className="small muted mt-8">{checkup.doctor ? `${checkup.doctor} · ` : ''}{checkup.clinic || checkup.place}</div>
+                <div className="tiny faint mt-8">{checkup.address}</div>
+              </>
+            ) : (
+              <>
+                <div className="bold mt-8">None booked</div>
+                <div className="small muted mt-8">Free at a government clinic near me. Tap to see times.</div>
+              </>
+            )}
           </button>
 
           <button className="card" style={{ textAlign: 'left' }} onClick={() => go('cover')}>

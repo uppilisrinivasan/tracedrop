@@ -357,16 +357,39 @@ function planFindings(donorId) {
   return health.findings(donorId).filter((f) => ['hypertension', 'anemia'].includes(f.concept) && f.severity !== 'watch');
 }
 
+// Free government primary-care clinic used for check-ups (synthetic). Day and evening doctors.
+const CLINIC = {
+  place: 'Ayushman Arogya Mandir',
+  address: '8th Cross Road, Malleshwaram',
+  phone: '080 2334 5521',
+  day: { doctor: 'Dr. Kavya Rao', speciality: 'General physician' },
+  evening: { doctor: 'Dr. Arvind Shetty', speciality: 'Family medicine' },
+};
+const BRING = ['TraceDrop on your phone, or your donor ID', 'Any recent lab reports', 'A list of medicines you take'];
+
+/** Who to see, where, and why, for a check-up slot. */
+function careDetails(st, time) {
+  const district = store.getDonor(st.donorId).district;
+  const who = time >= '17:00' ? CLINIC.evening : CLINIC.day;
+  const reasons = health.findings(st.donorId).filter((f) => f.severity !== 'watch').slice(0, 2).map((f) => lcFirst(f.title));
+  return {
+    place: `${CLINIC.place} (free), near you`, clinic: CLINIC.place, address: `${CLINIC.address}, ${district}`, phone: CLINIC.phone,
+    doctor: who.doctor, speciality: who.speciality, cost: 'Free',
+    reason: reasons.length ? `Review of ${reasons.join(' and ')}` : 'General health check-up',
+    bring: BRING, durationMinutes: 20,
+  };
+}
+
 function careSlots(st, { urgent } = {}) {
   const today = store.today();
   const evenings = st.memory.some((m) => /evening/i.test(m.text));
-  const place = 'Ayushman Arogya Mandir (free), near you';
-  if (urgent) return [{ id: `care-${today}-1830`, date: today, time: '18:30', place }, { id: `care-${addDays(today, 1)}-1000`, date: addDays(today, 1), time: '10:00', place }];
+  const slot = (d, t) => ({ id: `care-${d}-${t.replace(':', '')}`, date: d, time: t, ...careDetails(st, t) });
+  if (urgent) return [slot(today, '18:30'), slot(addDays(today, 1), '10:00')];
   const out = [];
   for (let i = 1; out.length < 3 && i < 21; i += 1) {
     const d = addDays(today, i);
     if (evenings ? [2, 4].includes(dow(d)) : dow(d) === 6) {
-      (evenings ? ['18:30'] : ['10:00', '11:30']).forEach((t) => out.length < 3 && out.push({ id: `care-${d}-${t.replace(':', '')}`, date: d, time: t, place }));
+      (evenings ? ['18:30'] : ['10:00', '11:30']).forEach((t) => out.length < 3 && out.push(slot(d, t)));
     }
   }
   return out;
@@ -443,8 +466,9 @@ function words(st, c) {
     case 'slots:care': {
       const evenings = st.memory.some((m) => /evening/i.test(m.text));
       const saturdays = st.memory.some((m) => /saturday/i.test(m.text));
+      const who = evenings ? CLINIC.evening : CLINIC.day;
       return {
-        text: `Free check-up at Ayushman Arogya Mandir, near you. ${evenings ? 'Weekday evenings:' : saturdays ? 'These suit your Saturdays:' : 'Next free slots:'}`,
+        text: `Free check-up with ${who.doctor} (${who.speciality}) at ${CLINIC.place}, ${CLINIC.address}. ${evenings ? 'Weekday evenings:' : saturdays ? 'These suit your Saturdays:' : 'Next free slots:'}`,
         chips: [...careSlots(st).map((s) => ({ label: slotLabel(s), value: { slotId: s.id } })), ...(evenings ? [] : [{ label: 'Weekday evenings instead', value: 'evenings' }])],
       };
     }
@@ -557,10 +581,10 @@ function answer(donorId, cardId, value) {
       {
         const slot = careSlots(st).find((s) => s.id === value?.slotId);
         if (!slot) throw new Error('That slot is not available');
-        const booking = { id: id('b'), kind: 'care', ...slot };
+        const booking = { ...slot, id: id('b'), kind: 'care', slotId: slot.id, bookedOn: today };
         st.bookings.push(booking);
         addEvent(st, { key: `postvisit:${booking.id}`, kind: 'postvisit', at: addDays(slot.date, 1), prompted: true, data: { bookingId: booking.id } });
-        done(`Booked ${slotLabel(slot)} · ${slot.place}`);
+        done(`Booked ${slotLabel(slot)} with ${slot.doctor} · ${slot.clinic}`);
       }
       break;
     case 'slots:donate': {
@@ -575,8 +599,8 @@ function answer(donorId, cardId, value) {
       else {
         const slot = careSlots(st, { urgent: true }).find((s) => s.id === value?.slotId);
         if (!slot) throw new Error('That slot is not available');
-        st.bookings.push({ id: id('b'), kind: 'care', ...slot });
-        done(`Booked ${slotLabel(slot)} · please go today`);
+        st.bookings.push({ ...slot, id: id('b'), kind: 'care', slotId: slot.id, bookedOn: today, urgent: true });
+        done(`Booked ${slotLabel(slot)} with ${slot.doctor} · please go today`);
       }
       break;
     case 'checkin:visit':

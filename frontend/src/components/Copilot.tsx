@@ -5,7 +5,7 @@
  */
 import { useEffect, useRef, useState, type ReactElement, type ReactNode } from 'react';
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { api, fmtDate, type Appointment, type ChartPoint, type CopilotAction, type DropCard, type DropView } from '../api';
+import { api, fmtDate, isStaleCard, type Appointment, type ChartPoint, type CopilotAction, type DropBooking, type DropCard, type DropView } from '../api';
 import { Icon, Thinking } from '../ui';
 import type { Screen } from '../App';
 import DropCardView from './drop/DropCardView';
@@ -13,15 +13,23 @@ import MemorySheet from './drop/MemorySheet';
 import BookingFlow from './BookingFlow';
 import AppointmentPass from './AppointmentPass';
 import StoryViewer from './drop/StoryViewer';
+import Checkup from './drop/Checkup';
+import { chatCards } from './drop/DropFeed';
 import './drop/drop.css';
 
-interface Turn { role: 'user' | 'ai'; text: string; offline?: boolean; actions?: CopilotAction[]; questions?: string[]; booking?: boolean; appointment?: Appointment }
+interface Turn { role: 'user' | 'ai'; text: string; offline?: boolean; actions?: CopilotAction[]; questions?: string[]; booking?: boolean; appointment?: Appointment; checkup?: DropBooking }
 
 /** Ask Drop to start the booking steps (Home's button and the Donate tile use this). */
 export function startBooking() {
   window.dispatchEvent(new CustomEvent('drop:book'));
 }
 
+/** Ask Drop for free check-up times (My health and Home use this). */
+export function bookCheckup() {
+  window.dispatchEvent(new CustomEvent('drop:checkup'));
+}
+
+const CHECKUP_INTENT = /\b(check-?ups?|doctor|physician|gp)\b/i;
 const BOOK_INTENT = /\b(book|schedule|reserve)\b.*\b(donat\w*|slot|appointment|blood)\b|^book\b/i;
 
 // One conversation per donor, shared by the chat on Home and the side panel on other screens
@@ -62,6 +70,7 @@ function Rich({ text }: { text: string }) {
 
 const SUGGESTIONS = [
   'Book a donation',
+  'Book a doctor check-up',
   'Explain my latest results',
   'How is my BP doing?',
   'Where did my blood go?',
@@ -105,6 +114,9 @@ export default function Copilot({ donorId, go, clientId, inline = false, top }: 
   const [turns, setTurns] = useState<Turn[]>(() => conversations.get(donorId)?.turns || []);
   const [history, setHistory] = useState<unknown[] | null>(() => conversations.get(donorId)?.history || null);
   useEffect(() => { conversations.set(donorId, { turns, history }); }, [donorId, turns, history]);
+  useEffect(() => {
+    turns.forEach((t) => t.actions?.forEach((a) => a.type === 'card' && a.cardId && chatCards.add(a.cardId)));
+  }, [turns]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [view, setView] = useState<DropView | null>(null);
@@ -113,6 +125,7 @@ export default function Copilot({ donorId, go, clientId, inline = false, top }: 
   const body = useRef<HTMLDivElement>(null);
   const sendRef = useRef<(text: string) => void>(() => {});
   const bookRef = useRef<() => void>(() => {});
+  const checkupRef = useRef<() => void>(() => {});
 
   useEffect(() => {
     if (turns.length || busy) body.current?.scrollTo({ top: body.current.scrollHeight, behavior: 'smooth' });
@@ -131,9 +144,25 @@ export default function Copilot({ donorId, go, clientId, inline = false, top }: 
     ]);
   }
 
+  async function offerCheckup(said?: string, text = 'Here are the next free check-up times. Tap one to book.') {
+    setOpen(true);
+    setInput('');
+    if (said) setTurns((t) => [...t, { role: 'user', text: said }]);
+    try {
+      const r = await api.dropOffer(donorId, 'care_slots');
+      chatCards.add(r.cardId);
+      setView(r.view);
+      changed();
+      setTurns((t) => [...t, { role: 'ai', text, actions: [{ type: 'card', cardId: r.cardId }] }]);
+    } catch (e) {
+      setTurns((t) => [...t, { role: 'ai', text: `I couldn't load check-up times just now: ${(e as Error).message}` }]);
+    }
+  }
+
   async function send(text: string) {
     const message = text.trim();
     if (!message || busy) return;
+    if (CHECKUP_INTENT.test(message) && /\b(book|schedule|reserve|see|visit|need|want|like)\b/i.test(message)) { offerCheckup(message); return; }
     if (BOOK_INTENT.test(message)) { book(message); return; }
     setInput('');
     setTurns((t) => [...t, { role: 'user', text: message }]);
@@ -141,6 +170,7 @@ export default function Copilot({ donorId, go, clientId, inline = false, top }: 
     try {
       const r = await api.copilot(donorId, message, history);
       if (r.history) setHistory(r.history);
+      r.actions.forEach((a) => a.type === 'card' && a.cardId && chatCards.add(a.cardId));
       setTurns((t) => [...t, { role: 'ai', text: r.reply, offline: r.offline, actions: r.actions }]);
       const nav = r.actions.find((a) => a.type === 'navigate');
       if (nav?.screen) go(nav.screen as Screen);
@@ -156,6 +186,7 @@ export default function Copilot({ donorId, go, clientId, inline = false, top }: 
   }
   sendRef.current = send;
   bookRef.current = () => { book(); if (inline) body.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+  checkupRef.current = () => { offerCheckup('Book a doctor check-up'); if (inline) body.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
 
   // Other parts of the app ask Drop things: a chip on a Card, or the line at the top of a screen
   useEffect(() => {
@@ -168,15 +199,18 @@ export default function Copilot({ donorId, go, clientId, inline = false, top }: 
     };
     const onChanged = () => reloadView();
     const onBook = () => bookRef.current();
+    const onCheckup = () => checkupRef.current();
     window.addEventListener('drop:ask', onAsk);
     window.addEventListener('drop:open', onOpen);
     window.addEventListener('drop:changed', onChanged);
     window.addEventListener('drop:book', onBook);
+    window.addEventListener('drop:checkup', onCheckup);
     return () => {
       window.removeEventListener('drop:ask', onAsk);
       window.removeEventListener('drop:open', onOpen);
       window.removeEventListener('drop:changed', onChanged);
       window.removeEventListener('drop:book', onBook);
+      window.removeEventListener('drop:checkup', onCheckup);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [donorId]);
@@ -196,7 +230,23 @@ export default function Copilot({ donorId, go, clientId, inline = false, top }: 
       setView(await p);
       changed();
     } catch (e) {
+      if (isStaleCard(e)) { await reloadView(); changed(); return; }
       setTurns((t) => [...t, { role: 'ai', text: (e as Error).message }]);
+    }
+  }
+
+  async function answerCard(card: DropCard, value: unknown) {
+    const before = new Set((view?.bookings || []).map((b) => b.id));
+    try {
+      const v = await api.dropAnswer(donorId, card.id, value);
+      setView(v);
+      changed();
+      const booked = v.bookings.find((b) => b.kind === 'care' && !before.has(b.id));
+      if (booked) setTurns((t) => [...t, { role: 'ai', text: `Booked with ${booked.doctor || 'the doctor'}. The details are also in My health.`, checkup: booked }]);
+    } catch (e) {
+      if (!isStaleCard(e)) { setTurns((t) => [...t, { role: 'ai', text: (e as Error).message }]); return; }
+      if (card.type === 'slots' && card.variant === 'care') offerCheckup(undefined, 'Those times had expired, so here are fresh ones. Tap one to book.');
+      else { await reloadView(); changed(); setTurns((t) => [...t, { role: 'ai', text: 'That card had expired, so I refreshed it.' }]); }
     }
   }
 
@@ -228,7 +278,7 @@ export default function Copilot({ donorId, go, clientId, inline = false, top }: 
       }
       return (
         <div key={key} style={{ width: '100%' }}>
-          <DropCardView card={card} busy={busy} onAnswer={(value) => act(api.dropAnswer(donorId, card.id, value))}
+          <DropCardView card={card} busy={busy} onAnswer={(value) => answerCard(card, value)}
             onSnooze={(o) => act(api.dropSnooze(donorId, card.id, o))} onHide={() => act(api.dropHide(donorId, card.id))}
             onStory={() => setStory(card)} onUpload={() => go('home')} onAsk={send} />
         </div>
@@ -281,6 +331,7 @@ export default function Copilot({ donorId, go, clientId, inline = false, top }: 
               </div>
             )}
             {t.appointment && <div className="chat-flow"><AppointmentPass appointment={t.appointment} compact /></div>}
+            {t.checkup && <div className="chat-flow"><Checkup booking={t.checkup} /></div>}
           </div>
         ))}
         {busy && <Thinking label="Drop is checking your records…" />}

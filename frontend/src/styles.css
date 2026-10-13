@@ -439,3 +439,16 @@ a.btn.btn-wa { color: #fff; }
 .stack-dot { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 12px; font-weight: 700; flex: none; }
 .terms { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
 .terms div { display: grid; gap: 2px; }
+
+/* Doctor check-up card (My health, Drop chat) */
+.checkup { display: flex; gap: 14px; padding: 14px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); width: 100%; }
+.checkup.urgent { border-color: var(--bad); }
+.checkup-when { flex: 0 0 56px; height: 60px; border-radius: 12px; background: var(--brand-soft); color: var(--brand-ink); display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1; }
+.checkup-day { font-size: 22px; font-weight: 700; }
+.checkup-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.checkup-facts { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
+.checkup-facts span { display: flex; align-items: center; gap: 6px; }
+.checkup-facts svg { flex: 0 0 auto; }
+.checkup-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.checkup-actions a.btn { text-decoration: none; color: inherit; }
+@media (max-width: 560px) { .checkup-when { display: none; } }

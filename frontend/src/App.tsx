@@ -13,7 +13,7 @@ import Donate from './pages/Donate';
 import Ecosystem from './pages/Ecosystem';
 import AIConsole from './pages/AIConsole';
 
-export type Screen = 'home' | 'donate' | 'impact' | 'health' | 'cover' | 'community' | 'plan' | 'labs' | 'ecosystem' | 'ai';
+export type Screen = 'home' | 'donate' | 'impact' | 'health' | 'cover' | 'community' | 'plan' | 'labs' | 'checkups' | 'ecosystem' | 'ai';
 
 const NAV: { id: Screen; label: string; icon: string; mobile?: boolean }[] = [
   { id: 'home', label: 'Home', icon: 'home', mobile: true },
@@ -35,7 +35,7 @@ function readStored(key: string, fallback: string) {
 
 function initialScreen(): Screen {
   const hash = window.location.hash.replace('#', '') as Screen;
-  return NAV.some((n) => n.id === hash) || hash === 'plan' || hash === 'labs' || hash === 'ai' ? hash : 'home';
+  return NAV.some((n) => n.id === hash) || hash === 'plan' || hash === 'labs' || hash === 'checkups' || hash === 'ai' ? hash : 'home';
 }
 
 export default function App({ user, clientId, onSignOut }: { user: AuthUser; clientId: string; onSignOut: () => void }) {
@@ -76,7 +76,7 @@ export default function App({ user, clientId, onSignOut }: { user: AuthUser; cli
       <aside className="sidebar">
         <div className="brand"><span className="brand-mark"><Icon name="drop" size={18} stroke={2.4} /></span>TraceDrop</div>
         {NAV.map((n) => (
-          <button key={n.id} className={`nav-item ${screen === n.id || (n.id === 'health' && (screen === 'plan' || screen === 'labs')) ? 'active' : ''}`} onClick={() => go(n.id)}>
+          <button key={n.id} className={`nav-item ${screen === n.id || (n.id === 'health' && (screen === 'plan' || screen === 'labs' || screen === 'checkups')) ? 'active' : ''}`} onClick={() => go(n.id)}>
             <Icon name={n.icon} /> {n.label}
           </button>
         ))}
@@ -93,7 +93,7 @@ export default function App({ user, clientId, onSignOut }: { user: AuthUser; cli
         {screen === 'home' && <DemoBar donorId={donorId} onChange={refresh} />}
         {screen === 'home' && <Home {...page} />}
         {screen === 'impact' && <Impact {...page} />}
-        {(screen === 'health' || screen === 'plan' || screen === 'labs') && <Health {...page} focus={screen} />}
+        {(screen === 'health' || screen === 'plan' || screen === 'labs' || screen === 'checkups') && <Health {...page} focus={screen} />}
         {screen === 'cover' && <Cover {...page} />}
         {screen === 'community' && <Community {...page} />}
         {screen === 'donate' && <Donate {...page} />}

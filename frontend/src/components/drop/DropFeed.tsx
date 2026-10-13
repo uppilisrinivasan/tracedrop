@@ -3,7 +3,7 @@
  * "N more"), receipts with Undo, and "Earlier this cycle". Rules live on the server.
  */
 import { useEffect, useState } from 'react';
-import { api, type DropCard, type DropView } from '../../api';
+import { api, isStaleCard, type DropCard, type DropView } from '../../api';
 import { ErrorNote, Icon } from '../../ui';
 import DropCardView from './DropCardView';
 import StoryViewer from './StoryViewer';
@@ -16,11 +16,14 @@ const LANGUAGE_NAMES: Record<string, string> = { en: 'English', hi: 'हिं�
 
 const fmtDay = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
 
+/** Cards the chat below already shows on Home, so the list above doesn't repeat them. */
+export const chatCards = new Set<string>();
+
 export function askDrop(question: string) {
   window.dispatchEvent(new CustomEvent('drop:ask', { detail: question }));
 }
 
-export default function DropFeed({ donorId, version, refresh, calmLine, storiesInChat = false }: { donorId: string; version: number; refresh: () => void; calmLine: string; storiesInChat?: boolean }) {
+export default function DropFeed({ donorId, version, refresh, calmLine, storiesInChat = false, onDetails }: { donorId: string; version: number; refresh: () => void; calmLine: string; storiesInChat?: boolean; onDetails?: () => void }) {
   const [view, setView] = useState<DropView | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -60,7 +63,10 @@ export default function DropFeed({ donorId, version, refresh, calmLine, storiesI
       setView(await action);
       if (refreshAfter) refresh();
     } catch (e) {
-      setError((e as Error).message);
+      if (isStaleCard(e)) {
+        setView(await api.drop(donorId).catch(() => view));
+        setError('That card had expired, so I refreshed the list.');
+      } else setError((e as Error).message);
     } finally {
       setBusy(false);
     }
@@ -68,7 +74,7 @@ export default function DropFeed({ donorId, version, refresh, calmLine, storiesI
 
   if (!view) return <div className="drop-feed">{error ? <ErrorNote error={error} /> : <div className="skeleton" style={{ height: 180 }} />}</div>;
 
-  const open = storiesInChat ? view.open.filter((c) => !c.main?.story) : view.open;
+  const open = storiesInChat ? view.open.filter((c) => !c.main?.story && !chatCards.has(c.id)) : view.open;
   const shown = showAll ? open : open.slice(0, 3);
   const answer = (card: DropCard, value: unknown) => run(api.dropAnswer(donorId, card.id, value), true);
 
@@ -121,7 +127,11 @@ export default function DropFeed({ donorId, version, refresh, calmLine, storiesI
           {view.bookings.map((b) => (
             <div key={b.id} className="drop-booking">
               <Icon name="calendar" size={16} />
-              <span><b>{b.kind === 'donate' ? 'Donation' : 'Free check-up'}</b> · {fmtDay(b.date)} · {b.time}<br /><span className="tiny muted">{b.place}</span></span>
+              <span>
+                <b>{b.kind === 'donate' ? 'Donation' : `Check-up${b.doctor ? ` with ${b.doctor}` : ''}`}</b> · {fmtDay(b.date)} · {b.time}<br />
+                <span className="tiny muted">{b.kind === 'care' && b.clinic ? `${b.clinic}, ${b.address}` : b.place}</span>
+                {b.kind === 'care' && onDetails && <><br /><button className="drop-link" onClick={onDetails}>See details</button></>}
+              </span>
               <button disabled={busy} onClick={() => run(api.dropCancelBooking(donorId, b.id, true), true)}>Change</button>
               <button disabled={busy} onClick={() => run(api.dropCancelBooking(donorId, b.id, false), true)}>Cancel</button>
             </div>

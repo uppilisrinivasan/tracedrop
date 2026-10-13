@@ -179,11 +179,19 @@ export interface DropPlan {
   goals: { marker: string; label: string }[]; activity: { label: string; minutesPerWeek: number } | null; notes?: string[];
   nextCheckin?: { date: string; marker: string }; reminders: { id: string; label: string; time: string }[];
 }
+/** A visit Drop booked. Check-ups ('care') carry the doctor and clinic. */
+export interface DropBooking {
+  id: string; kind: string; date: string; time: string; place: string;
+  slotId?: string; urgent?: boolean; clinic?: string; address?: string; phone?: string;
+  doctor?: string; speciality?: string; cost?: string; reason?: string; bring?: string[]; durationMinutes?: number;
+}
+/** Answering a Card that no longer exists (the server restarted, or it was already answered). */
+export const isStaleCard = (e: unknown) => /card not found|no longer open|not open/i.test((e as Error)?.message || '');
 export interface DropView {
   clock: DemoClock; language: string; preferredLanguage: string;
   open: DropCard[]; receipts: { id: string; receipt: string; undo: boolean }[]; earlier: { id: string; label: string; receipt: string; on: string }[];
   memory: { id: string; text: string }[]; memReceipt: string | null; plan: DropPlan | null; readings: DropReading[]; hiddenResults: string[];
-  bookings: { id: string; kind: string; date: string; time: string; place: string }[];
+  bookings: DropBooking[];
   donate: { from: string | null; daysTo: number | null };
   budget: { kind: 'goal' | 'healthy'; today: number; perDay: number; week: number; perWeek: number; weekOf: string; report: 'week' | 'month'; quiet: boolean };
   waiting: { name: string; foldOnly: boolean }[]; later: { label: string; status: string; snoozes: number; reason: string | null }[];
@@ -262,6 +270,7 @@ export const api = {
   dropSnooze: (id: string, cardId: string, option: SnoozeOption) => post<DropView>(`/donors/${id}/drop/cards/${cardId}/snooze`, { option }),
   dropHide: (id: string, cardId: string) => post<DropView>(`/donors/${id}/drop/cards/${cardId}/hide`),
   dropUndo: (id: string) => post<DropView>(`/donors/${id}/drop/undo`),
+  dropOffer: (id: string, kind: 'care_slots' | 'reminder') => post<{ cardId: string; view: DropView }>(`/donors/${id}/drop/offer`, { kind }),
   dropCancelBooking: (id: string, bookingId: string, reschedule: boolean) => post<DropView>(`/donors/${id}/drop/bookings/${bookingId}/cancel`, { reschedule }),
   dropMemoryUndo: (id: string) => post<DropView>(`/donors/${id}/drop/memory/undo`),
   dropForget: (id: string, memoryId?: string) => request<DropView>(`/donors/${id}/drop/memory${memoryId ? `/${memoryId}` : ''}`, { method: 'DELETE' }),
