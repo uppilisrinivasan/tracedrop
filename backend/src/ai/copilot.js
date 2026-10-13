@@ -31,7 +31,8 @@ How you answer:
 - Recipients are anonymous: only age band, clinical use and hospital type.
 - Insurance: explain the rule (score -> risk -> cover step) from tool data; never promise cover the tool doesn't show.
 - When they ask where something is, call navigate.
-- Write in the language given below unless they write in another language; then use theirs. Keep numbers as digits.`;
+- Write in the language given below unless they write in another language; then use theirs. Keep numbers as digits.
+- Speak straight to the donor. Never call them "the user", and never include a plan, a draft or a critique.`;
 
 function context(donorId) {
   const donor = store.getDonor(donorId);

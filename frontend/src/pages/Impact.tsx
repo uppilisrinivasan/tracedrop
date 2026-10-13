@@ -49,7 +49,7 @@ export default function Impact({ donorId, version }: PageProps) {
   };
 
   return (
-    <div className="stack fade-in">
+    <div className="stack fade-in impact-page">
       <div className="page-head">
         <div>
           <div className="page-title">Where your blood went</div>
@@ -84,7 +84,20 @@ export default function Impact({ donorId, version }: PageProps) {
 
       {tab === 'units' && !day && <div className="empty">No donations yet. Your first one will appear here.</div>}
       {tab === 'units' && day && (
-        <>
+        <div className="impact-board">
+          <div className="card cal-card">
+            <div className="card-title"><Icon name="calendar" size={17} /> Your donations</div>
+            <div className="card-sub">Pick a marked day to see that donation.</div>
+            <div className="mt-12"><DonationCalendar dates={dates} selected={day} onPick={pick} /></div>
+            <div className="cal-dates">
+              {[...dates].reverse().map((d) => (
+                <button key={d} className={d === day ? 'on' : ''} aria-pressed={d === day} onClick={() => pick(d)}>
+                  <b>{fmtDate(d)}{d === latest ? ' · Latest' : ''}</b>
+                  <span>{byDonation[d][0].centre}</span>
+                </button>
+              ))}
+            </div>
+          </div>
           <div ref={top} className="card donation-card">
             <div className="row between wrap">
               <div>
@@ -100,19 +113,10 @@ export default function Impact({ donorId, version }: PageProps) {
             </div>
             {current && <UnitDetail key={current.id} donorId={donorId} unit={current} onConcern={concerns.reload} />}
           </div>
-
-          <div className="impact-lower">
-            <div className="card cal-card">
-              <div className="card-title"><Icon name="calendar" size={17} /> Your donations</div>
-              <div className="card-sub">Pick a marked day to see that donation above.</div>
-              <div className="mt-12"><DonationCalendar dates={dates} selected={day} onPick={pick} /></div>
-            </div>
-            <ConcernList donorId={donorId} concerns={concerns.data || []} onChange={concerns.reload} />
-          </div>
-        </>
+        </div>
       )}
       {tab === 'institutions' && <Institutions stake={stake.data} loading={stake.loading} />}
-      {tab === 'institutions' && <ConcernList donorId={donorId} concerns={concerns.data || []} onChange={concerns.reload} />}
+      <ConcernList donorId={donorId} concerns={concerns.data || []} onChange={concerns.reload} />
 
       <div className="callout callout-info small">
         <Icon name="lock" size={16} />

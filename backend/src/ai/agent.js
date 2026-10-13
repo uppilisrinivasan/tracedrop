@@ -57,7 +57,10 @@ async function runAgent({ feature, system, messages, donorId, toolNames, maxToke
         convo.push({ role: 'user', content: `Please submit your final result with the ${llm.SUBMIT} tool now.` });
         continue;
       }
-      return { text: llm.text(response), steps, actions, messages: [...convo, { role: 'assistant', content: response.content }] };
+      const spoken = llm.text(response);
+      // Keep the saved turn to what the donor was shown, so the next turn does not continue a private note
+      const content = response.content.every((b) => b.type === 'text') ? [{ type: 'text', text: spoken }] : response.content;
+      return { text: spoken, steps, actions, messages: [...convo, { role: 'assistant', content }] };
     }
 
     convo.push({ role: 'assistant', content: response.content });

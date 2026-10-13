@@ -90,6 +90,8 @@ async function accessToken() {
 function normalise(raw) {
   const candidate = raw.candidates?.[0];
   const content = (candidate?.content?.parts || []).flatMap((p, index) => {
+    // Gemini marks its private reasoning as a part. It is not part of the reply.
+    if (p.thought) return [];
     if (p.text) return [{ type: 'text', text: p.text }];
     if (p.functionCall) return [{ type: 'tool_use', id: `${p.functionCall.name}:${index}`, name: p.functionCall.name,
       input: p.functionCall.args || {}, ...(p.thoughtSignature ? { thoughtSignature: p.thoughtSignature } : {}) }];
@@ -136,7 +138,20 @@ async function call({ feature, system, messages, tools, maxTokens = 4000, output
     throw new LLMUnavailable(message);
   }
 }
-function text(response) { return response.content.filter((b) => b.type === 'text').map((b) => b.text).join('\n').trim(); }
+const PLANNING = /^(the user\b|plan:|draft \d|critique \d|revise \d|final answer:)/i;
+
+/** The words meant for the donor. Drops a reasoning note if the model wrote one into the answer. */
+function visibleReply(raw) {
+  let t = String(raw || '').replace(/\r/g, '').trim();
+  const finals = [...t.matchAll(/(?:^|\n)\s*Final Answer:\s*/gi)];
+  if (finals.length) t = t.slice(finals[finals.length - 1].index + finals[finals.length - 1][0].length).trim();
+  const chunks = t.split(/\n{2,}/).map((s) => s.trim()).filter(Boolean);
+  const spoken = chunks.filter((s) => !PLANNING.test(s));
+  if (spoken.length && spoken.length < chunks.length) t = spoken.join('\n\n');
+  return t.trim();
+}
+
+function text(response) { return visibleReply(response.content.filter((b) => b.type === 'text').map((b) => b.text).join('\n\n')); }
 function submitted(response) { return response.content.find((b) => b.type === 'tool_use' && b.name === SUBMIT)?.input || null; }
 async function json(options) {
   const response = await call(options);
@@ -150,4 +165,4 @@ async function verify() {
   if (!PROJECT) return { ok: false, reason: reason() };
   return { ok: true, reason: 'Access checked on the first AI request' };
 }
-module.exports = { call, text, json, submitted, available, status, verify, traces: () => traces, toContents, LLMUnavailable, MODEL, SUBMIT };
+module.exports = { call, text, visibleReply, json, submitted, available, status, verify, traces: () => traces, toContents, LLMUnavailable, MODEL, SUBMIT };

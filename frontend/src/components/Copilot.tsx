@@ -27,6 +27,18 @@ const BOOK_INTENT = /\b(book|schedule|reserve)\b.*\b(donat\w*|slot|appointment|b
 // One conversation per donor, shared by the chat on Home and the side panel on other screens
 const conversations = new Map<string, { turns: Turn[]; history: unknown[] | null }>();
 
+const PLANNING = /^(the user\b|plan:|draft \d|critique \d|revise \d|final answer:)/i;
+
+/** Hide a reasoning note if one was saved into an earlier reply. */
+function spoken(raw: string) {
+  let t = raw.trim();
+  const at = t.toLowerCase().lastIndexOf('final answer:');
+  if (at >= 0) t = t.slice(at + 'final answer:'.length).trim();
+  const chunks = t.split(/\n{2,}/).map((s) => s.trim()).filter(Boolean);
+  const kept = chunks.filter((s) => !PLANNING.test(s));
+  return kept.length && kept.length < chunks.length ? kept.join('\n\n') : t;
+}
+
 /** Minimal formatter for model replies: **bold**, "- " bullets and paragraphs. No HTML injection. */
 function Rich({ text }: { text: string }) {
   const inline = (line: string) => line.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
@@ -262,7 +274,7 @@ export default function Copilot({ donorId, go, clientId, inline = false, top }: 
         {turns.map((t, i) => (
           <div key={i} className="stack" style={{ gap: 6, alignItems: t.role === 'user' ? 'flex-end' : 'flex-start' }}>
             <div className={`msg ${t.role === 'user' ? 'msg-user' : 'msg-ai'}`} style={t.role === 'ai' ? { whiteSpace: 'normal' } : undefined}>
-              {t.role === 'ai' ? <Rich text={t.text} /> : t.text}
+              {t.role === 'ai' ? <Rich text={spoken(t.text)} /> : t.text}
             </div>
             {(t.actions || []).filter((a) => a.type !== 'navigate').slice(0, 2).map(renderAction)}
             {t.actions?.some((a) => a.type === 'navigate') && <span className="pill pill-ai"><Icon name="arrow" size={12} /> Opened {t.actions.find((a) => a.type === 'navigate')?.screen}</span>}
