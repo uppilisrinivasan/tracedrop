@@ -90,7 +90,7 @@ export default function App({ user, clientId, onSignOut }: { user: AuthUser; cli
           <div className="brand" style={{ padding: 0 }}><span className="brand-mark"><Icon name="drop" size={18} stroke={2.4} /></span>TraceDrop</div>
           <AccountMenu user={user} donorPicker={personaPicker} donorLabel={donorLabel} onSignOut={onSignOut} compact />
         </div>
-        <DemoBar donorId={donorId} onChange={refresh} />
+        {screen === 'home' && <DemoBar donorId={donorId} onChange={refresh} />}
         {screen === 'home' && <Home {...page} />}
         {screen === 'impact' && <Impact {...page} />}
         {(screen === 'health' || screen === 'plan' || screen === 'labs') && <Health {...page} focus={screen} />}
