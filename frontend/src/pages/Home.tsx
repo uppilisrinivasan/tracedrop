@@ -5,6 +5,10 @@ import { ErrorNote, Icon, Loading, severityPill, useLoad } from '../ui';
 import DropFeed from '../components/drop/DropFeed';
 import Copilot, { bookCheckup, startBooking } from '../components/Copilot';
 import { fmtVisitDay } from '../components/drop/Checkup';
+import { introFocus } from '../components/intro/Intro';
+
+// The tiles each Intro step talks about; on the "Your data" step the account chip pulses instead
+const INTRO_TILES: Record<string, string[]> = { journey: ['helped'], health: ['score', 'checkup'], choices: ['cover'], donate: ['next'] };
 
 /** The New donor is the signed-in person themself: greet them by their Google first name ("Hello" with sign-in off). */
 function greeting(donor: { name: string; newUser?: boolean }, user: AuthUser) {
@@ -22,11 +26,23 @@ export default function Home({ donorId, go, version, refresh, clientId, user }: 
   const { data, error, loading } = useLoad(() => api.overview(donorId), [donorId, version]);
   const [dropTick, setDropTick] = useState(0);
   const drop = useLoad(() => api.drop(donorId), [donorId, version, dropTick]);
+  const [introStep, setIntroStep] = useState<string | null>(() => introFocus(donorId));
   useEffect(() => {
     const bump = () => setDropTick((n) => n + 1);
     window.addEventListener('drop:changed', bump);
     return () => window.removeEventListener('drop:changed', bump);
   }, []);
+  // Light up the tile Drop is talking about during the Intro
+  useEffect(() => {
+    const onFocus = (e: Event) => { const d = (e as CustomEvent<{ donorId: string; stepId: string | null }>).detail; if (d.donorId === donorId) setIntroStep(d.stepId); };
+    window.addEventListener('intro:focus', onFocus);
+    return () => window.removeEventListener('intro:focus', onFocus);
+  }, [donorId]);
+  useEffect(() => {
+    document.body.classList.toggle('intro-point-account', introStep === 'data');
+    return () => document.body.classList.remove('intro-point-account');
+  }, [introStep]);
+  const tile = (id: string) => `card${(INTRO_TILES[introStep || ''] || []).includes(id) ? ' intro-focus' : ''}`;
 
   if (loading && !data) return <Loading />;
   if (error || !data) return <ErrorNote error={error || 'Could not load'} />;
@@ -66,7 +82,7 @@ export default function Home({ donorId, go, version, refresh, clientId, user }: 
         </div>
 
         <div className="drop-side">
-          <button className="card" style={{ textAlign: 'left' }} onClick={() => go('impact')}>
+          <button className={tile('helped')} style={{ textAlign: 'left' }} onClick={() => go('impact')}>
             <div className="row between"><span className="stat-label">Your blood has helped</span><Icon name="drop" className="faint" /></div>
             {firstTime ? <div className="bold mt-8">Your first donation will show here</div> : (
               <>
@@ -76,7 +92,7 @@ export default function Home({ donorId, go, version, refresh, clientId, user }: 
             )}
           </button>
 
-          <button className="card" style={{ textAlign: 'left' }} onClick={() => go('health')}>
+          <button className={tile('score')} style={{ textAlign: 'left' }} onClick={() => go('health')}>
             <div className="row between"><span className="stat-label">Health score</span><Icon name="heart" className="faint" /></div>
             {health.score == null ? <div className="bold mt-8">After your first donation</div> : (
               <>
@@ -92,7 +108,7 @@ export default function Home({ donorId, go, version, refresh, clientId, user }: 
             )}
           </button>
 
-          <button className="card" style={{ textAlign: 'left' }} onClick={() => (checkup ? go('checkups') : bookCheckup())}>
+          <button className={tile('checkup')} style={{ textAlign: 'left' }} onClick={() => (checkup ? go('checkups') : bookCheckup())}>
             <div className="row between"><span className="stat-label">Doctor check-up</span><Icon name="doctor" className="faint" /></div>
             {checkup ? (
               <>
@@ -108,7 +124,7 @@ export default function Home({ donorId, go, version, refresh, clientId, user }: 
             )}
           </button>
 
-          <button className="card" style={{ textAlign: 'left' }} onClick={() => go('cover')}>
+          <button className={tile('cover')} style={{ textAlign: 'left' }} onClick={() => go('cover')}>
             <div className="row between"><span className="stat-label">Health insurance cover</span><Icon name="shield" className="faint" /></div>
             {!cover ? <div className="bold mt-8">No cover linked yet</div> : (
               <>
@@ -123,7 +139,7 @@ export default function Home({ donorId, go, version, refresh, clientId, user }: 
             )}
           </button>
 
-          <button className="card" style={{ textAlign: 'left' }} onClick={() => (daysTo != null ? startBooking() : go('donate'))}>
+          <button className={tile('next')} style={{ textAlign: 'left' }} onClick={() => (daysTo != null ? startBooking() : go('donate'))}>
             <div className="row between"><span className="stat-label">Next donation</span><Icon name="calendar" className="faint" /></div>
             {firstTime ? <div className="bold mt-8">Book your first donation</div> : (
               <>

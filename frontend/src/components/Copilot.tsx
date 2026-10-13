@@ -15,6 +15,7 @@ import AppointmentPass from './AppointmentPass';
 import StoryViewer from './drop/StoryViewer';
 import Checkup from './drop/Checkup';
 import { chatCards } from './drop/DropFeed';
+import { IntroBar, IntroFold, IntroThread, useIntro } from './intro/Intro';
 import './drop/drop.css';
 
 interface Turn { role: 'user' | 'ai'; text: string; offline?: boolean; actions?: CopilotAction[]; questions?: string[]; booking?: boolean; appointment?: Appointment; checkup?: DropBooking }
@@ -134,10 +135,15 @@ export default function Copilot({ donorId, go, clientId, inline = false, top, fi
   const sendRef = useRef<(text: string) => void>(() => {});
   const bookRef = useRef<() => void>(() => {});
   const checkupRef = useRef<() => void>(() => {});
+  // On Home, a new user's chat runs Drop's Intro first (the Cards above it stay)
+  const intro = useIntro(donorId, inline, { go, onBook: () => bookRef.current() });
+  const introLive = inline && intro.live;
+  const introLiveRef = useRef(false);
+  introLiveRef.current = introLive;
 
   useEffect(() => {
-    if (turns.length || busy) body.current?.scrollTo({ top: body.current.scrollHeight, behavior: 'smooth' });
-  }, [turns, busy]);
+    if (turns.length || busy || intro.entries.length) body.current?.scrollTo({ top: body.current.scrollHeight, behavior: 'smooth' });
+  }, [turns, busy, intro.entries.length, intro.busy]);
 
   const reloadView = () => api.drop(donorId).then(setView).catch(() => {});
   const changed = () => window.dispatchEvent(new CustomEvent('drop:changed'));
@@ -148,7 +154,7 @@ export default function Copilot({ donorId, go, clientId, inline = false, top, fi
     setTurns((t) => [
       ...t.filter((x) => !x.booking),
       ...(said ? [{ role: 'user' as const, text: said }] : []),
-      { role: 'ai', text: "Let's book your donation. It takes about a minute.", booking: true },
+      { role: 'ai', text: `Let's book your ${firstTime ? 'first ' : ''}donation. It takes about a minute.`, booking: true },
     ]);
   }
 
@@ -206,7 +212,8 @@ export default function Copilot({ donorId, go, clientId, inline = false, top, fi
       setTurns((t) => [...t, { role: 'ai', text: `${text} What would you like to know?`, questions }]);
     };
     const onChanged = () => reloadView();
-    const onBook = () => bookRef.current();
+    // Mid-Intro the chat is busy with the Intro, so booking opens on the Donate screen instead
+    const onBook = () => (introLiveRef.current ? go('donate') : bookRef.current());
     const onCheckup = () => checkupRef.current();
     // The demo went back to the start: the saved conversation and the Cards it showed no longer exist
     const onReset = () => {
@@ -328,12 +335,15 @@ export default function Copilot({ donorId, go, clientId, inline = false, top, fi
           <button className="btn btn-ghost btn-sm" style={{ minHeight: 40, minWidth: 40 }} onClick={() => setOpen(false)} aria-label="Close"><Icon name="x" /></button>
         </div>
       </div>}
+      {introLive && <IntroBar intro={intro} />}
       <div className="chat-body" ref={body}>
         {top}
-        {turns.length === 0 && (
+        {introLive && <IntroThread intro={intro} renderAction={renderAction} />}
+        {!introLive && inline && <IntroFold intro={intro} />}
+        {!introLive && turns.length === 0 && (
           <div className="msg msg-ai">{inline ? `Ask me anything, or book your ${firstTime ? 'first' : 'next'} donation here.` : "Hi, I'm Drop. Ask me about your results, your blood's journey, your Plan or when you can donate. I'll answer in a sentence or two, and show you a card when it helps."}</div>
         )}
-        {turns.map((t, i) => (
+        {!introLive && turns.map((t, i) => (
           <div key={i} className="stack" style={{ gap: 6, alignItems: t.role === 'user' ? 'flex-end' : 'flex-start' }}>
             <div className={`msg ${t.role === 'user' ? 'msg-user' : 'msg-ai'}`} style={t.role === 'ai' ? { whiteSpace: 'normal' } : undefined}>
               {t.role === 'ai' ? <Rich text={spoken(t.text)} /> : t.text}
@@ -355,13 +365,14 @@ export default function Copilot({ donorId, go, clientId, inline = false, top, fi
         {busy && <Thinking label="Drop is checking your records…" />}
       </div>
       {story?.story && <StoryViewer title={story.label} slides={story.story} onClose={storyDone} />}
-      <div className="suggestions suggestions-stay">
+      {!introLive && <div className="suggestions suggestions-stay">
         {stories.map((c) => <StoryChip key={c.id} card={c} onClick={() => watch(c)} />)}
         {(firstTime ? FIRST_TIME_SUGGESTIONS : SUGGESTIONS).map((s, i) => <button key={s} className={`suggestion ${i === 0 ? 'suggestion-main' : ''}`} style={{ minHeight: 36 }} disabled={busy} onClick={() => send(s)}>{s}</button>)}
-      </div>
-      <form className="chat-input" onSubmit={(e) => { e.preventDefault(); send(input); }}>
-        <input value={input} onChange={(e) => setInput(e.target.value)} placeholder={inline ? 'Ask Drop, or type "book a donation"' : 'Ask Drop anything'} aria-label="Message" />
-        <button className="btn btn-ai" disabled={busy || !input.trim()} aria-label="Send" style={{ minWidth: 44 }}><Icon name="send" size={16} /></button>
+      </div>}
+      <form className="chat-input" onSubmit={(e) => { e.preventDefault(); if (introLive) { intro.ask(input); setInput(''); } else send(input); }}>
+        <input value={input} onChange={(e) => setInput(e.target.value)} aria-label="Message"
+          placeholder={introLive ? intro.view?.ui.input : inline ? 'Ask Drop, or type "book a donation"' : 'Ask Drop anything'} />
+        <button className="btn btn-ai" disabled={busy || intro.busy || !input.trim()} aria-label="Send" style={{ minWidth: 44 }}><Icon name="send" size={16} /></button>
       </form>
       {memoryOpen && view && (
         <MemorySheet memory={view.memory} onForget={(id) => act(api.dropForget(donorId, id))} onForgetAll={() => act(api.dropForget(donorId))} onClose={() => setMemoryOpen(false)} />

@@ -4,6 +4,19 @@ One entry per commit, newest first, so any change can be traced or reverted: the
 To revert one: find it with `git log --oneline --grep "<commit title>"`, then `git revert <hash>`.
 The design behind these changes is in `CONTEXT.md` (vocabulary) and the build plan.
 
+## 2026-10-14 · Onboarding step 4: the Intro on Home, with the tile highlight
+
+- **What and why:** the New donor now meets Drop through the Intro in Home's chat.
+  - `frontend/src/components/intro/` (new): the thread and the step pictures (an example journey and an example results card, both labelled "Example"; what is kept and where; the three Choices; when donating suits you; a summary), rewritten from the prototype's variant D.
+  - In Home's chat (`Copilot.tsx`, inline only): while the Intro is new or running, the chat shows the Intro thread instead of the normal conversation and hides the suggestion buttons. Drop's Cards and the stat tiles stay. A bar at the top: "Getting started", progress, "3 of 8" and **Skip intro** (Drop asks to confirm). Buttons sit under the latest message only. Typed questions go to the AI and appear in the thread, followed by "Carry on: {step}" and "Skip intro"; with the AI off they get a rule answer that names the step.
+  - A new visit (reload or sign-in) folds the finished steps into "Done so far…" and Drop says "Welcome back, we stopped at…"; other screens in the same visit keep the thread.
+  - Finished or skipped, the thread folds into one line at the top of the chat, "Intro · finished 10 Oct · Replay" (the demo date), with the questions asked during it; the normal suggestions return. "Book my first donation" opens today's booking steps in the chat. Booking asked for from Home's button while the Intro is still running opens the Donate screen.
+  - The account menu gets **Replay intro**, only when viewing the New donor. Replaying highlights the language chosen before; skipping a replay changes nothing (the first run's questions come back too).
+  - The full-page "When can you donate?" setup (and `BookingChat.tsx`, which only it used) is removed from `AuthGate.tsx`, with the `tracedrop.localSetupDone` browser flag; the Intro's step 7 replaces it. Booking itself is unchanged.
+  - **Tile highlight** (`Home.tsx`): the tile Drop is talking about gets a purple ring and moves to the top of the column (journey: "Your blood has helped"; health: "Health score" and "Doctor check-up"; Choices: "Health insurance cover"; when to donate: "Next donation"). On the data step the account chip pulses instead; with motion turned off it is a still ring.
+- **Files:** `frontend/src/components/intro/Intro.tsx`, `pictures.tsx`, `intro.css` (new), `frontend/src/components/Copilot.tsx`, `frontend/src/pages/Home.tsx`, `frontend/src/components/AccountMenu.tsx`, `frontend/src/App.tsx`, `frontend/src/AuthGate.tsx`, `frontend/src/BookingChat.tsx` (deleted), `frontend/src/styles.css` (its style), `frontend/src/api.ts`, `backend/src/domain/intro.js` and `backend/src/routes/intro.js` (the Intro's own words for the bar, Skip and coming back, so they can be translated with the steps), `backend/test/intro.test.js`.
+- **Revert:** reverting this brings back the setup screen and leaves the Intro engine unused; nothing else depends on it until "Your data".
+
 ## 2026-10-14 · Onboarding step 3: the Intro engine (server, no screens)
 
 - **What and why:** Drop's Intro for a new user, as rules and data on the server, so the screens in the next commit only show it.

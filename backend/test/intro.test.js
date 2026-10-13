@@ -102,6 +102,7 @@ test('replay starts at step 1 filled in, saves only what changes, and skipping i
   const finished = intro.status('D-NEW');
   intro.noteQuestion('D-NEW', 'not running, so not kept', 'x');
   assert.equal(finished.questions.length, 0);
+  finished.questions.push({ q: 'asked the first time', a: 'kept', step: 3 }); // as if asked during the first run
 
   const r = intro.replay('D-NEW');
   assert.equal(r.status, 'running');
@@ -123,6 +124,7 @@ test('replay starts at step 1 filled in, saves only what changes, and skipping i
   const skipped = intro.skip('D-NEW');
   assert.equal(skipped.status, 'done', 'skipping a replay keeps it finished');
   assert.equal(skipped.finishedOn, finished.finishedOn);
+  assert.deepEqual(skipped.questions.map((q) => q.q), ['asked the first time'], "the first run's questions come back");
   assert.equal(store.getDonor('D-NEW').consent.shareHealthWithInsurer, true, 'skipping a replay changes nothing');
 
   intro.replay('D-NEW');

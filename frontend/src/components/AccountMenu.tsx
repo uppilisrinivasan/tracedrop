@@ -21,10 +21,12 @@ interface Props {
   donorPicker: ReactNode;
   donorLabel: string;
   onSignOut: () => void;
+  /** Only while viewing the New donor: play Drop's Intro again */
+  onReplayIntro?: () => void;
   compact?: boolean;
 }
 
-export default function AccountMenu({ user, donorPicker, donorLabel, onSignOut, compact = false }: Props) {
+export default function AccountMenu({ user, donorPicker, donorLabel, onSignOut, onReplayIntro, compact = false }: Props) {
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   const name = user.local ? 'Local development' : user.name || user.email;
@@ -62,6 +64,11 @@ export default function AccountMenu({ user, donorPicker, donorLabel, onSignOut, 
             <span className="account-label">Viewing donor</span>
             {donorPicker}
           </div>
+          {onReplayIntro && (
+            <button className="account-item" role="menuitem" onClick={() => { setOpen(false); onReplayIntro(); }}>
+              <Icon name="refresh" size={15} /> Replay intro
+            </button>
+          )}
           <div className="account-links">
             <a href="/privacy" target="_blank" rel="noopener">Privacy</a>
             <a href="/terms" target="_blank" rel="noopener">Terms</a>

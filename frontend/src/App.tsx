@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api, type AuthUser } from './api';
 import { Icon } from './ui';
 import Copilot from './components/Copilot';
+import { introChanged } from './components/intro/Intro';
 import DemoBar from './components/DemoBar';
 import AccountMenu from './components/AccountMenu';
 import Home from './pages/Home';
@@ -76,6 +77,10 @@ export default function App({ user, clientId, onSignOut }: { user: AuthUser; cli
 
   const donor = personas.find((p) => p.id === donorId);
   const donorLabel = donor ? personaLabel(donor) : '';
+  // Replay Drop's Intro: only the New donor has one to replay
+  const replayIntro = donor?.newUser
+    ? () => api.introReplay(donorId).then(() => { go('home'); introChanged(donorId); }).catch(() => go('home'))
+    : undefined;
 
   return (
     <div className="shell">
@@ -87,14 +92,14 @@ export default function App({ user, clientId, onSignOut }: { user: AuthUser; cli
           </button>
         ))}
         <div className="sidebar-foot">
-          <AccountMenu user={user} donorPicker={personaPicker} donorLabel={donorLabel} onSignOut={onSignOut} />
+          <AccountMenu user={user} donorPicker={personaPicker} donorLabel={donorLabel} onSignOut={onSignOut} onReplayIntro={replayIntro} />
         </div>
       </aside>
 
       <main className="main">
         <div className="mobile-top">
           <div className="brand" style={{ padding: 0 }}><span className="brand-mark"><Icon name="drop" size={18} stroke={2.4} /></span>TraceDrop</div>
-          <AccountMenu user={user} donorPicker={personaPicker} donorLabel={donorLabel} onSignOut={onSignOut} compact />
+          <AccountMenu user={user} donorPicker={personaPicker} donorLabel={donorLabel} onSignOut={onSignOut} onReplayIntro={replayIntro} compact />
         </div>
         {screen === 'home' && <DemoBar donorId={donorId} onChange={refresh} />}
         {screen === 'home' && <Home key={donorId} {...page} user={user} />}

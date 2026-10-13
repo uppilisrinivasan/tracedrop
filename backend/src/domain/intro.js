@@ -143,6 +143,27 @@ function steps() {
   return script().map((s, i) => ({ n: i + 1, ...s, after: s.after || [], picture: s.picture || null, pictureData: s.picture ? pictures[s.picture] : null }));
 }
 
+/** The Intro's own words around the steps: the bar, Skip, coming back, the folded line. {…} are filled in on screen. */
+const UI = {
+  bar: 'Getting started',
+  progress: '{n} of {total}',
+  skip: 'Skip intro',
+  skipAsk: "Skip the rest? Anything you haven't chosen keeps its default (insurer sharing off). You can replay the intro any time from the account menu.",
+  skipYes: 'Skip the intro',
+  keepGoing: 'Keep going',
+  carryOn: 'Carry on',
+  carryOnStep: 'Carry on: {title}',
+  welcomeBack: 'Welcome back, {first}. We stopped at {title} (step {n} of {total}).',
+  doneSoFar: 'Done so far',
+  backTo: 'Back to {title}',
+  input: 'Ask Drop anything. The intro waits for you.',
+  watched: 'Watched the story',
+  finished: 'Intro · finished {date}',
+  skipped: 'Intro · skipped {date}',
+  replay: 'Replay',
+  questions: 'Questions you asked',
+};
+
 /* ------------------------------------------------------------------ state */
 
 const states = new Map();
@@ -265,7 +286,7 @@ function skip(donorId) {
   const st = get(donorId);
   if (!live(st)) throw new Error('The intro is not running');
   if (st.replay) {
-    Object.assign(st, { status: st.replay.status, finishedOn: st.replay.finishedOn, step: TOTAL, replay: null });
+    Object.assign(st, { status: st.replay.status, finishedOn: st.replay.finishedOn, questions: st.replay.questions, step: TOTAL, replay: null });
   } else {
     Object.assign(st, { status: 'skipped', finishedOn: store.today(), step: TOTAL, replay: null });
   }
@@ -277,7 +298,7 @@ function replay(donorId) {
   const st = get(donorId);
   if (!store.getDonor(donorId).newUser) throw new Error('Only the New donor can replay the intro');
   if (live(st)) return status(donorId);
-  Object.assign(st, { replay: { status: st.status, finishedOn: st.finishedOn }, status: 'running', step: 1, questions: [] });
+  Object.assign(st, { replay: { status: st.status, finishedOn: st.finishedOn, questions: st.questions }, status: 'running', step: 1, questions: [] });
   return status(donorId);
 }
 
@@ -308,4 +329,4 @@ function explain(donorId) {
 
 store.onReset(() => states.clear());
 
-module.exports = { steps, status, prefill, answer, skip, replay, finishIntro, noteQuestion, explain, TOTAL, LANGUAGES, CHOICE_ROWS };
+module.exports = { steps, status, prefill, answer, skip, replay, finishIntro, noteQuestion, explain, UI, TOTAL, LANGUAGES, CHOICE_ROWS };

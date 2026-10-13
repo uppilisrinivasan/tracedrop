@@ -28,7 +28,8 @@ async function payload(req) {
   const donorId = req.params.donorId;
   const first = firstName(req);
   const steps = intro.steps().map((s) => ({ ...s, text: s.text.map((t) => personal(t, first)), after: s.after.map((t) => personal(t, first)) }));
-  return { ...intro.status(donorId), steps, prefill: await intro.prefill(donorId, req.user) };
+  const ui = Object.fromEntries(Object.entries(intro.UI).map(([k, t]) => [k, personal(t, first)]));
+  return { ...intro.status(donorId), steps, ui, prefill: await intro.prefill(donorId, req.user) };
 }
 
 /** Run an Intro action; a rule it breaks (e.g. answering the wrong step) comes back as 400 with the reason. */

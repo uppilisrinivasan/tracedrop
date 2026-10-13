@@ -193,10 +193,37 @@ export interface DropBooking {
   slotId?: string; urgent?: boolean; clinic?: string; address?: string; phone?: string;
   doctor?: string; speciality?: string; cost?: string; reason?: string; bring?: string[]; durationMinutes?: number;
 }
+/** Drop's Intro for a new user (CONTEXT.md: Intro). */
+export type IntroStepId = 'language' | 'hello' | 'journey' | 'health' | 'data' | 'choices' | 'donate' | 'done';
+export interface IntroStatus {
+  status: 'new' | 'running' | 'done' | 'skipped'; step: number; total: number; finishedOn: string | null; replay: boolean;
+  stepId: IntroStepId | null; title: string | null; canReplay: boolean; questions: { q: string; a: string; step: number }[];
+}
+export interface IntroButton { label: string; value: string; primary?: boolean }
+export interface JourneyPicture { label: string; date: string; volumeMl: number; tested: string | null; parts: { name: string; tag: string; good: boolean; text: string }[]; story: string[] }
+export interface ResultsPicture { label: string; title: string; rows: { name: string; value: string; status: string; good: boolean }[]; note: string }
+export interface DataPicture { rows: { icon: string; what: string; where: string }[]; note: string }
+export interface ChoicesPicture { rows: { key: keyof Donor['consent']; label: string; sub: string }[] }
+export interface DaysPicture { days: { id: string; label: string }[]; times: { id: string; label: string }[]; places: { id: string; label: string }[] }
+export interface SummaryPicture { rows: { what: string; value: string }[] }
+export interface IntroStep {
+  n: number; id: IntroStepId; title: string; text: string[]; after: string[]; buttons: IntroButton[];
+  picture: 'journey' | 'results' | 'data' | 'choices' | 'days' | 'summary' | null;
+  pictureData: JourneyPicture | ResultsPicture | DataPicture | ChoicesPicture | DaysPicture | SummaryPicture | null;
+}
+export interface IntroDonate { days: string | null; time: string | null; place: string | null }
+export interface IntroView extends IntroStatus {
+  steps: IntroStep[];
+  /** The Intro's own words (bar, Skip, coming back, folded line), with {n}, {total}, {title} and {date} to fill in */
+  ui: Record<'bar' | 'progress' | 'skip' | 'skipAsk' | 'skipYes' | 'keepGoing' | 'carryOn' | 'carryOnStep' | 'welcomeBack' | 'doneSoFar' | 'backTo' | 'input' | 'watched' | 'finished' | 'skipped' | 'replay' | 'questions', string>;
+  prefill: { language: string; choices: Donor['consent']; donate: IntroDonate | null };
+  saved?: string[];
+}
+
 /** Answering a Card that no longer exists (the server restarted, or it was already answered). */
 export const isStaleCard = (e: unknown) => /card not found|no longer open|not open/i.test((e as Error)?.message || '');
 export interface DropView {
-  clock: DemoClock; language: string; preferredLanguage: string;
+  clock: DemoClock; intro: IntroStatus; language: string; preferredLanguage: string;
   open: DropCard[]; receipts: { id: string; receipt: string; undo: boolean }[]; earlier: { id: string; label: string; receipt: string; on: string }[];
   memory: { id: string; text: string }[]; memReceipt: string | null; plan: DropPlan | null; readings: DropReading[]; hiddenResults: string[];
   bookings: DropBooking[];
@@ -286,6 +313,11 @@ export const api = {
   dropHideResult: (id: string, observationId: string) => post<DropView>(`/donors/${id}/drop/results/${observationId}/hide`),
   dropLanguage: (id: string, language: string) => post<DropView>(`/donors/${id}/drop/language`, { language }),
   dropLine: (id: string, screen: string) => request<{ screen: string; text: string; questions: string[]; date: string }>(`/donors/${id}/drop/line/${screen}`),
+  intro: (id: string) => request<IntroView>(`/donors/${id}/intro`),
+  introAnswer: (id: string, step: number, value: unknown) => post<IntroView>(`/donors/${id}/intro/answer`, { step, value }),
+  introSkip: (id: string) => post<IntroView>(`/donors/${id}/intro/skip`),
+  introReplay: (id: string) => post<IntroView>(`/donors/${id}/intro/replay`),
+  introFinish: (id: string) => post<IntroView>(`/donors/${id}/intro/finish`),
   demoClock: () => request<DemoClock>('/demo'),
   demoAdvance: (parts: number) => post<DemoClock>('/demo/advance', { parts }),
   demoNext: (donorId: string) => post<DemoClock>('/demo/next', { donorId }),
