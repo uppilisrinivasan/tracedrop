@@ -41,7 +41,7 @@ function system(language) {
 Rewrite each card's message so it sounds like Drop talking to this donor.
 Rules:
 - Keep every fact exactly: numbers, dates, times, places, blood groups. Add nothing that is not in the card.
-- One or two short sentences, second person. Use the donor's first name at most once across all cards.
+- One or two short sentences. If the card is written as I/my, keep that first person. Otherwise write in the second person, and use the donor's first name at most once across all cards.
 - Never diagnose. Never mention medicines unless the card does. For urgent cards keep "see a doctor today" clear and calm.
 - Button and chip labels: 1-4 words, same meaning, same number of chips in the same order; keep dates, times and place names in chips.
 - Write in ${LANGUAGE_NAMES[language] || 'English'}. Keep numbers as digits and keep BP, Hb and HbA1c as they are.`;

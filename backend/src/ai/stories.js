@@ -20,7 +20,7 @@ const SCHEMA = {
   required: ['headline', 'story', 'shareText', 'addedDetails'],
   properties: {
     headline: { type: 'string', description: 'Max 8 words' },
-    story: { type: 'string', description: '3-4 sentences, second person' },
+    story: { type: 'string', description: '3-4 sentences, first person (I, my). Never you, your, or the donor\'s name.' },
     shareText: { type: 'string', description: 'One sentence the donor can post, first person, ends with #DonateBlood' },
     addedDetails: { type: 'array', items: { type: 'string' }, description: 'Any fact in the story that is NOT in the journey data. Should be empty.' },
   },
@@ -28,7 +28,7 @@ const SCHEMA = {
 
 const SYSTEM = `You write short impact stories for blood donors about where one unit of their donated blood went.
 Hard privacy rules: use ONLY the facts in the journey data. No names, no exact ages, no hospital names, no dates more precise than given, no invented medical details, family members, or outcomes. If the outcome is "ongoing" or "not_reported", don't claim recovery.
-Tone: warm, specific, not saccharine. Explain in one clause what the component does medically.
+Tone: warm, specific, not saccharine. Write as the donor, in the first person (I, my). Never "you" or "your", and never the donor's name. Explain in one clause what the component does medically.
 List anything you added beyond the data in addedDetails (should be empty).`;
 
 async function write(donorId, componentId, { refresh = false } = {}) {
@@ -61,8 +61,8 @@ function template(journey, donor) {
   const r = journey.recipient;
   const recovered = r.outcome === 'recovered';
   return {
-    headline: `Your ${journey.name.toLowerCase()} reached a patient`,
-    story: `${donor.name.split(' ')[0]}, the ${journey.name.toLowerCase()} from your ${new Date(`${journey.donationDate}T00:00:00Z`).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })} donation went to a patient (${r.patient.toLowerCase()}) at a ${r.place}, for ${r.context.toLowerCase()}. ${journey.role}.${recovered ? ' The hospital recorded a good recovery.' : ''}`,
+    headline: `My ${journey.name.toLowerCase()} reached a patient`,
+    story: `My ${journey.name.toLowerCase()} from my ${new Date(`${journey.donationDate}T00:00:00Z`).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })} donation went to a patient (${r.patient.toLowerCase()}) at a ${r.place}, for ${r.context.toLowerCase()}. ${journey.role}.${recovered ? ' The hospital recorded a good recovery.' : ''}`,
     shareText: `My blood donation helped a patient with ${r.context.toLowerCase()}. One donation, up to three lives. #DonateBlood`,
     addedDetails: [],
     generatedBy: 'template',

@@ -316,16 +316,16 @@ function buildReport(st) {
     let minutes = 0;
     for (let i = 0; i <= dayNum(today) - dayNum(from); i += 1) minutes += activityMinutes(st.donorId, addDays(from, i));
     const target = st.plan.activity.minutesPerWeek * (period === 'week' ? 1 : 4);
-    slides.push(`Active minutes: ${minutes} of your ${target} goal (from your phone's step data, simulated).`);
+    slides.push(`Active minutes: ${minutes} of my ${target} goal (from my phone's step data, simulated).`);
   }
   const bp = st.readings.filter((r) => r.marker === 'bp' && inPeriod(r.date)).pop();
-  if (bp) slides.push(`Your latest BP: ${bp.s}/${bp.d}. Goal: under ${BP_GOAL.s}/${BP_GOAL.d}.`);
+  if (bp) slides.push(`My latest BP: ${bp.s}/${bp.d}. Goal: under ${BP_GOAL.s}/${BP_GOAL.d}.`);
   for (const e of folded.filter((x) => x.foldOnly)) slides.push(impactLine(st.donorId, e.data.componentId));
-  for (const c of foldedCards) slides.push(`You put this off: ${words(st, c).text}`);
+  for (const c of foldedCards) slides.push(`I put this off: ${words(st, c).text}`);
   const totals = impact.summarise(impact.donorJourneys(st.donorId));
-  slides.push(`You have helped ${totals.patientsHelped} patients so far.`);
+  slides.push(`I have helped ${totals.patientsHelped} patients so far.`);
   const ready = readiness(st);
-  if (ready) slides.push(ready <= today ? 'You can donate now.' : `${dayNum(ready) - dayNum(today)} days until you can donate again.`);
+  if (ready) slides.push(ready <= today ? 'I can donate now.' : `${dayNum(ready) - dayNum(today)} days until I can donate again.`);
 
   const waiting = folded.filter((e) => !e.foldOnly).map((e) => ({ key: e.key, name: eventName(e) }));
   pushCard(st, 'report', period, { slides, waiting, period });
@@ -340,8 +340,8 @@ function activityMinutes(donorId, iso) {
 
 function impactLine(donorId, componentId) {
   const j = impact.donorJourneys(donorId).find((x) => x.id === componentId);
-  if (!j || !j.recipient) return 'Another part of your donation reached a patient.';
-  return `Your ${j.name.toLowerCase()} from ${fmt(j.donationDate)} helped a patient: ${j.recipient.context.toLowerCase()} (${j.recipient.place}).`;
+  if (!j || !j.recipient) return 'Another part of my donation reached a patient.';
+  return `My ${j.name.toLowerCase()} from ${fmt(j.donationDate)} helped a patient: ${j.recipient.context.toLowerCase()} (${j.recipient.place}).`;
 }
 
 function eventName(e) {
@@ -402,13 +402,13 @@ function words(st, c) {
       const total = impact.summarise(impact.donorJourneys(donorId)).patientsHelped;
       const r = j.recipient;
       return {
-        text: `Your ${j.name.toLowerCase()} from ${fmt(j.donationDate)} helped a patient: ${r.context.toLowerCase()} (${r.patient.toLowerCase()}, ${r.place}).`,
+        text: `My ${j.name.toLowerCase()} from ${fmt(j.donationDate)} helped a patient: ${r.context.toLowerCase()} (${r.patient.toLowerCase()}, ${r.place}).`,
         main: { label: 'Watch the story', value: 'seen', story: true },
         story: [
-          `${fmt(j.donationDate)}. You gave blood at ${j.centre}.`,
-          `It was separated into parts. One of them: your ${j.name.toLowerCase()}. ${j.role}.`,
-          `Your ${j.name.toLowerCase()} went to ${r.place.startsWith('A ') ? r.place.toLowerCase() : `a ${r.place.toLowerCase()}`}.`,
-          `It helped ${r.patient.toLowerCase()}: ${r.context.toLowerCase()}. You have now helped ${total} patients.`,
+          `${fmt(j.donationDate)}. I gave blood at ${j.centre}.`,
+          `My blood was separated into parts. One of them was my ${j.name.toLowerCase()}. ${j.role}.`,
+          `My ${j.name.toLowerCase()} went to ${r.place.startsWith('A ') ? r.place.toLowerCase() : `a ${r.place.toLowerCase()}`}.`,
+          `I helped a patient (${r.patient.toLowerCase()}): ${r.context.toLowerCase()}. I have now helped ${total} patients.`,
         ],
       };
     }
@@ -479,8 +479,8 @@ function words(st, c) {
     case 'report:week':
     case 'report:month':
       return {
-        text: `Your ${d.period}, in ${d.slides.length} tap${d.slides.length === 1 ? '' : 's'}.`,
-        main: { label: `Watch your ${d.period}`, value: 'seen', story: true },
+        text: `My ${d.period}, in ${d.slides.length} tap${d.slides.length === 1 ? '' : 's'}.`,
+        main: { label: `Watch my ${d.period}`, value: 'seen', story: true },
         story: d.slides,
         chips: (d.waiting || []).map((w) => ({ label: `Still waiting: ${w.name}`, value: { pull: w.key } })),
       };
