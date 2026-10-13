@@ -838,6 +838,7 @@ function view(donorId) {
   const open = st.cards.filter((c) => c.status === 'open').sort((a, z) => (z.urgent - a.urgent) || (z.created - a.created));
   return {
     clock: store.clock(),
+    intro: require('./intro').status(donorId), // required here: intro.js uses this module
     language: st.language,
     preferredLanguage: store.getDonor(donorId).language,
     open: open.map((c) => cardView(st, c)),

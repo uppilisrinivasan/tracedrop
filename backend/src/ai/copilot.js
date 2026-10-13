@@ -9,6 +9,7 @@
 const store = require('../data/store');
 const health = require('../domain/health');
 const drop = require('../domain/drop');
+const intro = require('../domain/intro');
 const screenLines = require('../domain/screenLines');
 const llm = require('./llm');
 const { runAgent } = require('./agent');
@@ -47,7 +48,14 @@ function context(donorId, userName) {
   return `Today: ${store.today()}. Donor: ${who(donor, userName)}. Write in ${LANGUAGE_NAMES[c.language] || 'English'}.
 What you remember about them: ${c.memory.join('; ') || 'nothing yet'}.
 Their Plan: ${c.plan.join('; ') || 'none yet'}. Reminders: ${c.reminders.join('; ') || 'none'}. Latest reading they gave you: ${c.latestReading || 'none'}.
-Cards waiting for them on Home: ${c.openCards.join(', ') || 'none'}.`;
+Cards waiting for them on Home: ${c.openCards.join(', ') || 'none'}.${introLine(donorId)}`;
+}
+
+/** While the Intro runs, Drop knows which step the person is on, so "what's this?" gets a sensible answer. */
+function introLine(donorId) {
+  const i = intro.status(donorId);
+  if (i.status !== 'new' && i.status !== 'running') return '';
+  return `\nThey are in the Intro, Drop's scripted first conversation, on step ${i.step} of ${i.total}: "${i.title}". If they ask about it, answer in one or two sentences about that step; the Intro's buttons let them carry on.`;
 }
 
 async function chat({ donorId, history, message, userName }) {
@@ -99,6 +107,8 @@ function fallback(donorId, message) {
     const card = drop.offerCard(donorId, 'care_slots');
     return out('Here are free check-up slots near you.', [{ type: 'card', cardId: card.id }]);
   }
+  const step = intro.explain(donorId);
+  if (step) return out(step);
   return out("I need the AI connection for free-form questions, and it isn't available right now. Try asking about your results, your BP, where your blood went, or when you can donate.");
 }
 

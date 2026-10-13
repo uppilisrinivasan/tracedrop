@@ -4,6 +4,17 @@ One entry per commit, newest first, so any change can be traced or reverted: the
 To revert one: find it with `git log --oneline --grep "<commit title>"`, then `git revert <hash>`.
 The design behind these changes is in `CONTEXT.md` (vocabulary) and the build plan.
 
+## 2026-10-14 · Onboarding step 3: the Intro engine (server, no screens)
+
+- **What and why:** Drop's Intro for a new user, as rules and data on the server, so the screens in the next commit only show it.
+  - `backend/src/domain/intro.js` keeps, per demo donor in server memory, the Intro's `status` (new, running, done, skipped), `step` (1–8), `finishedOn` (the demo date) and the questions asked during it. Only the New donor starts as new; every other Persona is done and can't replay it. Demo Reset puts it back.
+  - The 8 steps as data: Drop's English words, which picture, and the buttons. Language; what TraceDrop is; your blood's journey, shown with a labelled example built from the demo's 3 Oct donation as it stands on the demo clock (no name), with a story to watch; health between donations, with an example results card from the same donation; your data; your Choices; when you can donate; all set, with "Book my first donation" and "Start using TraceDrop".
+  - Answers land where they belong: the language becomes Drop's language and the donor's own (so Home's switch offers English plus it); the Choices become the donor's Choices; "when can you donate" (days, time of day, place) is saved with the signed-in Google account through the same preferences store booking reads, as the old setup screen did. Skip keeps the defaults (insurer off). Replay starts at step 1 with what was chosen before filled in and saves only what changes; skipping a replay changes nothing.
+  - Demo Reset now also reloads the donor records, so the New donor's language and every Persona's Choices go back to where they started.
+  - Routes under `/api/donors/:id/intro`: read, answer a step, skip, replay, finish. Drop's view includes the Intro's status. Drop's chat is told which step the person is on, so "what's this?" mid-Intro gets a sensible answer; with the AI off the rule answer names the step. Questions asked during the Intro are kept with it.
+- **Files:** `backend/src/domain/intro.js` (new), `backend/src/routes/intro.js` (new), `backend/src/server.js` (one line mounting it), `backend/src/data/store.js`, `backend/src/domain/drop.js`, `backend/src/ai/copilot.js`, `backend/src/routes/donors.js`, `backend/test/intro.test.js` (new).
+- **Revert:** safe to revert on its own (no screen uses it yet).
+
 ## 2026-10-14 · Onboarding step 2: empty states for a donor with no records
 
 - **What and why:** the New donor has no donations, results, blood group, Circles or insurer, and several screens failed or read oddly for them.

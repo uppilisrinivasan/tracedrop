@@ -49,7 +49,7 @@ function loadDonors() {
   const overlay = readDemo('overlay.json') || {};
   return new Map([...read('donors.json'), ...(overlay.donors || [])].map((d) => [d.id, d]));
 }
-const donors = loadDonors();
+let donors = loadDonors();
 
 /** (Re)load the records that demo sessions can change, plus the demo overlay (e.g. Arjun's 3 Oct donation). */
 function loadRecords() {
@@ -93,9 +93,10 @@ module.exports = {
     clock = clock.part === PARTS.length - 1 ? { date: addDays(clock.date, 1), part: 0 } : { date: clock.date, part: clock.part + 1 };
     listeners.step.forEach((fn) => fn(clock));
   },
-  /** Put the clock and all demo-session writes back to the start. */
+  /** Put the clock and all demo-session writes back to the start, including what donors chose (language, Choices). */
   resetDemo() {
     clock = { ...START };
+    donors = loadDonors();
     loadRecords();
     Object.values(session).forEach((map) => map.clear());
     listeners.reset.forEach((fn) => fn());

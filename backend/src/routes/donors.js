@@ -20,6 +20,7 @@ const labReader = require('../ai/labReader');
 const stories = require('../ai/stories');
 const concerns = require('../domain/concerns');
 const insights = require('../ai/insights');
+const intro = require('../domain/intro');
 
 const router = express.Router();
 
@@ -156,11 +157,14 @@ router.post('/:donorId/appointments/:appointmentId/checkin', (req, res) => {
 });
 
 // ---- GenAI / agentic features
-router.post('/:donorId/copilot', (req, res) => {
+router.post('/:donorId/copilot', async (req, res) => {
   const { message, history } = req.body;
   if (!message || typeof message !== 'string') return fail(res, 400, 'message is required');
   const userName = req.user && !req.user.local ? req.user.name : null;
-  return withFallback(res, () => copilot.chat({ donorId: req.donor.id, history, message: message.slice(0, 2000), userName }), () => copilot.fallback(req.donor.id, message));
+  const id = req.donor.id;
+  // A question asked during the Intro is kept with it ("Intro · finished … · the questions you asked")
+  const keep = (reply) => { intro.noteQuestion(id, message, reply && reply.reply); return reply; };
+  return withFallback(res, async () => keep(await copilot.chat({ donorId: id, history, message: message.slice(0, 2000), userName })), () => keep(copilot.fallback(id, message)));
 });
 
 router.post('/:donorId/care-plan', (req, res) => withFallback(res, async () => {
