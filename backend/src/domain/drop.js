@@ -260,7 +260,8 @@ function deliver(st) {
     log(st, `${label(c)} was unanswered for a week: it moves into the next report.`);
   });
 
-  if (part === 1 && isReportDay(st, today) && !st.reports[today]) buildReport(st);
+  // Someone who has never donated has nothing to report yet
+  if (part === 1 && isReportDay(st, today) && !st.reports[today] && store.getDonations(st.donorId).length) buildReport(st);
 
   // Cards that follow up on something the Donor did skip the budget
   due.filter((e) => e.status === 'pending' && e.prompted).forEach((e) => send(st, e, { counted: false }));

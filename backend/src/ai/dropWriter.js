@@ -64,7 +64,7 @@ async function write(donorId) {
   }));
   const call = llm.json({
     feature: 'drop_cards', system: system(language), maxTokens: 1500, effort: 'low', outputSchema: SCHEMA,
-    messages: [{ role: 'user', content: `Donor's first name: ${donor.name.split(' ')[0]}.\nCards:\n${JSON.stringify(input, null, 1)}` }],
+    messages: [{ role: 'user', content: `Donor's first name: ${donor.newUser ? 'not known, use no name' : donor.name.split(' ')[0]}.\nCards:\n${JSON.stringify(input, null, 1)}` }],
   });
   const result = await Promise.race([call, new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), TIMEOUT_MS))]);
   let written = 0;

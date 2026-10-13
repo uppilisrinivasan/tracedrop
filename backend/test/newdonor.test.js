@@ -46,7 +46,7 @@ test('the New donor loads with no records', () => {
   assert.deepEqual(v.memory, []);
   assert.equal(v.plan, null);
   advance(4 * 7); // a week on, Drop still has nothing to send someone with no records
-  assert.deepEqual(drop.view('D-NEW').open.filter((c) => c.type !== 'report'), []);
+  assert.deepEqual(drop.view('D-NEW').open, []);
 });
 
 test('Reset keeps the New donor', () => {

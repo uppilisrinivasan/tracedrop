@@ -12,18 +12,28 @@ export default function Community({ donorId, version }: PageProps) {
 
   if (loading && !data) return <Loading />;
   if (error || !data) return <ErrorNote error={error || 'Could not load'} />;
-  if (!data.length) return <div className="empty">You are not in any circles yet.</div>;
+  const head = (
+    <div className="page-head">
+      <div>
+        <div className="page-title">Your circles</div>
+        <div className="page-sub">See what your family, friends and colleagues achieve together — without anyone's health data being shared.</div>
+      </div>
+    </div>
+  );
+  if (!data.length) {
+    return (
+      <div className="stack fade-in">
+        {head}
+        <div className="card empty">You're not in a Circle yet. A Circle is your family, workplace or club, seeing your impact together.</div>
+      </div>
+    );
+  }
   const c = data[Math.min(active, data.length - 1)];
   const maxContext = Math.max(...c.contexts.map((x) => x.count), 1);
 
   return (
     <div className="stack fade-in">
-      <div className="page-head">
-        <div>
-          <div className="page-title">Your circles</div>
-          <div className="page-sub">See what your family, friends and colleagues achieve together — without anyone's health data being shared.</div>
-        </div>
-      </div>
+      {head}
       <DropLine donorId={donorId} screen="community" version={version} />
 
       <div className="tabs">

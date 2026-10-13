@@ -97,9 +97,29 @@ function stack(donor, policy, cover) {
   return { layers, total, multiple: layers.length > 1 };
 }
 
+/** A Donor with no insurer linked yet (the New donor): nothing to step up, only what sharing would do. */
+function notLinked(donor, history) {
+  return {
+    linked: false,
+    policy: null,
+    baseCover: null,
+    currentCover: null,
+    eligibleCover: null,
+    nextStep: null,
+    pointsToNextStep: null,
+    healthScore: history.length ? history[history.length - 1].score : null,
+    conditions: {
+      consentToShare: { met: donor.consent.shareHealthWithInsurer, detail: donor.consent.shareHealthWithInsurer ? 'Sharing is on, for when an insurer is linked' : 'Sharing is off' },
+    },
+    history: [],
+    blockedBy: null,
+  };
+}
+
 function evaluate(donorId) {
   const donor = store.getDonor(donorId);
   const policy = store.getPolicy(donor.policyId);
+  if (!policy) return notLinked(donor, health.scoreHistory(donorId));
   const base = policy.baseCover;
   const history = health.scoreHistory(donorId);
   const current = history.length ? history[history.length - 1].score : 60;
@@ -140,6 +160,7 @@ function evaluate(donorId) {
   const fullPremium = selfPaid.reduce((sum, p) => sum + p.premium, 0);
 
   return {
+    linked: true,
     policy: { ...policy, premium: BASE_PREMIUM, paidBy: group ? policy.sponsor : 'You' },
     baseTerms: BASE_TERMS[group ? 'group' : 'retail'],
     stack: coverStack,
@@ -175,7 +196,9 @@ function evaluate(donorId) {
 /** What-if: cover if the score changed by `delta` points. */
 function simulate(donorId, newScore) {
   const donor = store.getDonor(donorId);
-  const base = store.getPolicy(donor.policyId).baseCover;
+  const policy = store.getPolicy(donor.policyId);
+  if (!policy) return { score: newScore, cover: null, relativeRisk: Number(relativeRisk(newScore).toFixed(2)) };
+  const base = policy.baseCover;
   return { score: newScore, cover: ladderStep(headroom(newScore, base), base), relativeRisk: Number(relativeRisk(newScore).toFixed(2)) };
 }
 

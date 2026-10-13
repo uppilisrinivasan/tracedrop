@@ -68,6 +68,14 @@ function Rich({ text }: { text: string }) {
   return <>{blocks}</>;
 }
 
+// Someone who hasn't donated yet has no results, readings or patients to ask about
+const FIRST_TIME_SUGGESTIONS = [
+  'Book my first donation',
+  'What happens at a donation?',
+  'Book a doctor check-up',
+  'What do you remember about me?',
+];
+
 const SUGGESTIONS = [
   'Book a donation',
   'Book a doctor check-up',
@@ -109,7 +117,7 @@ function ChartCard({ marker, points }: { marker: string; points: ChartPoint[] })
   );
 }
 
-export default function Copilot({ donorId, go, clientId, inline = false, top }: { donorId: string; go: (s: Screen) => void; clientId: string; inline?: boolean; top?: ReactNode }) {
+export default function Copilot({ donorId, go, clientId, inline = false, top, firstTime = false }: { donorId: string; go: (s: Screen) => void; clientId: string; inline?: boolean; top?: ReactNode; firstTime?: boolean }) {
   const [open, setOpen] = useState(inline);
   const [turns, setTurns] = useState<Turn[]>(() => conversations.get(donorId)?.turns || []);
   const [history, setHistory] = useState<unknown[] | null>(() => conversations.get(donorId)?.history || null);
@@ -323,7 +331,7 @@ export default function Copilot({ donorId, go, clientId, inline = false, top }: 
       <div className="chat-body" ref={body}>
         {top}
         {turns.length === 0 && (
-          <div className="msg msg-ai">{inline ? 'Ask me anything, or book your next donation here.' : "Hi, I'm Drop. Ask me about your results, your blood's journey, your Plan or when you can donate. I'll answer in a sentence or two, and show you a card when it helps."}</div>
+          <div className="msg msg-ai">{inline ? `Ask me anything, or book your ${firstTime ? 'first' : 'next'} donation here.` : "Hi, I'm Drop. Ask me about your results, your blood's journey, your Plan or when you can donate. I'll answer in a sentence or two, and show you a card when it helps."}</div>
         )}
         {turns.map((t, i) => (
           <div key={i} className="stack" style={{ gap: 6, alignItems: t.role === 'user' ? 'flex-end' : 'flex-start' }}>
@@ -349,7 +357,7 @@ export default function Copilot({ donorId, go, clientId, inline = false, top }: 
       {story?.story && <StoryViewer title={story.label} slides={story.story} onClose={storyDone} />}
       <div className="suggestions suggestions-stay">
         {stories.map((c) => <StoryChip key={c.id} card={c} onClick={() => watch(c)} />)}
-        {SUGGESTIONS.map((s) => <button key={s} className={`suggestion ${s === 'Book a donation' ? 'suggestion-main' : ''}`} style={{ minHeight: 36 }} disabled={busy} onClick={() => send(s)}>{s}</button>)}
+        {(firstTime ? FIRST_TIME_SUGGESTIONS : SUGGESTIONS).map((s, i) => <button key={s} className={`suggestion ${i === 0 ? 'suggestion-main' : ''}`} style={{ minHeight: 36 }} disabled={busy} onClick={() => send(s)}>{s}</button>)}
       </div>
       <form className="chat-input" onSubmit={(e) => { e.preventDefault(); send(input); }}>
         <input value={input} onChange={(e) => setInput(e.target.value)} placeholder={inline ? 'Ask Drop, or type "book a donation"' : 'Ask Drop anything'} aria-label="Message" />

@@ -160,7 +160,7 @@ function stakeholders(donorId) {
   const journeys = donorJourneys(donorId);
   const transfused = journeys.filter((j) => j.recipient);
   const byKind = (k) => journeys.filter((j) => j.kind === k);
-  const rareGroup = donor.bloodGroup.endsWith('-');
+  const rareGroup = Boolean(donor.bloodGroup && donor.bloodGroup.endsWith('-'));
   const labTests = store.getObservations(donorId).length;
   const hospitalKinds = {};
   for (const j of transfused) hospitalKinds[j.recipient.place] = (hospitalKinds[j.recipient.place] || 0) + 1;
@@ -176,7 +176,7 @@ function stakeholders(donorId) {
         { label: 'Units used (not wasted)', value: `${Math.round((journeys.filter((j) => j.helped).length / Math.max(journeys.length, 1)) * 100)}%` },
         { label: 'Repeat-donor status', value: completed.length >= 3 ? 'Regular (safest donor category)' : 'Building' },
       ],
-      story: `Repeat voluntary donors are the safest blood supply and cut the centre's replacement-donor dependence. ${rareGroup ? `Your ${donor.bloodGroup} group is rare — under 2% of donors — so the centre calls you for emergencies.` : `Your ${donor.bloodGroup} group is among the most requested.`}`,
+      story: `Repeat voluntary donors are the safest blood supply and cut the centre's replacement-donor dependence. ${!donor.bloodGroup ? 'Your blood group is found at your first donation.' : rareGroup ? `Your ${donor.bloodGroup} group is rare — under 2% of donors — so the centre calls you for emergencies.` : `Your ${donor.bloodGroup} group is among the most requested.`}`,
       drilldown: Object.keys(COMPONENTS).map((k) => ({ label: COMPONENTS[k].name, value: byKind(k).length })),
     },
     {

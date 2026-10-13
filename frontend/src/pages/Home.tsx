@@ -1,16 +1,24 @@
 import { useEffect, useState } from 'react';
-import { api, fmtDate, rupees } from '../api';
+import { api, fmtDate, rupees, type AuthUser } from '../api';
 import type { PageProps } from '../App';
 import { ErrorNote, Icon, Loading, severityPill, useLoad } from '../ui';
 import DropFeed from '../components/drop/DropFeed';
 import Copilot, { bookCheckup, startBooking } from '../components/Copilot';
 import { fmtVisitDay } from '../components/drop/Checkup';
 
+/** The New donor is the signed-in person themself: greet them by their Google first name ("Hello" with sign-in off). */
+function greeting(donor: { name: string; newUser?: boolean }, user: AuthUser) {
+  if (!donor.newUser) return `Hello, ${donor.name.split(' ')[0]}`;
+  const first = !user.local && user.name ? user.name.split(' ')[0] : '';
+  return first ? `Hello, ${first}` : 'Hello';
+}
+
 /**
  * Drop-first Home: Drop's open Cards and its chat in the main column, the numbers
  * as quiet tiles on the right, and the donation countdown always in the header.
+ * A Donor with no donations yet (the New donor) sees plain empty tiles that point to their first donation.
  */
-export default function Home({ donorId, go, version, refresh, clientId }: PageProps) {
+export default function Home({ donorId, go, version, refresh, clientId, user }: PageProps & { user: AuthUser }) {
   const { data, error, loading } = useLoad(() => api.overview(donorId), [donorId, version]);
   const [dropTick, setDropTick] = useState(0);
   const drop = useLoad(() => api.drop(donorId), [donorId, version, dropTick]);
@@ -23,8 +31,8 @@ export default function Home({ donorId, go, version, refresh, clientId }: PagePr
   if (loading && !data) return <Loading />;
   if (error || !data) return <ErrorNote error={error || 'Could not load'} />;
 
-  const first = data.donor.name.split(' ')[0];
   const { impact: im, health, cover, eligibility: el } = data;
+  const firstTime = data.donations.completed + data.donations.deferred === 0;
   const scoreDelta = health.score != null && health.previousScore != null ? health.score - health.previousScore : 0;
   const daysTo = drop.data?.donate.daysTo;
   const from = drop.data?.donate.from;
@@ -34,43 +42,54 @@ export default function Home({ donorId, go, version, refresh, clientId }: PagePr
     <div className="fade-in">
       <div className="page-head">
         <div>
-          <div className="page-title">Hello, {first}</div>
+          <div className="page-title">{greeting(data.donor, user)}</div>
           <div className="page-sub row wrap" style={{ gap: 12 }}>
-            <span>{data.donor.bloodGroup} donor · {data.donor.district}</span>
+            <span>{firstTime ? 'No donations yet' : `${data.donor.bloodGroup} donor · ${data.donor.district}`}</span>
             <span className="countdown" aria-label="Next donation">
               <Icon name="drop" size={14} />
-              {daysTo === 0 ? 'You can donate now'
-                : daysTo != null ? <><span className="track"><span className="fill" style={{ width: `${Math.max(4, 100 - Math.round((daysTo / el.gapDays) * 100))}%` }} /></span>Donate in {daysTo} days</>
-                  : 'Donation on hold for now'}
+              {firstTime ? 'You can book your first donation'
+                : daysTo === 0 ? 'You can donate now'
+                  : daysTo != null ? <><span className="track"><span className="fill" style={{ width: `${Math.max(4, 100 - Math.round((daysTo / el.gapDays) * 100))}%` }} /></span>Donate in {daysTo} days</>
+                    : 'Donation on hold for now'}
             </span>
           </div>
         </div>
-        <button className="btn btn-primary" onClick={() => (daysTo != null ? startBooking() : go('donate'))}><Icon name="calendar" /> {daysTo != null ? 'Book a donation' : 'Donation status'}</button>
+        <button className="btn btn-primary" onClick={() => (daysTo != null ? startBooking() : go('donate'))}>
+          <Icon name="calendar" /> {firstTime ? 'Book my first donation' : daysTo != null ? 'Book a donation' : 'Donation status'}
+        </button>
       </div>
 
       <div className="drop-board">
         <div className="drop-main">
-          <Copilot key={donorId} donorId={donorId} go={go} clientId={clientId} inline
-            top={<DropFeed donorId={donorId} version={version} refresh={refresh} calmLine={`You have helped ${im.patientsHelped} patients so far.`} storiesInChat onDetails={() => go('checkups')} />} />
+          <Copilot key={donorId} donorId={donorId} go={go} clientId={clientId} inline firstTime={firstTime}
+            top={<DropFeed donorId={donorId} version={version} refresh={refresh} calmLine={firstTime ? 'Your first donation will show here.' : `You have helped ${im.patientsHelped} patients so far.`} storiesInChat onDetails={() => go('checkups')} />} />
         </div>
 
         <div className="drop-side">
           <button className="card" style={{ textAlign: 'left' }} onClick={() => go('impact')}>
             <div className="row between"><span className="stat-label">Your blood has helped</span><Icon name="drop" className="faint" /></div>
-            <div className="row mt-8" style={{ alignItems: 'baseline' }}><span className="stat-value">{im.patientsHelped}</span><span className="muted">patients</span></div>
-            <div className="small muted mt-8">{data.donations.completed} donations · {im.components} components{im.children ? ` · ${im.children} children` : ''}</div>
+            {firstTime ? <div className="bold mt-8">Your first donation will show here</div> : (
+              <>
+                <div className="row mt-8" style={{ alignItems: 'baseline' }}><span className="stat-value">{im.patientsHelped}</span><span className="muted">patients</span></div>
+                <div className="small muted mt-8">{data.donations.completed} donations · {im.components} components{im.children ? ` · ${im.children} children` : ''}</div>
+              </>
+            )}
           </button>
 
           <button className="card" style={{ textAlign: 'left' }} onClick={() => go('health')}>
             <div className="row between"><span className="stat-label">Health score</span><Icon name="heart" className="faint" /></div>
-            <div className="row mt-8" style={{ alignItems: 'baseline' }}>
-              <span className="stat-value">{health.score ?? '—'}</span><span className="muted">/100</span>
-              {scoreDelta !== 0 && <span className={`pill ${scoreDelta > 0 ? 'pill-good' : 'pill-warn'}`}>{scoreDelta > 0 ? '▲' : '▼'} {Math.abs(scoreDelta)}</span>}
-            </div>
-            <div className="row wrap mt-8" style={{ gap: 6 }}>
-              {health.findings.length === 0 && <span className="pill pill-good">All results in range</span>}
-              {health.findings.slice(0, 2).map((f) => <span key={f.id} className={`pill ${severityPill[f.severity]}`}>{f.title}</span>)}
-            </div>
+            {health.score == null ? <div className="bold mt-8">After your first donation</div> : (
+              <>
+                <div className="row mt-8" style={{ alignItems: 'baseline' }}>
+                  <span className="stat-value">{health.score}</span><span className="muted">/100</span>
+                  {scoreDelta !== 0 && <span className={`pill ${scoreDelta > 0 ? 'pill-good' : 'pill-warn'}`}>{scoreDelta > 0 ? '▲' : '▼'} {Math.abs(scoreDelta)}</span>}
+                </div>
+                <div className="row wrap mt-8" style={{ gap: 6 }}>
+                  {health.findings.length === 0 && <span className="pill pill-good">All results in range</span>}
+                  {health.findings.slice(0, 2).map((f) => <span key={f.id} className={`pill ${severityPill[f.severity]}`}>{f.title}</span>)}
+                </div>
+              </>
+            )}
           </button>
 
           <button className="card" style={{ textAlign: 'left' }} onClick={() => (checkup ? go('checkups') : bookCheckup())}>
@@ -91,19 +110,27 @@ export default function Home({ donorId, go, version, refresh, clientId }: PagePr
 
           <button className="card" style={{ textAlign: 'left' }} onClick={() => go('cover')}>
             <div className="row between"><span className="stat-label">Health insurance cover</span><Icon name="shield" className="faint" /></div>
-            <div className="row mt-8" style={{ alignItems: 'baseline' }}>
-              <span className="stat-value">{rupees(cover.current)}</span>
-              {cover.current > cover.base && <span className="pill pill-good">+{rupees(cover.current - cover.base)}</span>}
-            </div>
-            <div className="small muted mt-8">
-              {cover.pointsToNext != null && cover.next ? `${cover.pointsToNext} score point${cover.pointsToNext === 1 ? '' : 's'} to ${rupees(cover.next)}, same premium` : cover.next ? 'Keep monitoring to grow your cover' : 'Top cover step reached'}
-            </div>
+            {!cover ? <div className="bold mt-8">No cover linked yet</div> : (
+              <>
+                <div className="row mt-8" style={{ alignItems: 'baseline' }}>
+                  <span className="stat-value">{rupees(cover.current)}</span>
+                  {cover.current > cover.base && <span className="pill pill-good">+{rupees(cover.current - cover.base)}</span>}
+                </div>
+                <div className="small muted mt-8">
+                  {cover.pointsToNext != null && cover.next ? `${cover.pointsToNext} score point${cover.pointsToNext === 1 ? '' : 's'} to ${rupees(cover.next)}, same premium` : cover.next ? 'Keep monitoring to grow your cover' : 'Top cover step reached'}
+                </div>
+              </>
+            )}
           </button>
 
           <button className="card" style={{ textAlign: 'left' }} onClick={() => (daysTo != null ? startBooking() : go('donate'))}>
             <div className="row between"><span className="stat-label">Next donation</span><Icon name="calendar" className="faint" /></div>
-            <div className="stat-value mt-8" style={{ fontSize: 22 }}>{daysTo === 0 ? 'Today' : from ? fmtDate(from) : 'On hold'}</div>
-            <div className="small muted mt-8">{daysTo == null && el.blockers.length ? `Paused: ${el.blockers[0].toLowerCase()}` : `Gap of ${el.gapDays} days after each donation`}</div>
+            {firstTime ? <div className="bold mt-8">Book your first donation</div> : (
+              <>
+                <div className="stat-value mt-8" style={{ fontSize: 22 }}>{daysTo === 0 ? 'Today' : from ? fmtDate(from) : 'On hold'}</div>
+                <div className="small muted mt-8">{daysTo == null && el.blockers.length ? `Paused: ${el.blockers[0].toLowerCase()}` : `Gap of ${el.gapDays} days after each donation`}</div>
+              </>
+            )}
           </button>
 
           {data.communities.length > 0 && (

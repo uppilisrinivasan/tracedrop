@@ -44,7 +44,8 @@ function candidates(donorId) {
   if (c.pointsToNextStep != null && c.pointsToNextStep <= 10) list.push({ id: 'cover', cta: 'cover', fact: `Health score ${c.healthScore}; ${c.pointsToNextStep} points from insurance cover rising ₹${c.currentCover / 1e5} lakh -> ₹${c.nextStep / 1e5} lakh at the same premium.` });
   if (c.blockedBy === 'monitoring') list.push({ id: 'cover_unlock', cta: 'donate', fact: `Score already qualifies for ₹${c.eligibleCover / 1e5} lakh cover but needs 2 monitored visits in 12 months; one more check-up unlocks it.` });
   const e = health.eligibility(donorId);
-  if (e.eligibleNow) list.push({ id: 'eligible', cta: 'donate', fact: `Eligible to donate today (last donation ${e.lastDonationDate}). Blood group ${store.getDonor(donorId).bloodGroup}.` });
+  if (e.eligibleNow && !e.lastDonationDate) list.push({ id: 'eligible', cta: 'donate', fact: 'Has not donated yet and can book a first donation today.' });
+  else if (e.eligibleNow) list.push({ id: 'eligible', cta: 'donate', fact: `Eligible to donate today (last donation ${e.lastDonationDate}). Blood group ${store.getDonor(donorId).bloodGroup}.` });
   const journeys = impact.donorJourneys(donorId).filter((j) => j.recipient);
   const recent = journeys.sort((a, b) => b.donationDate.localeCompare(a.donationDate))[0];
   if (recent) list.push({ id: 'impact', cta: 'impact', fact: `Their ${recent.name.toLowerCase()} from ${recent.donationDate} was used for ${recent.recipient.context.toLowerCase()} (${recent.recipient.patient}, ${recent.recipient.place}). Total patients helped: ${journeys.length}.` });
@@ -59,7 +60,7 @@ async function forDonor(donorId) {
   const list = candidates(donorId);
   const pick = await llm.json({
     feature: 'home_insight', system: SYSTEM, maxTokens: 800, effort: 'low', outputSchema: SCHEMA,
-    messages: [{ role: 'user', content: `Donor: ${donor.name.split(' ')[0]}. Language: ${LANGUAGE_NAMES[donor.language] || 'English'}.\nCandidates:\n${list.map((c) => `- [${c.id}] ${c.fact}`).join('\n')}` }],
+    messages: [{ role: 'user', content: `Donor: ${donor.newUser ? 'a new user (name not known)' : donor.name.split(' ')[0]}. Language: ${LANGUAGE_NAMES[donor.language] || 'English'}.\nCandidates:\n${list.map((c) => `- [${c.id}] ${c.fact}`).join('\n')}` }],
   });
   return { ...pick, generatedBy: 'ai', considered: list.map((c) => c.id) };
 }

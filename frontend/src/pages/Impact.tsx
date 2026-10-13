@@ -36,6 +36,19 @@ export default function Impact({ donorId, version }: PageProps) {
 
   if (loading && !data) return <Loading />;
   if (error || !data) return <ErrorNote error={error || 'Could not load'} />;
+  if (!data.journeys.length) {
+    return (
+      <div className="stack fade-in impact-page">
+        <div className="page-head">
+          <div>
+            <div className="page-title">Where your blood went</div>
+            <div className="page-sub">Every donation is separated into components. Follow each one to the patient it helped — privately.</div>
+          </div>
+        </div>
+        <div className="card empty">No donations yet. After your first one, you'll see each part of it here and the patient it helps.</div>
+      </div>
+    );
+  }
   const dates = Object.keys(byDonation).sort();
   const latest = dates[dates.length - 1];
   const day = date && byDonation[date] ? date : latest;

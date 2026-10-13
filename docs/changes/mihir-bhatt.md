@@ -4,6 +4,15 @@ One entry per commit, newest first, so any change can be traced or reverted: the
 To revert one: find it with `git log --oneline --grep "<commit title>"`, then `git revert <hash>`.
 The design behind these changes is in `CONTEXT.md` (vocabulary) and the build plan.
 
+## 2026-10-14 · Onboarding step 2: empty states for a donor with no records
+
+- **What and why:** the New donor has no donations, results, blood group, Circles or insurer, and several screens failed or read oddly for them.
+  - **Server:** every donor API (overview, health, impact, who benefited, cover and its what-if, community, slots and eligibility, Drop and Drop's line on each screen) now answers normally. Cover for a donor with no insurer says so (`linked: false`; the overview's `cover` is `null`); BMI is `null` without a height; Drop's line on each screen says what their first donation will bring instead of "All 0 of your results are in range". Drop sends no monthly report to someone who has never donated. The chat knows the New donor is the signed-in person (it uses their Google first name, or no name with sign-in off) and never calls them "New"; without the AI, questions about results or BP get "no results yet", and "What happens at a donation?" gets a plain answer.
+  - **Home:** greets the New donor by the signed-in person's Google first name ("Hello" with sign-in off); the line under it says "No donations yet" and the countdown "You can book your first donation"; the button reads "Book my first donation". Tiles: "Your blood has helped: your first donation will show here", "Health score: after your first donation", "Doctor check-up: none booked", "Health insurance cover: no cover linked yet", "Next donation: book your first donation", and no "Your circles" tile. The chat's suggestions for a first-time donor are about the first donation. Home is now keyed by donor, so switching donors never shows one donor's numbers under another's name while loading.
+  - **Other screens:** My impact, My health (check-ups stay), Health cover and Community ("You're not in a Circle yet") each show one short message instead of empty charts or errors; Donate's booking section reads "Book your first donation".
+- **Files:** `backend/src/domain/cover.js`, `backend/src/domain/impact.js`, `backend/src/domain/screenLines.js`, `backend/src/domain/drop.js`, `backend/src/routes/donors.js`, `backend/src/ai/copilot.js`, `backend/src/ai/agent.js`, `backend/src/ai/dropWriter.js`, `backend/src/ai/insights.js`, `backend/src/ai/carePlan.js`, `backend/test/emptystates.test.js` (new), `backend/test/newdonor.test.js`, `frontend/src/api.ts`, `frontend/src/App.tsx`, `frontend/src/pages/Home.tsx`, `frontend/src/components/Copilot.tsx`, `frontend/src/pages/Impact.tsx`, `frontend/src/pages/Health.tsx`, `frontend/src/pages/Cover.tsx`, `frontend/src/pages/Community.tsx`, `frontend/src/pages/Donate.tsx`.
+- **Revert:** safe to revert on its own; the New donor's screens then fail again.
+
 ## 2026-10-14 · Onboarding step 1: glossary, two fixes, and the New donor
 
 - **What and why:**

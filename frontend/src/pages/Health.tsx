@@ -40,6 +40,23 @@ export default function Health({ donorId, go, version, refresh, focus }: PagePro
   if (loading && !data) return <Loading />;
   if (error || !data) return <ErrorNote error={error || 'Could not load'} />;
   const latest = data.scores[data.scores.length - 1];
+  const checkups = <div ref={checkupsRef}><CheckupsSection donorId={donorId} view={dropView} onChange={(v) => { setDropView(v); window.dispatchEvent(new CustomEvent('drop:changed')); }} /></div>;
+
+  // No donations yet: no results, score or trends to show
+  if (!data.vitals.length) {
+    return (
+      <div className="stack fade-in">
+        <div className="page-head">
+          <div>
+            <div className="page-title">Your health</div>
+            <div className="page-sub">From the free lab panel on every donation sample, plus any reports you add.</div>
+          </div>
+        </div>
+        <div className="card empty">No results yet. Every donation includes a free health check, and your results will show here after your first one.</div>
+        {checkups}
+      </div>
+    );
+  }
 
   return (
     <div className="stack fade-in">
@@ -67,7 +84,7 @@ export default function Health({ donorId, go, version, refresh, focus }: PagePro
           <div className="tiny faint mt-12">Computed by fixed clinical rules (not AI) from your latest results. Drives your insurance cover.</div>
         </div>
 
-        <Section title="What your results say" sub={`${data.findings.length} finding${data.findings.length === 1 ? '' : 's'} · BMI ${data.bmi}`}>
+        <Section title="What your results say" sub={`${data.findings.length} finding${data.findings.length === 1 ? '' : 's'}${data.bmi != null ? ` · BMI ${data.bmi}` : ''}`}>
           {data.findings.length === 0 && <div className="callout" style={{ background: 'var(--good-soft)' }}><Icon name="check" /> Everything is in the healthy range. Keep it up!</div>}
           <div className="stack" style={{ gap: 10 }}>
             {data.findings.map((f) => (
@@ -84,7 +101,7 @@ export default function Health({ donorId, go, version, refresh, focus }: PagePro
         </Section>
       </div>
 
-      <div ref={checkupsRef}><CheckupsSection donorId={donorId} view={dropView} onChange={(v) => { setDropView(v); window.dispatchEvent(new CustomEvent('drop:changed')); }} /></div>
+      {checkups}
 
       <PlanSection view={dropView} />
       <Trends data={data} added={dropView?.readings || []} />

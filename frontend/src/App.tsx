@@ -97,7 +97,7 @@ export default function App({ user, clientId, onSignOut }: { user: AuthUser; cli
           <AccountMenu user={user} donorPicker={personaPicker} donorLabel={donorLabel} onSignOut={onSignOut} compact />
         </div>
         {screen === 'home' && <DemoBar donorId={donorId} onChange={refresh} />}
-        {screen === 'home' && <Home {...page} />}
+        {screen === 'home' && <Home key={donorId} {...page} user={user} />}
         {screen === 'impact' && <Impact {...page} />}
         {(screen === 'health' || screen === 'plan' || screen === 'labs' || screen === 'checkups') && <Health {...page} focus={screen} />}
         {screen === 'cover' && <Cover {...page} />}

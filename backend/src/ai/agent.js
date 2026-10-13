@@ -97,8 +97,8 @@ function summarise(name, output) {
   switch (name) {
     case 'get_profile': return `${output.name}, ${output.donations} donations, eligible now: ${output.eligibility.eligibleNow}`;
     case 'get_health_score': return `Latest score ${output.history.length ? output.history[output.history.length - 1].score : '—'}`;
-    case 'get_insurance_cover': return `Cover ₹${(output.currentCover / 1e5).toFixed(0)}L, qualifies ₹${(output.eligibleCover / 1e5).toFixed(0)}L`;
-    case 'simulate_cover': return `Score ${output.score} → ₹${(output.cover / 1e5).toFixed(0)}L`;
+    case 'get_insurance_cover': return output.linked === false ? 'No insurer linked' : `Cover ₹${(output.currentCover / 1e5).toFixed(0)}L, qualifies ₹${(output.eligibleCover / 1e5).toFixed(0)}L`;
+    case 'simulate_cover': return output.cover == null ? 'No insurer linked' : `Score ${output.score} → ₹${(output.cover / 1e5).toFixed(0)}L`;
     case 'get_donation_impact': return `${output.totals.patientsHelped} patients helped from ${output.totals.components} components`;
     case 'get_protocol': return output.name;
     case 'get_lifestyle_guidance': return output.title;

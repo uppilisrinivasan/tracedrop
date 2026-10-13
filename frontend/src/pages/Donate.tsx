@@ -99,7 +99,7 @@ export default function Donate({ donorId, go, version, refresh, clientId }: Page
         </Section>
       ))}
 
-      <Section title="Book a donation" sub={el.eligibleNow ? 'Quick checks, a place and a date. About a minute.' : el.nextEligibleDate ? `You can donate from ${fmtDate(el.nextEligibleDate)}.` : 'Donation is paused for now.'}>
+      <Section title={el.lastDonationDate ? 'Book a donation' : 'Book your first donation'} sub={el.eligibleNow ? 'Quick checks, a place and a date. About a minute.' : el.nextEligibleDate ? `You can donate from ${fmtDate(el.nextEligibleDate)}.` : 'Donation is paused for now.'}>
         {el.blockers.length > 0 && (
           <div className="callout callout-warn small">
             <Icon name="info" size={16} />

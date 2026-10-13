@@ -71,7 +71,8 @@ router.get('/:donorId/overview', (req, res) => {
     health: { score: scores.length ? scores[scores.length - 1].score : null, previousScore: scores.length > 1 ? scores[scores.length - 2].score : null,
       findings: health.findings(id).map(({ id: fid, title, severity, detail }) => ({ id: fid, title, severity, detail })) },
     eligibility: health.eligibility(id),
-    cover: { base: c.baseCover, current: c.currentCover, eligible: c.eligibleCover, next: c.nextStep, pointsToNext: c.pointsToNextStep, blockedBy: c.blockedBy },
+    // null until an insurer is linked (the New donor)
+    cover: c.linked ? { base: c.baseCover, current: c.currentCover, eligible: c.eligibleCover, next: c.nextStep, pointsToNext: c.pointsToNextStep, blockedBy: c.blockedBy } : null,
     communities: community.forDonor(id).map(({ id: cid, name, kind, memberCount, totals }) => ({ id: cid, name, kind, memberCount, totals })),
     ai: llm.status(),
   });
@@ -97,7 +98,8 @@ router.get('/:donorId/health', (req, res) => {
     vitals: health.vitalsSeries(id),
     labs: Object.fromEntries(Object.entries(labs).map(([k, list]) => [k, list.map(({ id, date, value, unit, low, high, name, source }) => ({ id, date, value, unit, low, high, name, source }))])),
     eligibility: health.eligibility(id),
-    bmi: Number(health.bmi(req.donor, health.vitalsSeries(id).slice(-1)[0]?.weightKg || 60).toFixed(1)),
+    // No height or weight on record yet (the New donor): no BMI
+    bmi: req.donor.heightCm && health.vitalsSeries(id).length ? Number(health.bmi(req.donor, health.vitalsSeries(id).slice(-1)[0].weightKg || 60).toFixed(1)) : null,
   });
 });
 
@@ -157,7 +159,8 @@ router.post('/:donorId/appointments/:appointmentId/checkin', (req, res) => {
 router.post('/:donorId/copilot', (req, res) => {
   const { message, history } = req.body;
   if (!message || typeof message !== 'string') return fail(res, 400, 'message is required');
-  return withFallback(res, () => copilot.chat({ donorId: req.donor.id, history, message: message.slice(0, 2000) }), () => copilot.fallback(req.donor.id, message));
+  const userName = req.user && !req.user.local ? req.user.name : null;
+  return withFallback(res, () => copilot.chat({ donorId: req.donor.id, history, message: message.slice(0, 2000), userName }), () => copilot.fallback(req.donor.id, message));
 });
 
 router.post('/:donorId/care-plan', (req, res) => withFallback(res, async () => {

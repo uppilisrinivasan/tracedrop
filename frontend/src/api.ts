@@ -2,9 +2,10 @@
 
 export type Severity = 'urgent' | 'high' | 'moderate' | 'watch';
 
+/** A Donor. The New donor is a new user with no records, so their blood group, district and body measures are null. */
 export interface Donor {
-  id: string; name: string; sex: 'M' | 'F'; age: number; bloodGroup: string; language: string; district: string;
-  heightCm: number; smoker: boolean; familyHistory: string[]; communityIds: string[];
+  id: string; name: string; sex: 'M' | 'F' | null; age: number | null; bloodGroup: string | null; language: string; district: string | null;
+  heightCm: number | null; smoker: boolean | null; familyHistory: string[]; communityIds: string[]; newUser?: boolean;
   consent: { shareHealthWithInsurer: boolean; showOnLeaderboard: boolean; includeInCommunityStats: boolean };
 }
 
@@ -41,7 +42,8 @@ export interface Overview {
   impact: ImpactSummary; latestJourney: Journey | null;
   health: { score: number | null; previousScore: number | null; findings: Finding[] };
   eligibility: Eligibility;
-  cover: { base: number; current: number; eligible: number; next: number | null; pointsToNext: number | null; blockedBy: string | null };
+  /** null until an insurer is linked */
+  cover: { base: number; current: number; eligible: number; next: number | null; pointsToNext: number | null; blockedBy: string | null } | null;
   communities: { id: string; name: string; kind: string; memberCount: number; totals: { donations: number; patientsHelped: number } }[];
   ai: AIStatus;
 }
@@ -56,10 +58,16 @@ export interface HealthData {
   vitals: { date: string; status: string; systolic: number; diastolic: number; haemoglobin: number; weightKg: number; pulse: number }[];
   labs: Record<string, LabPoint[]>;
   eligibility: Eligibility;
-  bmi: number;
+  bmi: number | null;
+}
+
+/** Cover for a Donor with no insurer linked yet (the New donor). */
+export interface CoverNotLinked {
+  linked: false; healthScore: number | null; conditions: Record<string, { met: boolean; detail: string }>;
 }
 
 export interface CoverData {
+  linked: true;
   policy: { sponsor: string; kind: string; premium: number; paidBy: string };
   baseTerms: { label: string; value: string }[];
   stack: {
@@ -239,7 +247,7 @@ export const api = {
   impact: (id: string) => request<{ summary: ImpactSummary; journeys: Journey[]; k: number }>(`/donors/${id}/impact`),
   stakeholders: (id: string) => request<Stakeholder[]>(`/donors/${id}/stakeholders`),
   health: (id: string) => request<HealthData>(`/donors/${id}/health`),
-  cover: (id: string) => request<CoverData>(`/donors/${id}/cover`),
+  cover: (id: string) => request<CoverData | CoverNotLinked>(`/donors/${id}/cover`),
   simulateCover: (id: string, score: number) => request<{ score: number; cover: number; relativeRisk: number }>(`/donors/${id}/cover/simulate?score=${score}`),
   communities: (id: string) => request<Community[]>(`/donors/${id}/communities`),
   setConsent: (id: string, consent: Partial<Donor['consent']>) => request<Donor['consent']>(`/donors/${id}/consent`, { method: 'PATCH', body: JSON.stringify(consent) }),

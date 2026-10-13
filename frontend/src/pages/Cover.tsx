@@ -21,6 +21,19 @@ export default function Cover({ donorId, go, version, refresh }: PageProps) {
 
   if (loading && !data) return <Loading />;
   if (error || !data) return <ErrorNote error={error || 'Could not load'} />;
+  if (!data.linked) {
+    return (
+      <div className="stack fade-in">
+        <div className="page-head">
+          <div>
+            <div className="page-title">Health cover that grows with you</div>
+            <div className="page-sub">Like a credit limit that rises with good behaviour: stay healthy and your sum insured steps up — for the same premium.</div>
+          </div>
+        </div>
+        <div className="card empty">No health cover linked yet. When your insurer is linked, your cover and how your health score can raise it will show here.</div>
+      </div>
+    );
+  }
 
   const score = what ?? data.healthScore;
   const simCover = what != null && sim ? sim.cover : data.currentCover;

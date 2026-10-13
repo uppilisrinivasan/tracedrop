@@ -120,7 +120,7 @@ function fallback(donorId) {
       urgency: findings.some((f) => f.severity === 'urgent') ? 'urgent' : findings.some((f) => ['high', 'moderate'].includes(f.severity)) ? 'soon' : 'routine',
       actions: actions.slice(0, 4),
       doctorNote: findings.map((f) => `${f.title} — ${f.detail}${f.protocolId ? ` (${f.protocolId})` : ''}`).join('; ') || 'No abnormal findings.',
-      coverGoal: c.blockedBy === 'monitoring'
+      coverGoal: !c.linked ? 'No health cover is linked yet.' : c.blockedBy === 'monitoring'
         ? `Your score already qualifies for ₹${c.eligibleCover / 1e5} lakh; one more monitored visit this year unlocks it.`
         : c.pointsToNextStep != null
           ? `${c.pointsToNextStep} more health-score point${c.pointsToNextStep === 1 ? '' : 's'} would move your cover to ₹${c.nextStep / 1e5} lakh.`

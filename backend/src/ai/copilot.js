@@ -34,18 +34,25 @@ How you answer:
 - Write in the language given below unless they write in another language; then use theirs. Keep numbers as digits.
 - Speak straight to the donor. Never call them "the user", and never include a plan, a draft or a critique.`;
 
-function context(donorId) {
+/** Who Drop is talking to. The New donor is the signed-in person themself, a new user with no records yet. */
+function who(donor, userName) {
+  if (!donor.newUser) return `${donor.name} (${donor.id})`;
+  const first = userName ? String(userName).split(' ')[0] : null;
+  return `a new user (${donor.id}) who has just joined: no donations, results, Circles or insurer yet. ${first ? `Their first name is ${first}.` : "You don't know their name, so don't use one."}`;
+}
+
+function context(donorId, userName) {
   const donor = store.getDonor(donorId);
   const c = drop.chatContext(donorId);
-  return `Today: ${store.today()}. Donor: ${donor.name} (${donorId}). Write in ${LANGUAGE_NAMES[c.language] || 'English'}.
+  return `Today: ${store.today()}. Donor: ${who(donor, userName)}. Write in ${LANGUAGE_NAMES[c.language] || 'English'}.
 What you remember about them: ${c.memory.join('; ') || 'nothing yet'}.
 Their Plan: ${c.plan.join('; ') || 'none yet'}. Reminders: ${c.reminders.join('; ') || 'none'}. Latest reading they gave you: ${c.latestReading || 'none'}.
 Cards waiting for them on Home: ${c.openCards.join(', ') || 'none'}.`;
 }
 
-async function chat({ donorId, history, message }) {
+async function chat({ donorId, history, message, userName }) {
   const messages = [...(history || []), { role: 'user', content: message }];
-  const result = await runAgent({ feature: 'copilot', system: `${SYSTEM}\n\n${context(donorId)}`, messages, donorId, toolNames: CHAT_TOOLS, maxTokens: 2500, effort: 'low' });
+  const result = await runAgent({ feature: 'copilot', system: `${SYSTEM}\n\n${context(donorId, userName)}`, messages, donorId, toolNames: CHAT_TOOLS, maxTokens: 2500, effort: 'low' });
   if (!result.text && !result.actions.some((x) => x.type !== 'navigate')) {
     // The model looked things up but gave no words: answer the question from the rules instead
     const rules = fallback(donorId, message);
@@ -71,12 +78,19 @@ function fallback(donorId, message) {
     const memory = drop.view(donorId).memory.map((x) => x.text);
     return out(memory.length ? `Here's what I remember: ${memory.join('; ')}. You can delete any of it from "What do you remember about me?".` : "I don't remember anything about you yet.");
   }
+  // No donations yet: no results, readings or patients to talk about
+  if (!store.getDonations(donorId).length && /\b(bp|blood pressure|trend|results?|explain|mean)\b/.test(m)) {
+    return out(screenLines.line(donorId, 'health').text);
+  }
   if (/\b(bp|blood pressure|trend)\b/.test(m)) {
     return out(screenLines.line(donorId, 'health').text, [{ type: 'chart', marker: 'bp', points: drop.chartPoints(donorId, 'bp') }]);
   }
   if (/result|explain|mean/.test(m)) {
     const f = health.findings(donorId);
     return out(f.length ? `Your latest results: ${f.slice(0, 3).map((x) => `${x.title} (${x.detail})`).join('; ')}. Your Plan on the Health screen has the next steps; a doctor confirms all findings.` : 'All your latest results are in the healthy range.');
+  }
+  if (/what happens|at a donation|how long does/.test(m)) {
+    return out('You answer a few health questions, then the centre checks your haemoglobin, blood pressure and pulse. Giving blood takes about 10 minutes and the whole visit about 45, and your sample gets a free health check.');
   }
   if (/blood go|helped|impact|platelet|red cell/.test(m)) return out(screenLines.line(donorId, 'impact').text);
   if (/donate|eligible|hold/.test(m)) return out(screenLines.line(donorId, 'donate').text);
