@@ -92,7 +92,7 @@ p { margin: 0; }
 /* ---------- Shell ---------- */
 .shell { display: grid; grid-template-columns: 240px minmax(0, 1fr); min-height: 100vh; }
 .sidebar {
-  position: sticky; top: 0; height: 100vh; padding: 20px 14px;
+  position: sticky; top: 0; height: 100vh; padding: 20px 14px; z-index: 30; overflow: visible;
   background: var(--surface); border-right: 1px solid var(--border);
   display: flex; flex-direction: column; gap: 4px;
 }
@@ -116,9 +116,9 @@ p { margin: 0; }
 .account-who { display: flex; flex-direction: column; min-width: 0; flex: 1; line-height: 1.25; }
 .account-who b { font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .account-who span { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.account-head .account-who span { white-space: normal; overflow: visible; text-overflow: unset; overflow-wrap: anywhere; }
+.account-head .account-who span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .account-caret { color: var(--faint); transform: rotate(-90deg); flex: none; }
-.account-menu { position: absolute; bottom: calc(100% + 8px); left: 0; right: 0; z-index: 40; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35); padding: 6px; display: grid; gap: 2px; }
+.account-menu { position: absolute; bottom: calc(100% + 8px); left: 0; width: 300px; z-index: 40; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35); padding: 6px; display: grid; gap: 2px; }
 .account-compact .account-menu { bottom: auto; top: calc(100% + 8px); left: auto; right: 0; width: 280px; }
 .account-head { display: flex; align-items: center; gap: 10px; padding: 10px; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
 .account-section { display: grid; gap: 6px; padding: 8px 10px; }
