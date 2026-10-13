@@ -102,7 +102,7 @@ test('units from a donation with a confidential follow-up are withheld with no r
 test('community views expose only aggregates and opted-in names', () => {
   for (const c of community.forDonor('D-001')) {
     for (const row of c.leaderboard) {
-      assert.deepEqual(Object.keys(row).sort(), ['donations', 'isYou', 'lastDonation', 'name', 'patientsHelped'].sort());
+      assert.deepEqual(Object.keys(row).sort(), ['donations', 'isYou', 'lastDonation', 'name', 'onlyYou', 'patientsHelped'].sort());
     }
     assert.doesNotMatch(JSON.stringify(c), /haemoglobin|systolic|hba1c|ferritin/i);
   }

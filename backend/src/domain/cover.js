@@ -149,6 +149,17 @@ function evaluate(donorId) {
   const toReachNext = !nextStep ? 'You are at the top step.'
     : [pointsToNext ? `raise your health score by ${pointsToNext} point(s) to ${current + pointsToNext}` : null, ...missing].filter(Boolean).join(' AND ');
 
+  // What the insurer Choice does right now: cover with sharing on, and with it off (always the base)
+  const coverIfOn = consistent ? target : base;
+  const nextIfOn = LADDER.find((step) => step > coverIfOn) || null;
+  let scoreForNext = null;
+  if (nextIfOn) {
+    for (let s = current; s <= 100; s += 1) {
+      if (ladderStep(headroom(s, base), base) >= nextIfOn) { scoreForNext = s; break; }
+    }
+  }
+  const insurerEffect = { on: coverIfOn, off: base, qualifies: target, next: nextIfOn, scoreForNext, needsVisit: !consistent && target > base };
+
   const group = policy.id !== 'P-RETAIL';
   const coverStack = stack(donor, policy, cover);
   const offers = discounts(donor, current, recentVisits.length);
@@ -187,6 +198,7 @@ function evaluate(donorId) {
     history: history.map((h) => ({ date: h.date, score: h.score, cover: ladderStep(headroom(h.score, base), base) })),
     // Why the donor isn't getting the cover their score qualifies for
     blockedBy: target > cover ? (consented ? 'monitoring' : 'consent') : null,
+    insurerEffect,
     toReachNextStep: toReachNext,
     method: 'Cover = largest ladder step where expected claims at your risk level stay within the premium priced for Rs 5L. '
       + `Relative risk from score: e^(-0.0115 x (score - 70)); claims grow with cover^${ELASTICITY}; capped at ${MAX_MULTIPLE}x base.`,

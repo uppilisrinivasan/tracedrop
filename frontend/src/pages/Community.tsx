@@ -3,12 +3,22 @@ import { api } from '../api';
 import type { PageProps } from '../App';
 import { ErrorNote, Icon, Loading, Section, useLoad } from '../ui';
 import DropLine from '../components/drop/DropLine';
+import { ChoiceSwitch } from '../components/Choices';
 
 const KIND_ICON: Record<string, string> = { family: 'home', friends: 'users', workplace: 'landmark' };
 
 export default function Community({ donorId, version }: PageProps) {
-  const { data, error, loading } = useLoad(() => api.communities(donorId), [donorId, version]);
+  const { data, error, loading, reload } = useLoad(() => api.communities(donorId), [donorId, version]);
+  const consent = useLoad(() => api.consent(donorId), [donorId, version]);
   const [active, setActive] = useState(0);
+
+  // The two Choices about Circles; Cover and "Your data" change the same ones
+  const choices = consent.data && (
+    <Section title={<><Icon name="lock" size={17} /> Your choices for your Circles</>} sub="Change them here, in Your data, or in the Intro. They are the same switches.">
+      <ChoiceSwitch donorId={donorId} choice="showOnLeaderboard" on={consent.data.showOnLeaderboard} onChanged={() => { consent.reload(); reload(); }} />
+      <ChoiceSwitch donorId={donorId} choice="includeInCommunityStats" on={consent.data.includeInCommunityStats} onChanged={() => { consent.reload(); reload(); }} />
+    </Section>
+  );
 
   if (loading && !data) return <Loading />;
   if (error || !data) return <ErrorNote error={error || 'Could not load'} />;
@@ -25,6 +35,7 @@ export default function Community({ donorId, version }: PageProps) {
       <div className="stack fade-in">
         {head}
         <div className="card empty">You're not in a Circle yet. A Circle is your family, workplace or club, seeing your impact together.</div>
+        {choices}
       </div>
     );
   }
@@ -47,6 +58,7 @@ export default function Community({ donorId, version }: PageProps) {
           <div><div className="hero-big" style={{ fontSize: 44 }}>{c.totals.donations}</div><div className="muted small">donations</div></div>
           <div><div className="hero-big" style={{ fontSize: 44 }}>{c.participation}%</div><div className="muted small">donated in the last year</div></div>
         </div>
+        {c.notCounted > 0 && <div className="small mt-12" style={{ opacity: 0.85 }}>{c.notCounted} member{c.notCounted === 1 ? '' : 's'} not counted (their choice)</div>}
       </div>
 
       <div className="grid grid-2">
@@ -68,7 +80,9 @@ export default function Community({ donorId, version }: PageProps) {
               <tbody>
                 {c.leaderboard.map((m, i) => (
                   <tr key={m.name} style={m.isYou ? { background: 'var(--brand-soft)' } : undefined}>
-                    <td>{i + 1}</td><td className={m.isYou ? 'bold' : ''}>{m.name}</td><td>{m.donations}</td><td className="bold">{m.patientsHelped}</td>
+                    <td>{i + 1}</td>
+                    <td className={m.isYou ? 'bold' : ''}>{m.name}{m.onlyYou && <div className="tiny muted" style={{ fontWeight: 400 }}>Only you see yourself here</div>}</td>
+                    <td>{m.donations}</td><td className="bold">{m.patientsHelped}</td>
                   </tr>
                 ))}
               </tbody>
@@ -76,6 +90,8 @@ export default function Community({ donorId, version }: PageProps) {
           </div>
         </Section>
       </div>
+
+      {choices}
 
       <Section title="Blood groups in your circle" sub="Useful in an emergency — the blood centre can call the right group">
         <div className="row wrap" style={{ gap: 8 }}>

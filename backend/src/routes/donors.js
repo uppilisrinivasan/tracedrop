@@ -74,7 +74,7 @@ router.get('/:donorId/overview', (req, res) => {
     eligibility: health.eligibility(id),
     // null until an insurer is linked (the New donor)
     cover: c.linked ? { base: c.baseCover, current: c.currentCover, eligible: c.eligibleCover, next: c.nextStep, pointsToNext: c.pointsToNextStep, blockedBy: c.blockedBy } : null,
-    communities: community.forDonor(id).map(({ id: cid, name, kind, memberCount, totals }) => ({ id: cid, name, kind, memberCount, totals })),
+    communities: community.forDonor(id).map(({ id: cid, name, kind, memberCount, notCounted, totals }) => ({ id: cid, name, kind, memberCount, notCounted, totals })),
     ai: llm.status(),
   });
 });
@@ -104,10 +104,14 @@ router.get('/:donorId/health', (req, res) => {
   });
 });
 
-router.get('/:donorId/cover', (req, res) => ok(res, cover.evaluate(req.donor.id)));
+// demo: in the demo no insurer receives anything, and the Cover page says so
+router.get('/:donorId/cover', (req, res) => ok(res, { ...cover.evaluate(req.donor.id), demo: require('./demo').enabled() }));
 router.get('/:donorId/cover/simulate', (req, res) => ok(res, cover.simulate(req.donor.id, Number(req.query.score))));
 
 router.get('/:donorId/communities', (req, res) => ok(res, community.forDonor(req.donor.id)));
+
+// The donor's Choices (CONTEXT.md): read here, changed with PATCH from any screen
+router.get('/:donorId/consent', (req, res) => ok(res, req.donor.consent));
 
 router.patch('/:donorId/consent', (req, res) => {
   const allowed = ['shareHealthWithInsurer', 'showOnLeaderboard', 'includeInCommunityStats'];

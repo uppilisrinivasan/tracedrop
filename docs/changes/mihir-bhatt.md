@@ -4,6 +4,17 @@ One entry per commit, newest first, so any change can be traced or reverted: the
 To revert one: find it with `git log --oneline --grep "<commit title>"`, then `git revert <hash>`.
 The design behind these changes is in `CONTEXT.md` (vocabulary) and the build plan.
 
+## 2026-10-14 · Onboarding step 6: Choices that work
+
+- **What and why:** the three Choices now do what they say, everywhere.
+  - **Count me in my Circles' totals** was read nowhere. Now a member with it off is left out of every Circle total (donations, patients helped, causes helped, blood group mix, participation), and the Community page says "N members not counted (their choice)"; Home's "Your circles" tile uses the same totals and shows "N not counted" (`backend/src/domain/community.js`).
+  - **Leaderboard:** with their own switch off, the donor still sees themself, marked "Only you see yourself here"; others don't see them, and the "prefer not to be listed" count no longer counts the viewer. The switch's second line reads "Your first name, donations and patients helped".
+  - **Insurer:** the switch's second line shows its live effect, e.g. "On: your cover can rise with your score (next step ₹6 lakh at 80). Off: it stays at ₹5 lakh", "On: your cover is ₹8 lakh…" or "…rises to ₹7 lakh after one more monitored visit this year", plus "In this demo no insurer receives anything". Turning it off drops cover back at once. For the New donor, with no insurer yet, it says what it will do once one is linked.
+  - The Community page gets the leaderboard and totals switches (also when you're not in a Circle yet). Cover, Community, the Intro and "Your data" all change the same saved Choices through one switch component (`frontend/src/components/Choices.tsx`); a change refreshes every screen. A small `GET /api/donors/:id/consent` reads them.
+  - Demo Reset puts every Persona's Choices back to where they started (the donor reload from step 3), now tested.
+- **Files:** `backend/src/domain/community.js`, `backend/src/domain/cover.js`, `backend/src/routes/donors.js`, `backend/test/choices.test.js` (new), `backend/test/domain.test.js` (a leaderboard row may carry the `onlyYou` flag), `frontend/src/components/Choices.tsx` (new), `frontend/src/pages/Cover.tsx`, `frontend/src/pages/Community.tsx`, `frontend/src/pages/Home.tsx`, `frontend/src/App.tsx`, `frontend/src/api.ts`, `frontend/src/styles.css`.
+- **Revert:** safe to revert on its own; the totals switch goes back to doing nothing.
+
 ## 2026-10-14 · Onboarding step 5: the Intro in the chosen language
 
 - **What and why:** step 1 sets the language, and the rest of the Intro appears in it.

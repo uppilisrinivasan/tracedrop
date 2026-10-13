@@ -44,7 +44,7 @@ export interface Overview {
   eligibility: Eligibility;
   /** null until an insurer is linked */
   cover: { base: number; current: number; eligible: number; next: number | null; pointsToNext: number | null; blockedBy: string | null } | null;
-  communities: { id: string; name: string; kind: string; memberCount: number; totals: { donations: number; patientsHelped: number } }[];
+  communities: { id: string; name: string; kind: string; memberCount: number; notCounted: number; totals: { donations: number; patientsHelped: number } }[];
   ai: AIStatus;
 }
 
@@ -63,7 +63,7 @@ export interface HealthData {
 
 /** Cover for a Donor with no insurer linked yet (the New donor). */
 export interface CoverNotLinked {
-  linked: false; healthScore: number | null; conditions: Record<string, { met: boolean; detail: string }>;
+  linked: false; healthScore: number | null; conditions: Record<string, { met: boolean; detail: string }>; demo: boolean;
 }
 
 export interface CoverData {
@@ -79,7 +79,9 @@ export interface CoverData {
     percentOff: number; cap: number; premiumsYouPay: { name: string; premium: number }[]; fullPremium: number; saving: number;
   };
   baseCover: number; currentCover: number; eligibleCover: number; nextStep: number | null; pointsToNextStep: number | null;
-  healthScore: number; relativeRisk: number; blockedBy: string | null; method: string;
+  healthScore: number; relativeRisk: number; blockedBy: string | null; method: string; demo: boolean;
+  /** What the insurer Choice does now: cover with sharing on, and off (the base) */
+  insurerEffect: { on: number; off: number; qualifies: number; next: number | null; scoreForNext: number | null; needsVisit: boolean };
   conditions: Record<string, { met: boolean; detail: string }>;
   history: { date: string; score: number; cover: number }[];
 }
@@ -95,7 +97,9 @@ export interface Community {
   totals: { donations: number; patientsHelped: number; activeThisYear: number };
   participation: number; contexts: { context: string; count: number }[];
   bloodGroups: { group: string; count: number }[];
-  leaderboard: { name: string; isYou: boolean; donations: number; patientsHelped: number }[];
+  leaderboard: { name: string; isYou: boolean; onlyYou: boolean; donations: number; patientsHelped: number }[];
+  /** members left out of every total because their Choice is off */
+  notCounted: number;
   hiddenMembers: number; privacyNote: string;
 }
 
@@ -279,6 +283,7 @@ export const api = {
   cover: (id: string) => request<CoverData | CoverNotLinked>(`/donors/${id}/cover`),
   simulateCover: (id: string, score: number) => request<{ score: number; cover: number; relativeRisk: number }>(`/donors/${id}/cover/simulate?score=${score}`),
   communities: (id: string) => request<Community[]>(`/donors/${id}/communities`),
+  consent: (id: string) => request<Donor['consent']>(`/donors/${id}/consent`),
   setConsent: (id: string, consent: Partial<Donor['consent']>) => request<Donor['consent']>(`/donors/${id}/consent`, { method: 'PATCH', body: JSON.stringify(consent) }),
   slots: (id: string) => request<{ eligibility: Eligibility; slots: Slot[] }>(`/donors/${id}/slots`),
   appointments: (id: string) => request<Appointment[]>(`/donors/${id}/appointments`),

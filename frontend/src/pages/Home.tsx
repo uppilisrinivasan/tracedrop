@@ -155,7 +155,7 @@ export default function Home({ donorId, go, version, refresh, clientId, user }: 
               <div className="stack mt-12" style={{ gap: 10 }}>
                 {data.communities.map((c) => (
                   <button key={c.id} className="circle-row" onClick={() => go('community')}>
-                    <span><b>{c.name}</b><span className="tiny muted">{c.kind} · {c.memberCount} members</span></span>
+                    <span><b>{c.name}</b><span className="tiny muted">{c.kind} · {c.memberCount} members{c.notCounted ? ` · ${c.notCounted} not counted` : ''}</span></span>
                     <span className="small">{c.totals.patientsHelped} helped</span>
                   </button>
                 ))}

@@ -57,8 +57,11 @@ export default function App({ user, clientId, onSignOut }: { user: AuthUser; cli
   }, [donorId]);
   useEffect(() => {
     const onHash = () => setScreen(initialScreen());
+    // A Choice changed in one place: every screen shows the new state
+    const onChoices = () => setVersion((v) => v + 1);
     window.addEventListener('hashchange', onHash);
-    return () => window.removeEventListener('hashchange', onHash);
+    window.addEventListener('choices:changed', onChoices);
+    return () => { window.removeEventListener('hashchange', onHash); window.removeEventListener('choices:changed', onChoices); };
   }, []);
 
   const go = (next: Screen) => {

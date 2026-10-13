@@ -1,13 +1,25 @@
 import { useEffect, useState } from 'react';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { api, fmtDate, rupees } from '../api';
+import { api, fmtDate, rupees, type CoverData } from '../api';
 import type { PageProps } from '../App';
 import { ErrorNote, Icon, Loading, Section, useLoad } from '../ui';
 import DropLine from '../components/drop/DropLine';
+import { ChoiceSwitch } from '../components/Choices';
 
 const LADDER = [500000, 600000, 700000, 800000];
 
-export default function Cover({ donorId, go, version, refresh }: PageProps) {
+const DEMO_NOTE = 'In this demo no insurer receives anything.';
+
+/** What the insurer switch does right now, e.g. "On: your cover is ₹6 lakh. Off: it stays at ₹5 lakh." */
+function insurerEffect(e: CoverData['insurerEffect']) {
+  const on = e.on > e.off ? `On: your cover is ${rupees(e.on)}.`
+    : e.needsVisit ? `On: your cover rises to ${rupees(e.qualifies)} after one more monitored visit this year.`
+      : e.next && e.scoreForNext != null ? `On: your cover can rise with your score (next step ${rupees(e.next)} at ${e.scoreForNext}).`
+        : 'On: your cover can rise with your score.';
+  return `${on} Off: it stays at ${rupees(e.off)}.`;
+}
+
+export default function Cover({ donorId, go, version }: PageProps) {
   const { data, error, loading, reload } = useLoad(() => api.cover(donorId), [donorId, version]);
   const [what, setWhat] = useState<number | null>(null);
   const [sim, setSim] = useState<{ cover: number; relativeRisk: number } | null>(null);
@@ -31,6 +43,10 @@ export default function Cover({ donorId, go, version, refresh }: PageProps) {
           </div>
         </div>
         <div className="card empty">No health cover linked yet. When your insurer is linked, your cover and how your health score can raise it will show here.</div>
+        <Section title={<><Icon name="lock" size={17} /> Your data, your choice</>}>
+          <ChoiceSwitch donorId={donorId} choice="shareHealthWithInsurer" on={data.conditions.consentToShare.met} onChanged={reload}
+            sub={<>Once an insurer is linked: on, your cover can rise with your health score at the same premium; off, it stays at the base. Only the score is shared, never your results.{data.demo ? ` ${DEMO_NOTE}` : ''}</>} />
+        </Section>
       </div>
     );
   }
@@ -38,12 +54,6 @@ export default function Cover({ donorId, go, version, refresh }: PageProps) {
   const score = what ?? data.healthScore;
   const simCover = what != null && sim ? sim.cover : data.currentCover;
   const consent = data.conditions.consentToShare.met;
-
-  async function toggleConsent() {
-    await api.setConsent(donorId, { shareHealthWithInsurer: !consent });
-    reload();
-    refresh();
-  }
 
   return (
     <div className="stack fade-in">
@@ -206,10 +216,8 @@ export default function Cover({ donorId, go, version, refresh }: PageProps) {
           <p className="tiny faint mt-12">{data.method} Illustrative parameters; a partner insurer applies its filed rating factors.</p>
         </Section>
         <Section title={<><Icon name="lock" size={17} /> Your data, your choice</>}>
-          <div className="row between">
-            <div><div className="bold small">Share my health score with my insurer</div><div className="tiny muted">Only the score is shared — never your raw results or findings.</div></div>
-            <button className={`toggle ${consent ? 'on' : ''}`} onClick={toggleConsent} aria-pressed={consent} aria-label="Share health score with insurer" />
-          </div>
+          <ChoiceSwitch donorId={donorId} choice="shareHealthWithInsurer" on={consent} onChanged={reload}
+            sub={<>{insurerEffect(data.insurerEffect)} Only the score is shared, never your results.{data.demo ? ` ${DEMO_NOTE}` : ''}</>} />
           <div className="stack mt-16" style={{ gap: 8 }}>
             {Object.entries(data.conditions).map(([k, c]) => (
               <div key={k} className="row small"><span className={`pill ${c.met ? 'pill-good' : 'pill-warn'}`}>{c.met ? 'Met' : 'Not yet'}</span>{c.detail}</div>
