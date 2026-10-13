@@ -178,3 +178,31 @@ test('the Intro routes: read, answer, skip, replay and finish', async () => {
     server.close();
   }
 });
+
+test('a translation is used only if every number and placeholder survives; without the AI the Intro stays in English', async () => {
+  const introWriter = require('../src/ai/introWriter');
+  assert.ok(introWriter.ok('Someone gave 450 ml on 3 Oct.', 'किसी ने 3 Oct को 450 ml दिया।'));
+  assert.ok(!introWriter.ok('Someone gave 450 ml on 3 Oct.', 'किसी ने रक्त दिया।'), 'numbers dropped');
+  assert.ok(!introWriter.ok('Carry on: {title}', 'जारी रखें'), 'placeholder dropped');
+  const llm = require('../src/ai/llm');
+  if (!llm.available()) {
+    const r = await introWriter.translate('hi', ['Show me']);
+    assert.deepEqual(r.texts, ['Show me']);
+    assert.equal(r.fallback, true);
+  }
+  assert.deepEqual(await introWriter.translate('en', ['Show me']), { texts: ['Show me'], fallback: false });
+});
+
+test('asking Drop to switch language changes it mid-Intro, and the Intro carries on', async () => {
+  const { fallback } = require('../src/ai/copilot');
+  await intro.answer('D-NEW', 1, 'en', { user });
+  const r = fallback('D-NEW', 'Please talk to me in Hindi');
+  assert.match(r.reply, /Hindi/);
+  assert.equal(r.actions[0].type, 'receipt');
+  assert.equal(drop.view('D-NEW').language, 'hi');
+  assert.equal(drop.view('D-NEW').preferredLanguage, 'hi');
+  assert.equal(intro.status('D-NEW').step, 2, 'the Intro is still on its step');
+  fallback('D-NEW', 'English please');
+  assert.equal(drop.view('D-NEW').language, 'en');
+  assert.equal(drop.view('D-NEW').preferredLanguage, 'hi', "Home's switch still offers Hindi");
+});

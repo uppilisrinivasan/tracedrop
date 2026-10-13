@@ -81,9 +81,17 @@ export function useIntro(donorId: string, enabled: boolean, { go, onBook }: { go
       threads.delete(donorId);
       api.intro(donorId).then((v) => alive && begin(v, true)).catch(() => {});
     };
+    // Home's language switch changed Drop's language: carry on in it
+    const relang = () => api.intro(donorId).then((v) => alive && setView(v)).catch(() => {});
     window.addEventListener('intro:changed', restart);
     window.addEventListener('demo:reset', restart);
-    return () => { alive = false; window.removeEventListener('intro:changed', restart); window.removeEventListener('demo:reset', restart); };
+    window.addEventListener('drop:language', relang);
+    return () => {
+      alive = false;
+      window.removeEventListener('intro:changed', restart);
+      window.removeEventListener('demo:reset', restart);
+      window.removeEventListener('drop:language', relang);
+    };
   }, [donorId, enabled, begin]);
 
   // Home lights up the tile for the step Drop is talking about
@@ -178,8 +186,11 @@ export function useIntro(donorId: string, enabled: boolean, { go, onBook }: { go
         add({ kind: 'answer', text: r.reply, offline: r.offline, actions: r.actions });
         const nav = r.actions.find((a) => a.type === 'navigate');
         if (nav?.screen) go(nav.screen as Screen);
-        api.intro(donorId).then(setView).catch(() => {}); // the question is kept with the Intro
         if (r.actions.some((a) => a.type !== 'navigate')) changed();
+        // The question is kept with the Intro; after a language switch, wait for the Intro in the new language
+        const relang = r.actions.some((a) => a.type === 'receipt' && /^Language:/.test(a.text || ''));
+        if (relang) await api.intro(donorId).then(setView).catch(() => {});
+        else api.intro(donorId).then(setView).catch(() => {});
       } catch (e) {
         add({ kind: 'error', text: `Sorry, something went wrong: ${(e as Error).message}` });
       } finally {
@@ -243,6 +254,7 @@ function StepEntry({ intro, n, again, last }: { intro: IntroModel; n: number; ag
       {step.text.map((t) => <div key={t} className="msg msg-ai">{t}</div>)}
       {step.picture && <div style={{ width: '100%' }}><Picture step={step} intro={intro} active={active && !intro.busy} /></div>}
       {step.after.map((t) => <div key={t} className="msg msg-ai">{t}</div>)}
+      {active && v.translation.fallback && <div className="tiny faint">Shown in English: a translation isn't available right now.</div>}
       {active && (
         <Chips disabled={intro.busy} actions={step.buttons.map((b) => ({
           // The language chosen before is the one to keep (English on a first run)
@@ -254,7 +266,7 @@ function StepEntry({ intro, n, again, last }: { intro: IntroModel; n: number; ag
 }
 
 /** The Intro's thread, in place of the normal conversation while it runs. */
-export function IntroThread({ intro, renderAction }: { intro: IntroModel; renderAction: (a: CopilotAction, key: number) => ReactNode }) {
+export function IntroThread({ intro, renderAction, renderText }: { intro: IntroModel; renderAction: (a: CopilotAction, key: number) => ReactNode; renderText: (text: string) => ReactNode }) {
   const v = intro.view;
   if (!v || !intro.live) return null;
   const { entries } = intro;
@@ -274,7 +286,7 @@ export function IntroThread({ intro, renderAction }: { intro: IntroModel; render
         if (e.kind === 'answer') {
           return (
             <div key={i} className="stack" style={{ gap: 8, alignItems: 'flex-start' }}>
-              <div className="msg msg-ai" style={{ whiteSpace: 'normal' }}>{e.text}</div>
+              <div className="msg msg-ai" style={{ whiteSpace: 'normal' }}>{renderText(e.text)}</div>
               {(e.actions || []).filter((a) => a.type !== 'navigate').slice(0, 2).map(renderAction)}
               {e.offline && <span className="tiny faint">AI offline: answered by rules</span>}
               {last && <Chips disabled={intro.busy} actions={[{ label: fill(v.ui.carryOnStep, { title: current.title }), primary: true, run: intro.carryOn }, { label: v.ui.skip, run: intro.askSkip }]} />}

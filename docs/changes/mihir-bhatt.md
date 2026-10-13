@@ -4,6 +4,15 @@ One entry per commit, newest first, so any change can be traced or reverted: the
 To revert one: find it with `git log --oneline --grep "<commit title>"`, then `git revert <hash>`.
 The design behind these changes is in `CONTEXT.md` (vocabulary) and the build plan.
 
+## 2026-10-14 · Onboarding step 5: the Intro in the chosen language
+
+- **What and why:** step 1 sets the language, and the rest of the Intro appears in it.
+  - `backend/src/ai/introWriter.js` (new): for a language other than English, Gemini translates each step's words and buttons, and the Intro's own words (bar, Skip, coming back, the folded line), the first time they are shown, once per language. A translation is used only if every number and every `{placeholder}` survives, the same check as Drop's Cards; otherwise that text stays in English and a quiet note says so ("Shown in English: a translation isn't available right now"). With the AI off, the Intro is in English with that note. The pictures stay in English. Outside English the progress reads "3/8" (the AI sometimes swapped the numbers in "3 of 8").
+  - Asking Drop to switch language mid-Intro works: a new `set_language` tool for the AI, and a rule answer ("talk to me in Hindi", "English please") when it is off. Home's language switch (English plus the donor's chosen language) also changes it mid-Intro, and the Intro carries on in the new language; the chat waits for the translated Intro before it stops "thinking".
+  - If the AI's reply opens with its own planning ("The user wants…"), Drop answers from the rules instead, or asks to be asked again; answers in the Intro thread are formatted like the rest of the chat.
+- **Files:** `backend/src/ai/introWriter.js` (new), `backend/src/routes/intro.js`, `backend/src/ai/tools.js`, `backend/src/ai/agent.js`, `backend/src/ai/copilot.js`, `backend/test/intro.test.js`, `frontend/src/components/intro/Intro.tsx`, `frontend/src/components/Copilot.tsx`, `frontend/src/components/drop/DropFeed.tsx`, `frontend/src/api.ts`, `frontend/src/ui.tsx`.
+- **Revert:** safe to revert on its own; the Intro is then English only.
+
 ## 2026-10-14 · Onboarding step 4: the Intro on Home, with the tile highlight
 
 - **What and why:** the New donor now meets Drop through the Intro in Home's chat.

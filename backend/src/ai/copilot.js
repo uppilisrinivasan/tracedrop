@@ -19,6 +19,9 @@ const tools = require('./tools');
 const CHAT_TOOLS = tools.definitions().map((d) => d.name).filter((n) => n !== 'find_care_slots');
 
 const LANGUAGE_NAMES = { en: 'English', hi: 'Hindi', kn: 'Kannada', ta: 'Tamil', te: 'Telugu', ml: 'Malayalam' };
+const LANGUAGE_WORDS = {
+  en: /\benglish\b/, hi: /\bhindi\b|हिंदी|हिन्दी/, kn: /\bkannada\b|ಕನ್ನಡ/, ta: /\btamil\b|தமிழ்/, te: /\btelugu\b|తెలుగు/, ml: /\bmalayalam\b|മലയാളം/,
+};
 
 const SYSTEM = `You are Drop, the assistant inside TraceDrop, an app for voluntary blood donors in India.
 TraceDrop shows donors (1) where every component of their donated blood went and who it helped, without revealing recipients, (2) their health from the free lab panel run on each donation sample, with trends and a Plan, (3) how sustained good health raises their health-insurance cover for the same premium, and (4) the impact on their communities.
@@ -58,9 +61,17 @@ function introLine(donorId) {
   return `\nThey are in the Intro, Drop's scripted first conversation, on step ${i.step} of ${i.total}: "${i.title}". If they ask about it, answer in one or two sentences about that step; the Intro's buttons let them carry on.`;
 }
 
+// A reply that opens with the model's own planning ("The user wants…") is not for the donor
+const NOTE_TO_SELF = /^(the user\b|okay, the user\b|i should\b|plan:)/i;
+
 async function chat({ donorId, history, message, userName }) {
   const messages = [...(history || []), { role: 'user', content: message }];
   const result = await runAgent({ feature: 'copilot', system: `${SYSTEM}\n\n${context(donorId, userName)}`, messages, donorId, toolNames: CHAT_TOOLS, maxTokens: 2500, effort: 'low' });
+  if (NOTE_TO_SELF.test(result.text || '')) {
+    const rules = fallback(donorId, message);
+    const reply = rules.generic ? 'Sorry, I lost my words there. Could you ask me that again?' : rules.reply;
+    return { reply, steps: result.steps, actions: [...result.actions, ...rules.actions.filter((a) => !result.actions.some((b) => b.type === a.type && b.text === a.text))], history: null, answeredByRules: true };
+  }
   if (!result.text && !result.actions.some((x) => x.type !== 'navigate')) {
     // The model looked things up but gave no words: answer the question from the rules instead
     const rules = fallback(donorId, message);
@@ -82,6 +93,12 @@ function defaultReply(actions) {
 function fallback(donorId, message) {
   const m = String(message || '').toLowerCase();
   const out = (reply, actions = []) => ({ reply, steps: [], actions, history: null, offline: true, reason: llm.status().reason });
+  // "Talk to me in Hindi", "English please": switch Drop's language (the Intro follows)
+  const asked = Object.entries(LANGUAGE_WORDS).find(([, re]) => re.test(m));
+  if (asked && /\b(speak|talk|switch|change|use|in|please|language)\b|^\S+$/.test(m)) {
+    const r = tools.switchLanguage(donorId, asked[0]);
+    return out(`Okay, I'll use ${LANGUAGE_NAMES[asked[0]]}${llm.status().live ? '' : " where I can. Without the AI connection some things stay in English"}.`, [r._ui]);
+  }
   if (/remember/.test(m)) {
     const memory = drop.view(donorId).memory.map((x) => x.text);
     return out(memory.length ? `Here's what I remember: ${memory.join('; ')}. You can delete any of it from "What do you remember about me?".` : "I don't remember anything about you yet.");
@@ -109,7 +126,7 @@ function fallback(donorId, message) {
   }
   const step = intro.explain(donorId);
   if (step) return out(step);
-  return out("I need the AI connection for free-form questions, and it isn't available right now. Try asking about your results, your BP, where your blood went, or when you can donate.");
+  return { ...out("I need the AI connection for free-form questions, and it isn't available right now. Try asking about your results, your BP, where your blood went, or when you can donate."), generic: true };
 }
 
 module.exports = { chat, fallback, SYSTEM };

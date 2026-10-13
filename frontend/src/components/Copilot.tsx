@@ -338,7 +338,7 @@ export default function Copilot({ donorId, go, clientId, inline = false, top, fi
       {introLive && <IntroBar intro={intro} />}
       <div className="chat-body" ref={body}>
         {top}
-        {introLive && <IntroThread intro={intro} renderAction={renderAction} />}
+        {introLive && <IntroThread intro={intro} renderAction={renderAction} renderText={(t) => <Rich text={spoken(t)} />} />}
         {!introLive && inline && <IntroFold intro={intro} />}
         {!introLive && turns.length === 0 && (
           <div className="msg msg-ai">{inline ? `Ask me anything, or book your ${firstTime ? 'first' : 'next'} donation here.` : "Hi, I'm Drop. Ask me about your results, your blood's journey, your Plan or when you can donate. I'll answer in a sentence or two, and show you a card when it helps."}</div>

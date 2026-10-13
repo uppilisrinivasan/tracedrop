@@ -105,6 +105,11 @@ const DEFINITIONS = [
     input_schema: obj({ systolic: { type: 'integer' }, diastolic: { type: 'integer' } }, ['systolic', 'diastolic']),
   },
   {
+    name: 'set_language',
+    description: 'Switch the language Drop writes in when the donor asks (e.g. "talk to me in Hindi", "English please"). Also changes the Intro and the Cards on Home.',
+    input_schema: obj({ language: { type: 'string', enum: ['en', 'hi', 'kn', 'ta', 'te', 'ml'] } }, ['language']),
+  },
+  {
     name: 'navigate',
     description: 'Open a screen in the app for the donor. Use when the donor asks where to find something or wants to go somewhere.',
     input_schema: obj({
@@ -218,6 +223,8 @@ function run(name, input, donorId) {
       const receipt = drop.logReading(donorId, { s: input.systolic, d: input.diastolic });
       return { saved: receipt, _ui: { type: 'receipt', text: receipt } };
     }
+    case 'set_language':
+      return switchLanguage(donorId, input.language);
     case 'navigate':
       return { ok: true, screen: input.screen };
     default:
@@ -225,8 +232,17 @@ function run(name, input, donorId) {
   }
 }
 
+const LANGUAGE_LABELS = { en: 'English', hi: 'हिंदी', kn: 'ಕನ್ನಡ', ta: 'தமிழ்', te: 'తెలుగు', ml: 'മലയാളം' };
+
+/** Drop writes in this language from now on; Home's switch keeps offering English plus it. */
+function switchLanguage(donorId, language) {
+  drop.setLanguage(donorId, language);
+  if (language !== 'en') store.getDonor(donorId).language = language;
+  return { language, _ui: { type: 'receipt', text: `Language: ${LANGUAGE_LABELS[language]}` } };
+}
+
 function definitions(names) {
   return names ? DEFINITIONS.filter((d) => names.includes(d.name)) : DEFINITIONS;
 }
 
-module.exports = { definitions, run, careSlots };
+module.exports = { definitions, run, careSlots, switchLanguage };

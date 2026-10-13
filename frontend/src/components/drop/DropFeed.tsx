@@ -93,7 +93,8 @@ export default function DropFeed({ donorId, version, refresh, calmLine, storiesI
         {view.preferredLanguage !== 'en' && LANGUAGE_NAMES[view.preferredLanguage] && (
           <div className="drop-lang" role="group" aria-label="Drop's language">
             {['en', view.preferredLanguage].map((code) => (
-              <button key={code} aria-pressed={view.language === code} disabled={busy} onClick={() => run(api.dropLanguage(donorId, code).then(() => api.drop(donorId)))}>{LANGUAGE_NAMES[code]}</button>
+              <button key={code} aria-pressed={view.language === code} disabled={busy}
+                onClick={() => run(api.dropLanguage(donorId, code).then(() => { window.dispatchEvent(new CustomEvent('drop:language')); return api.drop(donorId); }))}>{LANGUAGE_NAMES[code]}</button>
             ))}
           </div>
         )}

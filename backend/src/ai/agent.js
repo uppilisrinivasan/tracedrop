@@ -108,6 +108,7 @@ function summarise(name, output) {
     case 'offer_reminder': return 'Offered a reminder';
     case 'remember': return `Remembered: ${output.remembered}`;
     case 'log_reading': return output.saved;
+    case 'set_language': return `Language set to ${output.language}`;
     default: return 'OK';
   }
 }

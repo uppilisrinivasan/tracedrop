@@ -217,6 +217,8 @@ export interface IntroView extends IntroStatus {
   /** The Intro's own words (bar, Skip, coming back, folded line), with {n}, {total}, {title} and {date} to fill in */
   ui: Record<'bar' | 'progress' | 'skip' | 'skipAsk' | 'skipYes' | 'keepGoing' | 'carryOn' | 'carryOnStep' | 'welcomeBack' | 'doneSoFar' | 'backTo' | 'input' | 'watched' | 'finished' | 'skipped' | 'replay' | 'questions', string>;
   prefill: { language: string; choices: Donor['consent']; donate: IntroDonate | null };
+  /** The Intro is shown in Drop's language; fallback means some of it had to stay in English */
+  translation: { language: string; fallback: boolean };
   saved?: string[];
 }
 
