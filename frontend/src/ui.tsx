@@ -29,6 +29,12 @@ const PATHS: Record<string, string> = {
   cpu: 'M7 7h10v10H7zM9.5 3v4M14.5 3v4M9.5 17v4M14.5 17v4M3 9.5h4M3 14.5h4M17 9.5h4M17 14.5h4',
   chevron: 'M9 6l6 6-6 6',
   doc: 'M7 3h7l5 5v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM14 3v5h5M9 13h6M9 17h6',
+  pin: 'M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z',
+  flag: 'M5 21V4M5 4h11l-2 4 2 4H5',
+  layers: 'M12 3 2.5 8 12 13l9.5-5zM2.5 12.5 12 17.5l9.5-5M2.5 16.5 12 21.5l9.5-5',
+  tag: 'M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9zM7.5 7.5h.01',
+  mail: 'M3.5 6h17v12h-17zM3.5 6.5 12 13l8.5-6.5',
+  qr: 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2v2h-2zM18 14h2v2h-2zM14 18h2v2h-2zM18 18h2v2h-2z',
 };
 
 export function Icon({ name, size = 18, className, stroke = 1.9 }: { name: string; size?: number; className?: string; stroke?: number }) {
@@ -130,7 +136,27 @@ export function useLoad<T>(loader: () => Promise<T>, deps: unknown[]): { data: T
   return { data, error, loading, reload: () => setTick((t) => t + 1) };
 }
 
-export function Section({ title, sub, right, children }: { title: ReactNode; sub?: ReactNode; right?: ReactNode; children: ReactNode }) {
+export function Section({ title, sub, right, children, collapsible, defaultOpen = true }: {
+  title: ReactNode; sub?: ReactNode; right?: ReactNode; children: ReactNode; collapsible?: boolean; defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  if (collapsible) {
+    return (
+      <section className="card">
+        <div className="row between wrap" style={{ marginBottom: open ? 14 : 0 }}>
+          <button className="section-toggle" aria-expanded={open} onClick={() => setOpen(!open)}>
+            <Icon name="chevron" size={16} className={open ? 'rot90' : undefined} />
+            <span>
+              <span className="card-title">{title}</span>
+              {sub && <span className="card-sub">{sub}</span>}
+            </span>
+          </button>
+          {open && right}
+        </div>
+        {open && children}
+      </section>
+    );
+  }
   return (
     <section className="card">
       <div className="row between wrap" style={{ marginBottom: 14 }}>

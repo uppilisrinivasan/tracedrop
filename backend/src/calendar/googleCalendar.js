@@ -65,7 +65,7 @@ function reminderOverrides(minutes) {
   return overrides.slice(0, 5);
 }
 
-function buildEvent({ slot, email, reminderMinutes }) {
+function buildEvent({ slot, email, reminderMinutes, checkInCode }) {
   const start = `${slot.date}T${slot.time}:00+05:30`;
   const [hour, minute] = slot.time.split(':').map(Number);
   const endMinutes = hour * 60 + minute + 45;
@@ -73,7 +73,7 @@ function buildEvent({ slot, email, reminderMinutes }) {
   return {
     summary: `Blood donation at ${slot.centre}`,
     location: `${slot.centre}, ${slot.district}`,
-    description: 'TraceDrop donation appointment. Bring a photo ID. A reminder email is set before this slot.',
+    description: `TraceDrop donation appointment. Bring a photo ID.${checkInCode ? ` Check-in code: ${checkInCode} (the QR code is in the TraceDrop app).` : ''} A reminder email is set before this slot.`,
     start: { dateTime: start, timeZone: 'Asia/Kolkata' },
     end: { dateTime: `${slot.date}T${endTime}:00+05:30`, timeZone: 'Asia/Kolkata' },
     attendees: [{ email }],
@@ -94,14 +94,16 @@ async function deleteEvent(token, eventId, fetchImpl) {
   }, fetchImpl);
 }
 
-function confirmationMail({ to, slot, reminderMinutes }) {
+function confirmationMail({ to, slot, reminderMinutes, checkInCode }) {
   const leads = reminderMinutes.map((value) => (value >= 1440 ? `${value / 1440} day${value === 1440 ? '' : 's'}` : `${value / 60} hour${value === 60 ? '' : 's'}`)).join(' and ');
   const text = [
     `Your donation is booked for ${slot.date} at ${slot.time}.`,
     `${slot.centre}, ${slot.district}.`,
+    checkInCode ? `Check-in code: ${checkInCode}. Show the QR code in TraceDrop at the desk.` : null,
     `A reminder email will arrive ${leads} before the slot.`,
+    'Before you come: eat a meal 3 to 4 hours before, sleep at least 6 hours, drink water, and skip alcohol for 24 hours.',
     'Bring a photo ID.',
-  ].join('\n');
+  ].filter(Boolean).join('\n');
   const raw = Buffer.from([
     `To: ${to}`,
     'Subject: Your TraceDrop donation is booked',

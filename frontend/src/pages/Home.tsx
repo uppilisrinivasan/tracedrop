@@ -2,12 +2,13 @@ import { api, fmtDate, rupees } from '../api';
 import type { PageProps } from '../App';
 import { ErrorNote, Icon, Loading, severityPill, useLoad } from '../ui';
 import DropFeed from '../components/drop/DropFeed';
+import Copilot, { startBooking } from '../components/Copilot';
 
 /**
- * Drop-first Home: Drop's open Cards in the main column, the numbers as quiet
- * tiles on the right, and the donation countdown always in the header.
+ * Drop-first Home: Drop's open Cards and its chat in the main column, the numbers
+ * as quiet tiles on the right, and the donation countdown always in the header.
  */
-export default function Home({ donorId, go, version, refresh }: PageProps) {
+export default function Home({ donorId, go, version, refresh, clientId }: PageProps) {
   const { data, error, loading } = useLoad(() => api.overview(donorId), [donorId, version]);
   const drop = useLoad(() => api.drop(donorId), [donorId, version]);
 
@@ -35,11 +36,14 @@ export default function Home({ donorId, go, version, refresh }: PageProps) {
             </span>
           </div>
         </div>
-        <button className="btn btn-primary" onClick={() => go('donate')}><Icon name="calendar" /> {daysTo === 0 ? 'Book a donation' : 'Donation status'}</button>
+        <button className="btn btn-primary" onClick={() => (daysTo != null ? startBooking() : go('donate'))}><Icon name="calendar" /> {daysTo != null ? 'Book a donation' : 'Donation status'}</button>
       </div>
 
       <div className="drop-board">
-        <DropFeed donorId={donorId} version={version} refresh={refresh} calmLine={`You have helped ${im.patientsHelped} patients so far.`} />
+        <div className="drop-main">
+          <DropFeed donorId={donorId} version={version} refresh={refresh} calmLine={`You have helped ${im.patientsHelped} patients so far.`} />
+          <Copilot key={donorId} donorId={donorId} go={go} clientId={clientId} inline />
+        </div>
 
         <div className="drop-side">
           <button className="card" style={{ textAlign: 'left' }} onClick={() => go('impact')}>
@@ -71,7 +75,7 @@ export default function Home({ donorId, go, version, refresh }: PageProps) {
             </div>
           </button>
 
-          <button className="card" style={{ textAlign: 'left' }} onClick={() => go('donate')}>
+          <button className="card" style={{ textAlign: 'left' }} onClick={() => (daysTo != null ? startBooking() : go('donate'))}>
             <div className="row between"><span className="stat-label">Next donation</span><Icon name="calendar" className="faint" /></div>
             <div className="stat-value mt-8" style={{ fontSize: 22 }}>{daysTo === 0 ? 'Today' : from ? fmtDate(from) : 'On hold'}</div>
             <div className="small muted mt-8">{daysTo == null && el.blockers.length ? `Paused: ${el.blockers[0].toLowerCase()}` : `Gap of ${el.gapDays} days after each donation`}</div>

@@ -65,6 +65,39 @@ function publicRecipient(c) {
   };
 }
 
+const SHELF_DAYS = { PRBC: 42, PLT: 5, FFP: 365, CRYO: 365 };
+const dayDiff = (a, b) => Math.round((Date.parse(b) - Date.parse(a)) / 864e5);
+
+/**
+ * Why an expired unit was never used, from what the dataset shows about the same
+ * component and blood group in the days it was on the shelf, and what follows from it.
+ */
+function expiryReason(c) {
+  const stored = c.events.find((e) => e.type === 'stored') || c.events[0];
+  const expired = c.events.find((e) => e.type === 'expired');
+  if (!expired) return null;
+  const days = Math.max(1, dayDiff(stored.date, expired.date));
+  const name = COMPONENTS[c.kind].name.toLowerCase();
+  const sameGroup = store.allComponents().filter((o) => o.id !== c.id && o.kind === c.kind && o.bloodGroup === c.bloodGroup);
+  const inWindow = (o, type) => o.events.some((e) => e.type === type && e.date >= stored.date && e.date <= expired.date);
+  const issued = sameGroup.filter((o) => inWindow(o, 'issued')).length;
+  const alsoExpired = sameGroup.filter((o) => inWindow(o, 'expired')).length;
+
+  const cause = [`${COMPONENTS[c.kind].name} keep for ${SHELF_DAYS[c.kind] >= 365 ? 'about a year frozen' : `${SHELF_DAYS[c.kind]} days`}. This unit was on the shelf for ${days} day${days === 1 ? '' : 's'}.`];
+  if (issued === 0) cause.push(`No hospital in the network asked for ${c.bloodGroup} ${name} in that time.`);
+  else cause.push(`In that time hospitals were issued ${issued} other ${c.bloodGroup} ${name} unit${issued === 1 ? '' : 's'}. Older units go out first, so this one ran out of time.`);
+  if (alsoExpired > 0) cause.push(`${alsoExpired} other ${c.bloodGroup} ${name} unit${alsoExpired === 1 ? '' : 's'} also expired then, so supply was higher than demand.`);
+
+  const effect = [
+    'The unit was discarded safely under biomedical waste rules. It was never given to anyone.',
+    'It counts in the blood centre\'s wastage rate, which the centre reports to the State Blood Transfusion Council.',
+    c.kind === 'PLT'
+      ? 'Platelets expire fastest. Your next donation can be timed for when platelet requests rise, or you can be called for a platelet-only donation when a patient needs one.'
+      : `Your next slot can be suggested when ${c.bloodGroup} stock runs low, so the blood is used sooner.`,
+  ];
+  return { days, issuedMeanwhile: issued, alsoExpired, cause, effect };
+}
+
 /** A component's journey as of the demo clock: later steps haven't happened yet. */
 function publicJourney(c, donation) {
   const withheld = donation.confidentialFollowUp;
@@ -87,6 +120,7 @@ function publicJourney(c, donation) {
     events: events.map((e) => ({ type: e.type, label: STAGE_LABELS[e.type], when: ['transfused', 'outcome', 'issued'].includes(e.type) ? month(e.date) : e.date })),
     recipient: withheld || !transfused ? null : publicRecipient(c),
     fractionation: withheld ? null : c.fractionation,
+    expiry: !withheld && lastType === 'expired' ? expiryReason(c) : null,
     withheld,
   };
 }

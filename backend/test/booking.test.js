@@ -42,12 +42,11 @@ test('a district answer is stored as an approximate location', () => {
     { step: 'times', value: 'morning' },
     { step: 'distance', value: '15' },
     { step: 'holidays', value: 'yes' },
-    { step: 'reminders', value: 'day-and-two' },
   ]) state = turn(state.preferences, answer);
   state = turn(state.preferences, { step: 'place', value: { label: 'Here', lat: 12.97194, lng: 77.59369, source: 'gps' } });
   assert.equal(state.ready, true);
   assert.deepEqual(state.preferences.location, { label: 'Here', lat: 12.97, lng: 77.59, source: 'gps' });
-  assert.deepEqual(state.preferences.reminderMinutes, [1440, 120]);
+  assert.deepEqual(state.preferences.reminderMinutes, [1440]);
 });
 
 test('distance, holidays, downtime and calendar clashes remove slots', () => {
@@ -74,8 +73,10 @@ test('a booking email and calendar reminders are both created', () => {
     { method: 'email', minutes: 120 }, { method: 'popup', minutes: 120 },
   ]);
   assert.equal(reminderOverrides([1440, 120, 60]).length, 5);
-  const mail = confirmationMail({ to: 'a@gmail.com', slot: slot({ id: 'near' }), reminderMinutes: [1440, 120] });
+  const mail = confirmationMail({ to: 'a@gmail.com', slot: slot({ id: 'near' }), reminderMinutes: [1440], checkInCode: 'AB12CD34' });
   assert.match(mail.text, /09:30/);
+  assert.match(mail.text, /AB12CD34/);
+  assert.match(mail.text, /1 day before/);
   assert.match(mail.text, /reminder email/);
   assert.ok(mail.raw.length > 20);
 });

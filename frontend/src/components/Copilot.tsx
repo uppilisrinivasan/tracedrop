@@ -5,14 +5,26 @@
  */
 import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { api, fmtDate, type AgentStep, type ChartPoint, type CopilotAction, type DropView } from '../api';
-import { AgentTrace, Icon, Thinking } from '../ui';
+import { api, fmtDate, type Appointment, type ChartPoint, type CopilotAction, type DropView } from '../api';
+import { Icon, Thinking } from '../ui';
 import type { Screen } from '../App';
 import DropCardView from './drop/DropCardView';
 import MemorySheet from './drop/MemorySheet';
+import BookingFlow from './BookingFlow';
+import AppointmentPass from './AppointmentPass';
 import './drop/drop.css';
 
-interface Turn { role: 'user' | 'ai'; text: string; steps?: AgentStep[]; offline?: boolean; actions?: CopilotAction[]; questions?: string[] }
+interface Turn { role: 'user' | 'ai'; text: string; offline?: boolean; actions?: CopilotAction[]; questions?: string[]; booking?: boolean; appointment?: Appointment }
+
+/** Ask Drop to start the booking steps (Home's button and the Donate tile use this). */
+export function startBooking() {
+  window.dispatchEvent(new CustomEvent('drop:book'));
+}
+
+const BOOK_INTENT = /\b(book|schedule|reserve)\b.*\b(donat\w*|slot|appointment|blood)\b|^book\b/i;
+
+// One conversation per donor, shared by the chat on Home and the side panel on other screens
+const conversations = new Map<string, { turns: Turn[]; history: unknown[] | null }>();
 
 /** Minimal formatter for model replies: **bold**, "- " bullets and paragraphs. No HTML injection. */
 function Rich({ text }: { text: string }) {
@@ -36,6 +48,7 @@ function Rich({ text }: { text: string }) {
 }
 
 const SUGGESTIONS = [
+  'Book a donation',
   'Explain my latest results',
   'How is my BP doing?',
   'Where did my blood go?',
@@ -66,32 +79,45 @@ function ChartCard({ marker, points }: { marker: string; points: ChartPoint[] })
   );
 }
 
-export default function Copilot({ donorId, go }: { donorId: string; go: (s: Screen) => void }) {
-  const [open, setOpen] = useState(false);
-  const [turns, setTurns] = useState<Turn[]>([]);
-  const [history, setHistory] = useState<unknown[] | null>(null);
+export default function Copilot({ donorId, go, clientId, inline = false }: { donorId: string; go: (s: Screen) => void; clientId: string; inline?: boolean }) {
+  const [open, setOpen] = useState(inline);
+  const [turns, setTurns] = useState<Turn[]>(() => conversations.get(donorId)?.turns || []);
+  const [history, setHistory] = useState<unknown[] | null>(() => conversations.get(donorId)?.history || null);
+  useEffect(() => { conversations.set(donorId, { turns, history }); }, [donorId, turns, history]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [view, setView] = useState<DropView | null>(null);
   const [memoryOpen, setMemoryOpen] = useState(false);
   const body = useRef<HTMLDivElement>(null);
   const sendRef = useRef<(text: string) => void>(() => {});
+  const bookRef = useRef<() => void>(() => {});
 
   useEffect(() => { body.current?.scrollTo({ top: body.current.scrollHeight, behavior: 'smooth' }); }, [turns, busy]);
 
   const reloadView = () => api.drop(donorId).then(setView).catch(() => {});
   const changed = () => window.dispatchEvent(new CustomEvent('drop:changed'));
 
+  function book(said?: string) {
+    setOpen(true);
+    setInput('');
+    setTurns((t) => [
+      ...t.filter((x) => !x.booking),
+      ...(said ? [{ role: 'user' as const, text: said }] : []),
+      { role: 'ai', text: "Let's book your donation. It takes about a minute.", booking: true },
+    ]);
+  }
+
   async function send(text: string) {
     const message = text.trim();
     if (!message || busy) return;
+    if (BOOK_INTENT.test(message)) { book(message); return; }
     setInput('');
     setTurns((t) => [...t, { role: 'user', text: message }]);
     setBusy(true);
     try {
       const r = await api.copilot(donorId, message, history);
       if (r.history) setHistory(r.history);
-      setTurns((t) => [...t, { role: 'ai', text: r.reply, steps: r.steps, offline: r.offline, actions: r.actions }]);
+      setTurns((t) => [...t, { role: 'ai', text: r.reply, offline: r.offline, actions: r.actions }]);
       const nav = r.actions.find((a) => a.type === 'navigate');
       if (nav?.screen) go(nav.screen as Screen);
       if (r.actions.some((a) => a.type !== 'navigate')) {
@@ -105,6 +131,7 @@ export default function Copilot({ donorId, go }: { donorId: string; go: (s: Scre
     }
   }
   sendRef.current = send;
+  bookRef.current = () => { book(); if (inline) body.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
 
   // Other parts of the app ask Drop things: a chip on a Card, or the line at the top of a screen
   useEffect(() => {
@@ -116,13 +143,16 @@ export default function Copilot({ donorId, go }: { donorId: string; go: (s: Scre
       setTurns((t) => [...t, { role: 'ai', text: `${text} What would you like to know?`, questions }]);
     };
     const onChanged = () => reloadView();
+    const onBook = () => bookRef.current();
     window.addEventListener('drop:ask', onAsk);
     window.addEventListener('drop:open', onOpen);
     window.addEventListener('drop:changed', onChanged);
+    window.addEventListener('drop:book', onBook);
     return () => {
       window.removeEventListener('drop:ask', onAsk);
       window.removeEventListener('drop:open', onOpen);
       window.removeEventListener('drop:changed', onChanged);
+      window.removeEventListener('drop:book', onBook);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [donorId]);
@@ -130,6 +160,7 @@ export default function Copilot({ donorId, go }: { donorId: string; go: (s: Scre
   useEffect(() => {
     if (!open) return undefined;
     reloadView();
+    if (inline) return undefined;
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && !memoryOpen && setOpen(false);
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -178,8 +209,8 @@ export default function Copilot({ donorId, go }: { donorId: string; go: (s: Scre
   }
 
   return (
-    <div className="chat fade-in" role="dialog" aria-label="Drop, your TraceDrop assistant">
-      <div className="chat-head">
+    <div className={inline ? 'chat chat-inline' : 'chat fade-in'} role={inline ? 'region' : 'dialog'} aria-label="Drop, your TraceDrop assistant">
+      {!inline && <div className="chat-head">
         <div className="row">
           <span className="drop-avatar"><Icon name="drop" size={18} stroke={2.2} /></span>
           <div>
@@ -191,13 +222,13 @@ export default function Copilot({ donorId, go }: { donorId: string; go: (s: Scre
           <button className="btn btn-ghost btn-sm" style={{ minHeight: 40 }} onClick={() => setMemoryOpen(true)}>What I remember</button>
           <button className="btn btn-ghost btn-sm" style={{ minHeight: 40, minWidth: 40 }} onClick={() => setOpen(false)} aria-label="Close"><Icon name="x" /></button>
         </div>
-      </div>
+      </div>}
       <div className="chat-body" ref={body}>
         {turns.length === 0 && (
           <div className="stack">
-            <div className="msg msg-ai">Hi, I'm Drop. Ask me about your results, your blood's journey, your Plan or when you can donate. I'll answer in a sentence or two, and show you a card when it helps.</div>
+            <div className="msg msg-ai">{inline ? 'Ask me anything, or book your next donation here.' : "Hi, I'm Drop. Ask me about your results, your blood's journey, your Plan or when you can donate. I'll answer in a sentence or two, and show you a card when it helps."}</div>
             <div className="suggestions">
-              {SUGGESTIONS.map((s) => <button key={s} className="suggestion" style={{ minHeight: 36 }} onClick={() => send(s)}>{s}</button>)}
+              {SUGGESTIONS.map((s) => <button key={s} className={`suggestion ${s === 'Book a donation' ? 'suggestion-main' : ''}`} style={{ minHeight: 36 }} onClick={() => send(s)}>{s}</button>)}
             </div>
           </div>
         )}
@@ -210,13 +241,19 @@ export default function Copilot({ donorId, go }: { donorId: string; go: (s: Scre
             {t.actions?.some((a) => a.type === 'navigate') && <span className="pill pill-ai"><Icon name="arrow" size={12} /> Opened {t.actions.find((a) => a.type === 'navigate')?.screen}</span>}
             {t.questions && <div className="suggestions">{t.questions.map((q) => <button key={q} className="suggestion" style={{ minHeight: 36 }} onClick={() => send(q)}>{q}</button>)}</div>}
             {t.offline && <span className="tiny faint">AI offline: answered by rules</span>}
-            {t.steps && t.steps.length > 0 && <div style={{ width: '100%' }}><AgentTrace steps={t.steps} title="Tools Drop used" /></div>}
+            {t.booking && (
+              <div className="chat-flow">
+                <BookingFlow donorId={donorId} clientId={clientId}
+                  onBooked={(a) => setTurns((all) => all.map((x) => (x === t ? { ...x, booking: false, appointment: a, text: "You're booked. Thank you! Show this at the desk; it is also on the Donate screen." } : x)))} />
+              </div>
+            )}
+            {t.appointment && <div className="chat-flow"><AppointmentPass appointment={t.appointment} compact /></div>}
           </div>
         ))}
         {busy && <Thinking label="Drop is checking your records…" />}
       </div>
       <form className="chat-input" onSubmit={(e) => { e.preventDefault(); send(input); }}>
-        <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask Drop anything" aria-label="Message" />
+        <input value={input} onChange={(e) => setInput(e.target.value)} placeholder={inline ? 'Ask Drop, or type "book a donation"' : 'Ask Drop anything'} aria-label="Message" />
         <button className="btn btn-ai" disabled={busy || !input.trim()} aria-label="Send" style={{ minWidth: 44 }}><Icon name="send" size={16} /></button>
       </form>
       {memoryOpen && view && (

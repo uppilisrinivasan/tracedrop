@@ -46,7 +46,7 @@ export function ReadingsSection({ donorId, view, data, onChange }: { donorId: st
   };
 
   return (
-    <Section title={<><Icon name="doc" size={18} /> Readings and results</>} sub="What you added yourself, and the latest results from the blood centre.">
+    <Section title={<><Icon name="doc" size={18} /> Readings and results</>} sub={`${added.length} you added · ${shown.length} from the blood centre`} collapsible defaultOpen={false}>
       <div className="bold small">Readings you added</div>
       {!added.length && <p className="muted small mt-8">None yet. Tell Drop a BP reading or add a lab report.</p>}
       <div className="stack mt-8" style={{ gap: 0 }}>

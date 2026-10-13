@@ -86,7 +86,7 @@ export default function AuthGate() {
           <h1>When can you donate?</h1>
           <p className="muted">These answers are saved to your account and used whenever you book. Skip if you want to decide later.</p>
           {setup === 'show'
-            ? <BookingChat mode="setup" clientId={clientId} onFinished={() => { if (user.local) rememberLocalSetup(); setSetup('hide'); }} />
+            ? <BookingChat onFinished={() => { if (user.local) rememberLocalSetup(); setSetup('hide'); }} />
             : <p className="tiny muted">Loading your donation preferences…</p>}
         </div>
       </div>

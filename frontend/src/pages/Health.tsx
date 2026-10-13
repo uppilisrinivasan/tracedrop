@@ -80,8 +80,8 @@ export default function Health({ donorId, go, version, refresh, focus }: PagePro
       <Trends data={data} added={dropView?.readings || []} />
       <ReadingsSection donorId={donorId} view={dropView} data={data} onChange={(v) => { setDropView(v); refresh(); }} />
 
-      <div ref={planRef}><CarePlanCard donorId={donorId} version={version} /></div>
-      <div ref={labsRef}><LabReader donorId={donorId} onSaved={refresh} /></div>
+      <div ref={planRef}><CarePlanCard key={focus === 'plan' ? 'plan' : 'care'} donorId={donorId} version={version} startOpen={focus === 'plan'} /></div>
+      <div ref={labsRef}><LabReader key={focus === 'labs' ? 'labs' : 'reader'} donorId={donorId} onSaved={refresh} focusLabs={focus === 'labs'} /></div>
     </div>
   );
 }
@@ -123,7 +123,7 @@ function Trends({ data, added }: { data: HealthData; added: DropReading[] }) {
 
 const CATEGORY_ICON: Record<string, string> = { see_doctor: 'hospital', diet: 'heart', activity: 'activity', monitoring: 'trend', lifestyle: 'sparkles', donation: 'drop' };
 
-function CarePlanCard({ donorId, version }: { donorId: string; version: number }) {
+function CarePlanCard({ donorId, version, startOpen }: { donorId: string; version: number; startOpen: boolean }) {
   const [plan, setPlan] = useState<CarePlan | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -146,6 +146,7 @@ function CarePlanCard({ donorId, version }: { donorId: string; version: number }
   return (
     <Section title={<><Icon name="sparkles" size={18} /> Detailed analysis <AIBadge label="Agent" /></>}
       sub="An AI agent studies your results, trends and clinical protocols together and explains each step with evidence. Your Plan above is what Drop follows up."
+      collapsible defaultOpen={startOpen}
       right={plan ? <button className="btn btn-sm" onClick={() => run(true)} disabled={busy}><Icon name="refresh" size={14} /> Regenerate</button> : null}>
       {!plan && !busy && <button className="btn btn-ai" onClick={() => run()}><Icon name="sparkles" size={16} /> Analyse my results and build a plan</button>}
       {busy && <Thinking label="Agent is reviewing trends, protocols, guidance and your cover…" />}
@@ -202,7 +203,7 @@ Thyroid Stimulating Hormone   2.9    µIU/mL   (0.4-4.5)
 Vitamin D (25-OH)             17.2   ng/mL    (30-100)
 Urine routine: NAD`;
 
-function LabReader({ donorId, onSaved }: { donorId: string; onSaved: () => void }) {
+function LabReader({ donorId, onSaved, focusLabs }: { donorId: string; onSaved: () => void; focusLabs: boolean }) {
   const [text, setText] = useState('');
   const [image, setImage] = useState<string | null>(null);
   const [result, setResult] = useState<(Extraction & { aiUnavailable?: string }) | null>(null);
@@ -243,7 +244,8 @@ function LabReader({ donorId, onSaved }: { donorId: string; onSaved: () => void 
 
   return (
     <Section title={<><Icon name="doc" size={18} /> Add an outside lab report <AIBadge label="GenAI" /></>}
-      sub="Every lab prints differently — names, units, layouts. AI reads any format (text or photo), maps each test to a standard code and converts units, so it joins your timeline.">
+      sub="Every lab prints differently — names, units, layouts. AI reads any format (text or photo), maps each test to a standard code and converts units, so it joins your timeline."
+      collapsible defaultOpen={focusLabs}>
       <div className="grid grid-2">
         <div className="stack" style={{ gap: 10 }}>
           <textarea className="input" value={text} onChange={(e) => setText(e.target.value)} placeholder="Paste the text of a lab report…" aria-label="Lab report text" />

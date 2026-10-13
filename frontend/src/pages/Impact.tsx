@@ -3,6 +3,8 @@ import { api, fmtDate, type Journey, type Stakeholder, type Story } from '../api
 import type { PageProps } from '../App';
 import { AIBadge, ErrorNote, Icon, Loading, OfflineNote, Section, Thinking, useLoad } from '../ui';
 import DropLine from '../components/drop/DropLine';
+import ShareBar from '../components/impact/ShareBar';
+import { ConcernForm, ConcernList } from '../components/impact/Concerns';
 
 const KIND_STYLE: Record<string, { bg: string; fg: string; short: string }> = {
   PRBC: { bg: '#fde2e5', fg: '#9b0c23', short: 'RBC' },
@@ -18,8 +20,10 @@ const PLASMA_STAGES = ['collected', 'separated', 'tested', 'stored', 'fractionat
 export default function Impact({ donorId, version }: PageProps) {
   const { data, error, loading } = useLoad(() => api.impact(donorId), [donorId, version]);
   const stake = useLoad(() => api.stakeholders(donorId), [donorId, version]);
+  const concerns = useLoad(() => api.concerns(donorId), [donorId, version]);
   const [tab, setTab] = useState<'units' | 'institutions'>('units');
   const [selected, setSelected] = useState<string | null>(null);
+  const [sharing, setSharing] = useState(false);
 
   const byDonation = useMemo(() => {
     const groups: Record<string, Journey[]> = {};
@@ -39,12 +43,25 @@ export default function Impact({ donorId, version }: PageProps) {
           <div className="page-title">Where your blood went</div>
           <div className="page-sub">Every donation is separated into components. Follow each one to the patient it helped — privately.</div>
         </div>
-        <div className="tabs">
-          <button className={`tab ${tab === 'units' ? 'active' : ''}`} onClick={() => setTab('units')}>Each component</button>
-          <button className={`tab ${tab === 'institutions' ? 'active' : ''}`} onClick={() => setTab('institutions')}>Who benefited</button>
+        <div className="row wrap">
+          <button className="btn btn-primary btn-sm" onClick={() => setSharing(!sharing)}><Icon name="share" size={15} /> Share my impact</button>
+          <div className="tabs">
+            <button className={`tab ${tab === 'units' ? 'active' : ''}`} onClick={() => setTab('units')}>Each component</button>
+            <button className={`tab ${tab === 'institutions' ? 'active' : ''}`} onClick={() => setTab('institutions')}>Who benefited</button>
+          </div>
         </div>
       </div>
       <DropLine donorId={donorId} screen="impact" version={version} />
+
+      {sharing && (
+        <div className="card fade-in">
+          <ShareBar item={{
+            headline: `My blood has helped ${s.patientsHelped} patient${s.patientsHelped === 1 ? '' : 's'}`,
+            story: `${s.components} components from my donations went to hospitals${s.children ? `, including ${s.children} for children` : ''}. ${s.medicineDosesShare ? `My plasma also helped make about ${s.medicineDosesShare} medicine doses.` : ''} TraceDrop let me follow each one, privately.`,
+            shareText: `My blood donations have helped ${s.patientsHelped} patients so far. One donation can help up to three people. #DonateBlood`,
+          }} />
+        </div>
+      )}
 
       <div className="grid grid-4">
         <Stat value={s.patientsHelped} label="patients treated" />
@@ -68,11 +85,13 @@ export default function Impact({ donorId, version }: PageProps) {
               </div>
             ))}
           </div>
-          <div style={{ position: 'sticky', top: 16 }}>{current && <UnitDetail donorId={donorId} unit={current} />}</div>
+          <div style={{ position: 'sticky', top: 16 }}>{current && <UnitDetail key={current.id} donorId={donorId} unit={current} onConcern={concerns.reload} />}</div>
         </div>
       ) : (
         <Institutions stake={stake.data} loading={stake.loading} />
       )}
+
+      <ConcernList donorId={donorId} concerns={concerns.data || []} onChange={concerns.reload} />
 
       <div className="callout callout-info small">
         <Icon name="lock" size={16} />
@@ -101,20 +120,21 @@ function UnitRow({ unit, selected, onClick }: { unit: Journey; selected: boolean
   );
 }
 
-function UnitDetail({ donorId, unit }: { donorId: string; unit: Journey }) {
+function UnitDetail({ donorId, unit, onConcern }: { donorId: string; unit: Journey; onConcern: () => void }) {
   const [story, setStory] = useState<Story | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [concernOpen, setConcernOpen] = useState(false);
+  const [concernSent, setConcernSent] = useState<string | null>(null);
   const stages = unit.kind === 'PLASMA' || unit.events.some((e) => e.type === 'fractionation') ? PLASMA_STAGES : STAGES;
   const reached = new Set(unit.events.map((e) => e.type));
   const style = KIND_STYLE[unit.kind];
 
-  async function makeStory() {
+  async function makeStory(refresh = false) {
     setBusy(true);
     setErr(null);
     try {
-      setStory(await api.story(donorId, unit.id));
+      setStory(await api.story(donorId, unit.id, refresh));
     } catch (e) {
       setErr((e as Error).message);
     } finally {
@@ -122,20 +142,8 @@ function UnitDetail({ donorId, unit }: { donorId: string; unit: Journey }) {
     }
   }
 
-  async function share() {
-    if (!story) return;
-    const text = `${story.headline}\n\n${story.shareText}`;
-    try {
-      if (navigator.share) await navigator.share({ title: story.headline, text });
-      else {
-        await navigator.clipboard.writeText(text);
-        setCopied(true);
-      }
-    } catch { /* user cancelled */ }
-  }
-
   return (
-    <div className="card fade-in" key={unit.id}>
+    <div className="card fade-in">
       <div className="row between">
         <div className="row">
           <span className="unit-icon" style={{ background: style.bg, color: style.fg }}>{style.short}</span>
@@ -165,7 +173,18 @@ function UnitDetail({ donorId, unit }: { donorId: string; unit: Journey }) {
       {unit.withheld && (
         <div className="callout callout-info small mt-16"><Icon name="info" size={16} /> This unit was kept out of the supply as a safety precaution. The blood centre's counsellor will contact you privately.</div>
       )}
-      {unit.status === 'expired' && <div className="callout small mt-16" style={{ background: 'var(--surface-2)' }}>This unit reached its shelf-life limit before it was needed — blood centres keep a buffer for emergencies.</div>}
+      {unit.status === 'expired' && (
+        <div className="expiry mt-16">
+          <div className="bold small">Why it wasn't used</div>
+          <ul>{(unit.expiry?.cause || ['This unit reached its shelf-life limit before it was needed.']).map((c) => <li key={c}>{c}</li>)}</ul>
+          {unit.expiry && (
+            <>
+              <div className="bold small mt-8">What happens because of it</div>
+              <ul>{unit.expiry.effect.map((c) => <li key={c}>{c}</li>)}</ul>
+            </>
+          )}
+        </div>
+      )}
 
       {unit.recipient && (
         <div className="mt-16" style={{ background: 'var(--brand-soft)', borderRadius: 14, padding: 16 }}>
@@ -185,25 +204,34 @@ function UnitDetail({ donorId, unit }: { donorId: string; unit: Journey }) {
 
       {unit.recipient && (
         <div className="mt-16">
-          {!story && !busy && <button className="btn btn-ai" onClick={makeStory}><Icon name="sparkles" size={16} /> Write my impact story</button>}
+          {!story && !busy && <button className="btn btn-ai" onClick={() => makeStory()}><Icon name="sparkles" size={16} /> Write my impact story</button>}
           {busy && <Thinking label="Writing your story in your language…" />}
           {err && <ErrorNote error={err} />}
-          {story && (
+          {story && !busy && (
             <div className="stack fade-in" style={{ gap: 10 }}>
               <div className="share-card">
                 <div className="row between"><span className="tiny" style={{ opacity: 0.8 }}>TraceDrop · My donation story</span>{story.generatedBy === 'ai' && <span className="ai-badge" style={{ background: 'rgba(255,255,255,.2)', color: '#fff' }}>AI</span>}</div>
                 <div className="bold mt-12" style={{ fontSize: 20 }}>{story.headline}</div>
                 <p className="mt-8" style={{ opacity: 0.95 }}>{story.story}</p>
               </div>
-              <div className="row wrap">
-                <button className="btn btn-primary btn-sm" onClick={share}><Icon name="share" size={15} /> {copied ? 'Copied!' : 'Share'}</button>
-                <span className="tiny muted">"{story.shareText}"</span>
-              </div>
+              <ShareBar item={story} />
+              <button className="btn btn-ghost btn-sm" style={{ alignSelf: 'flex-start' }} onClick={() => makeStory(true)}><Icon name="refresh" size={14} /> Write it again</button>
               <OfflineNote reason={story.aiUnavailable} />
             </div>
           )}
         </div>
       )}
+
+      <div className="mt-16">
+        {concernSent && <div className="callout small" style={{ background: 'var(--good-soft)' }}><Icon name="check" size={16} /> {concernSent}</div>}
+        {!concernOpen && !concernSent && (
+          <button className="btn btn-ghost btn-sm" onClick={() => setConcernOpen(true)}><Icon name="flag" size={14} /> Something wrong? Raise a concern</button>
+        )}
+        {concernOpen && (
+          <ConcernForm donorId={donorId} unit={unit} onCancel={() => setConcernOpen(false)}
+            onDone={(c) => { setConcernOpen(false); setConcernSent(`Sent as ${c.id} to ${c.owner}. Answer due by ${fmtDate(c.dueOn)}. Follow it under "Your concerns" below.`); onConcern(); }} />
+        )}
+      </div>
     </div>
   );
 }

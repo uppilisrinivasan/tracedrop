@@ -30,7 +30,7 @@ router.get('/preferences', async (req, res) => {
 router.put('/preferences', async (req, res) => {
   const user = actor(req);
   if (!user) return fail(res, 401, 'Sign in with Google');
-  const preferences = normalise(req.body || {});
+  const { dateFrom, dateTo, ...preferences } = normalise(req.body || {});
   preferences.onboardingComplete = Boolean(req.body && req.body.onboardingComplete);
   preferences.onboardingSkipped = Boolean(req.body && req.body.onboardingSkipped);
   return ok(res, await settings.savePreferences(user, preferences));

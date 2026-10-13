@@ -44,10 +44,12 @@ function candidates(donorId, preferences) {
   if (!eligibility.nextEligibleDate) return { eligibility, slots: [] };
   const windows = preferences.timeWindows && preferences.timeWindows.length ? preferences.timeWindows : Object.keys(WINDOW_TIME);
   const slots = [];
-  const start = new Date(`${eligibility.nextEligibleDate}T00:00:00Z`);
+  const from = preferences.dateFrom && preferences.dateFrom > eligibility.nextEligibleDate ? preferences.dateFrom : eligibility.nextEligibleDate;
+  const start = new Date(`${from}T00:00:00Z`);
   for (let day = 0; day < 21; day += 1) {
     const date = new Date(start.getTime() + day * 864e5);
     const iso = date.toISOString().slice(0, 10);
+    if (preferences.dateTo && iso > preferences.dateTo) break;
     const weekday = date.getUTCDay();
     for (const centre of store.institutions.bloodCentres) {
       const meta = schedule.centres[centre.id];
@@ -89,7 +91,7 @@ function decorate(slot, preferences, busy) {
   const reasons = [];
   if (distanceKm != null) reasons.push(`${distanceKm} km away`);
   if (preferredDay && preferredTime) reasons.push(`${slot.window} on a day you chose`);
-  reasons.push(conflict ? 'Clashes with your calendar' : 'Free on your calendar');
+  if (busy) reasons.push(conflict ? 'Clashes with your calendar' : 'Free on your calendar');
   if (slot.holiday) reasons.push(preferences.avoidHolidays ? 'Public holiday, skipped' : 'Public holiday, centre is open');
   if (slot.downtime) reasons.push('Centre downtime');
   if (tooFar) reasons.push(`Beyond ${preferences.maxDistanceKm} km`);

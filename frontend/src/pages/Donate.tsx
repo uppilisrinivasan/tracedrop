@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { api, fmtDate, type Appointment } from '../api';
 import type { PageProps } from '../App';
-import BookingChat from '../BookingChat';
 import { requestCalendarAccess } from '../calendarAuth';
 import { ErrorNote, Icon, Loading, Section, useLoad } from '../ui';
 import DropLine from '../components/drop/DropLine';
+import BookingFlow from '../components/BookingFlow';
+import AppointmentPass from '../components/AppointmentPass';
 
 export default function Donate({ donorId, go, version, refresh, clientId }: PageProps) {
   const { data, error, loading, reload } = useLoad(() => api.slots(donorId), [donorId, version]);
@@ -80,8 +81,11 @@ export default function Donate({ donorId, go, version, refresh, clientId }: Page
       {err && <ErrorNote error={err} />}
 
       {booked.map((a) => (
-        <Section key={a.id} title={<><Icon name="calendar" size={18} /> Booked: {fmtDate(a.date)} at {a.time}</>} sub={`${a.centre}, ${a.district}`}>
-          <p className="small muted">Demo: on the day, staff record your screening and you donate. Leave blank to use typical values for you, or enter values to try a deferral (e.g. haemoglobin 11.9).</p>
+        <Section key={a.id} title={<><Icon name="calendar" size={18} /> Your donation on {fmtDate(a.date)}</>} sub={`${a.centre}, ${a.district}`}>
+          <AppointmentPass appointment={a} />
+          <details className="mt-16">
+            <summary className="small bold" style={{ cursor: 'pointer' }}>Demo: check in at the centre</summary>
+          <p className="small muted mt-8">On the day, staff scan your QR code, record your screening and you donate. Leave blank to use typical values for you, or enter values to try a deferral (e.g. haemoglobin 11.9).</p>
           <div className="grid grid-3 mt-12" style={{ gap: 10 }}>
             <label className="small">Systolic BP<input className="input" inputMode="numeric" value={vitals.systolic} onChange={(e) => setVitals({ ...vitals, systolic: e.target.value })} placeholder="e.g. 128" /></label>
             <label className="small">Diastolic BP<input className="input" inputMode="numeric" value={vitals.diastolic} onChange={(e) => setVitals({ ...vitals, diastolic: e.target.value })} placeholder="e.g. 82" /></label>
@@ -89,19 +93,22 @@ export default function Donate({ donorId, go, version, refresh, clientId }: Page
           </div>
           <div className="row mt-12 wrap">
             <button className="btn btn-primary" onClick={() => checkIn(a)} disabled={busy === a.id}><Icon name="drop" size={16} /> Check in and donate</button>
-            <button className="btn" disabled={busy === a.id} onClick={() => cancel(a)}>Cancel booking</button>
           </div>
+          </details>
+          <div className="row mt-12"><button className="btn btn-sm" disabled={busy === a.id} onClick={() => cancel(a)}>Cancel booking</button></div>
         </Section>
       ))}
 
-      <Section title="Book a donation" sub={el.eligibleNow ? 'Answer a few questions and TraceDrop will match an open slot.' : el.nextEligibleDate ? `You can donate from ${fmtDate(el.nextEligibleDate)}.` : 'Donation is paused for now.'}>
+      <Section title="Book a donation" sub={el.eligibleNow ? 'Quick checks, a place and a date. About a minute.' : el.nextEligibleDate ? `You can donate from ${fmtDate(el.nextEligibleDate)}.` : 'Donation is paused for now.'}>
         {el.blockers.length > 0 && (
           <div className="callout callout-warn small">
             <Icon name="info" size={16} />
             <span>Paused because: {el.blockers.join('; ')}. <button className="btn btn-sm" onClick={() => go('plan')}>Care plan</button></span>
           </div>
         )}
-        {!el.blockers.length && <BookingChat mode="book" donorId={donorId} clientId={clientId} onBooked={() => appts.reload()} />}
+        {!el.blockers.length && (booked.length
+          ? <p className="small muted">You already have a donation booked. Cancel it above to choose another time.</p>
+          : <BookingFlow donorId={donorId} clientId={clientId} onBooked={() => appts.reload()} />)}
         <button className="btn btn-ghost btn-sm mt-12" onClick={() => setShowAll((open) => !open)}>{showAll ? 'Hide other slots' : 'Browse every open slot'}</button>
         {showAll && (
           <div className="grid grid-3 mt-12" style={{ gap: 10 }}>

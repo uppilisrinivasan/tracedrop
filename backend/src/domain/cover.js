@@ -42,6 +42,61 @@ function ladderStep(amount, base) {
   return LADDER.filter((step) => step >= base && step <= amount).pop() || base;
 }
 
+// What the base policy covers (illustrative terms, by policy type)
+const BASE_TERMS = {
+  group: [
+    { label: 'Who is covered', value: 'You, your spouse and up to 2 children, sharing the sum insured' },
+    { label: 'Hospital room', value: 'Single private room, no cap' },
+    { label: 'Co-payment', value: 'None' },
+    { label: 'Existing illnesses', value: 'Covered from day 1' },
+    { label: 'Waiting period', value: 'None' },
+    { label: 'Day-care procedures', value: 'Covered' },
+    { label: 'Maternity', value: 'Up to ₹50,000' },
+    { label: 'Ambulance', value: 'Up to ₹2,000 per claim' },
+  ],
+  retail: [
+    { label: 'Who is covered', value: 'You' },
+    { label: 'Hospital room', value: 'Up to 1% of the sum insured per day' },
+    { label: 'Co-payment', value: 'None below age 60' },
+    { label: 'Existing illnesses', value: 'Covered after 3 years' },
+    { label: 'Waiting period', value: '30 days for new illnesses (accidents covered at once)' },
+    { label: 'Day-care procedures', value: 'Covered' },
+    { label: 'Maternity', value: 'Not covered' },
+    { label: 'Ambulance', value: 'Up to ₹2,000 per claim' },
+  ],
+};
+
+// Other cover a donor holds, so the stack can be shown (synthetic, fixed per donor)
+const OTHER_COVER = [
+  [{ name: 'Personal health policy', insurer: 'Bharat Health Insurance', cover: 300000, premium: 7200, kind: 'personal' }],
+  [],
+  [{ name: 'Super top-up', insurer: 'Suraksha General', cover: 1000000, deductible: 500000, premium: 3400, kind: 'topup' }],
+];
+
+/** Premium discounts the donor qualifies for on the policies they pay for themselves. */
+function discounts(donor, score, recentVisits) {
+  return [
+    { id: 'donor', label: 'Regular blood donor', rule: '2 or more donations in the last 12 months', percent: 5, met: recentVisits >= 2 },
+    { id: 'wellness', label: 'Wellness reward', rule: 'Health score of 75 or more (10% at 85 or more)', percent: score >= 85 ? 10 : 5, met: score >= 75 },
+    { id: 'nonsmoker', label: 'Non-smoker', rule: 'No tobacco declared', percent: 5, met: !donor.smoker },
+  ];
+}
+
+function stack(donor, policy, cover) {
+  const n = Number(donor.id.replace(/\D/g, '')) || 0;
+  const others = OTHER_COVER[n % OTHER_COVER.length];
+  const layers = [
+    { name: `${policy.kind} (health-linked)`, insurer: policy.sponsor, cover, kind: 'base', order: 1, note: 'Used first for every claim, cashless at network hospitals' },
+    ...others.map((o, i) => ({
+      ...o,
+      order: i + 2,
+      note: o.kind === 'topup' ? `Pays only after a single bill crosses ₹${(o.deductible / 100000).toFixed(0)} lakh` : 'Used when the first policy runs out, or for what it does not cover',
+    })),
+  ];
+  const total = layers.reduce((sum, l) => sum + l.cover, 0);
+  return { layers, total, multiple: layers.length > 1 };
+}
+
 function evaluate(donorId) {
   const donor = store.getDonor(donorId);
   const policy = store.getPolicy(donor.policyId);
@@ -74,8 +129,28 @@ function evaluate(donorId) {
   const toReachNext = !nextStep ? 'You are at the top step.'
     : [pointsToNext ? `raise your health score by ${pointsToNext} point(s) to ${current + pointsToNext}` : null, ...missing].filter(Boolean).join(' AND ');
 
+  const group = policy.id !== 'P-RETAIL';
+  const coverStack = stack(donor, policy, cover);
+  const offers = discounts(donor, current, recentVisits.length);
+  const percentOff = Math.min(20, offers.filter((d) => d.met).reduce((sum, d) => sum + d.percent, 0));
+  const selfPaid = [
+    ...(group ? [] : [{ name: policy.kind, premium: BASE_PREMIUM }]),
+    ...coverStack.layers.filter((l) => l.premium).map((l) => ({ name: l.name, premium: l.premium })),
+  ];
+  const fullPremium = selfPaid.reduce((sum, p) => sum + p.premium, 0);
+
   return {
-    policy: { ...policy, premium: BASE_PREMIUM },
+    policy: { ...policy, premium: BASE_PREMIUM, paidBy: group ? policy.sponsor : 'You' },
+    baseTerms: BASE_TERMS[group ? 'group' : 'retail'],
+    stack: coverStack,
+    discounts: {
+      rows: offers,
+      percentOff,
+      cap: 20,
+      premiumsYouPay: selfPaid,
+      fullPremium,
+      saving: Math.round((fullPremium * percentOff) / 100),
+    },
     baseCover: base,
     currentCover: cover,
     eligibleCover: target,

@@ -16,13 +16,12 @@ export type Screen = 'home' | 'donate' | 'impact' | 'health' | 'cover' | 'commun
 
 const NAV: { id: Screen; label: string; icon: string; mobile?: boolean }[] = [
   { id: 'home', label: 'Home', icon: 'home', mobile: true },
+  { id: 'donate', label: 'Donate', icon: 'calendar', mobile: true },
   { id: 'impact', label: 'My impact', icon: 'drop', mobile: true },
   { id: 'health', label: 'My health', icon: 'heart', mobile: true },
   { id: 'cover', label: 'Health cover', icon: 'shield', mobile: true },
-  { id: 'community', label: 'Community', icon: 'users', mobile: true },
-  { id: 'donate', label: 'Donate', icon: 'calendar' },
+  { id: 'community', label: 'Community', icon: 'users' },
   { id: 'ecosystem', label: 'Ecosystem view', icon: 'globe' },
-  { id: 'ai', label: 'AI console', icon: 'cpu' },
 ];
 
 function readStored(key: string, fallback: string) {
@@ -35,7 +34,7 @@ function readStored(key: string, fallback: string) {
 
 function initialScreen(): Screen {
   const hash = window.location.hash.replace('#', '') as Screen;
-  return NAV.some((n) => n.id === hash) || hash === 'plan' || hash === 'labs' ? hash : 'home';
+  return NAV.some((n) => n.id === hash) || hash === 'plan' || hash === 'labs' || hash === 'ai' ? hash : 'home';
 }
 
 export default function App({ user, clientId, onSignOut }: { user: AuthUser; clientId: string; onSignOut: () => void }) {
@@ -106,12 +105,12 @@ export default function App({ user, clientId, onSignOut }: { user: AuthUser; cli
       <nav className="bottom-nav">
         {NAV.filter((n) => n.mobile).map((n) => (
           <button key={n.id} className={screen === n.id ? 'active' : ''} onClick={() => go(n.id)}>
-            <Icon name={n.icon} size={20} /> {n.label.replace('My ', '').replace('Health cover', 'Cover')}
+            <Icon name={n.icon} size={20} /> {{ impact: 'Impact', health: 'Health', cover: 'Cover' }[n.id as string] || n.label}
           </button>
         ))}
       </nav>
 
-      <Copilot key={donorId} donorId={donorId} go={go} />
+      {screen !== 'home' && <Copilot key={donorId} donorId={donorId} go={go} clientId={clientId} />}
     </div>
   );
 }

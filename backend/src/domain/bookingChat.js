@@ -7,11 +7,8 @@ const DAY_SETS = {
   saturday: ['sat'],
   any: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat'],
 };
-const REMINDERS = {
-  'day-and-two': [1440, 120],
-  'two-hours': [120],
-  'one-hour': [60],
-};
+const DEFAULT_REMINDER = [1440];
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 const PROMPTS = {
   days: {
@@ -46,14 +43,6 @@ const PROMPTS = {
       { id: 'no', label: 'Holidays are fine' },
     ],
   },
-  reminders: {
-    text: 'When should the reminder email arrive?',
-    chips: [
-      { id: 'day-and-two', label: '1 day and 2 hours before' },
-      { id: 'two-hours', label: '2 hours before' },
-      { id: 'one-hour', label: '1 hour before' },
-    ],
-  },
   place: {
     text: 'Where should we look for a centre? You can use this device’s location or pick a district.',
     chips: [
@@ -70,8 +59,10 @@ function normalise(raw) {
     timeWindows: Array.isArray(prefs.timeWindows) ? prefs.timeWindows.filter((item) => ['morning', 'afternoon', 'evening'].includes(item)) : [],
     maxDistanceKm: [5, 15, 30].includes(Number(prefs.maxDistanceKm)) ? Number(prefs.maxDistanceKm) : null,
     avoidHolidays: typeof prefs.avoidHolidays === 'boolean' ? prefs.avoidHolidays : null,
-    reminderMinutes: Array.isArray(prefs.reminderMinutes) ? prefs.reminderMinutes.filter((item) => [60, 120, 1440].includes(item)).slice(0, 2) : [],
+    reminderMinutes: DEFAULT_REMINDER,
     location: placeOrNull(prefs.location),
+    dateFrom: ISO_DATE.test(prefs.dateFrom) ? prefs.dateFrom : null,
+    dateTo: ISO_DATE.test(prefs.dateTo) ? prefs.dateTo : null,
     onboardingComplete: Boolean(prefs.onboardingComplete),
     onboardingSkipped: Boolean(prefs.onboardingSkipped),
   };
@@ -95,7 +86,6 @@ function missing(prefs) {
   if (!prefs.timeWindows.length) return 'times';
   if (!prefs.maxDistanceKm) return 'distance';
   if (prefs.avoidHolidays === null) return 'holidays';
-  if (!prefs.reminderMinutes.length) return 'reminders';
   if (!prefs.location) return 'place';
   return null;
 }
@@ -109,7 +99,6 @@ function apply(prefs, answer) {
   }
   if (answer.step === 'distance' && [5, 15, 30].includes(Number(answer.value))) next.maxDistanceKm = Number(answer.value);
   if (answer.step === 'holidays') next.avoidHolidays = answer.value === 'yes';
-  if (answer.step === 'reminders' && REMINDERS[answer.value]) next.reminderMinutes = REMINDERS[answer.value];
   if (answer.step === 'place') {
     if (typeof answer.value === 'string' && schedule.places[answer.value]) {
       next.location = { ...schedule.places[answer.value], source: 'manual' };
@@ -123,8 +112,9 @@ function apply(prefs, answer) {
 function turn(preferences, answer) {
   const prefs = apply(preferences, answer);
   const step = missing(prefs);
-  if (!step) return { preferences: prefs, step: null, prompt: null, chips: [], ready: true };
-  return { preferences: prefs, step, prompt: PROMPTS[step].text, chips: PROMPTS[step].chips, ready: false };
+  const places = PROMPTS.place.chips.filter((chip) => chip.id !== 'gps');
+  if (!step) return { preferences: prefs, step: null, prompt: null, chips: [], ready: true, places };
+  return { preferences: prefs, step, prompt: PROMPTS[step].text, chips: PROMPTS[step].chips, ready: false, places };
 }
 
 module.exports = { normalise, missing, apply, turn, PROMPTS };

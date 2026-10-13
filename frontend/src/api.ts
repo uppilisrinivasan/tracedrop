@@ -18,6 +18,14 @@ export interface Journey {
   events: { type: string; label: string; when: string }[];
   recipient: Recipient | null;
   fractionation: { poolSize: number; albuminVials: number; ivigVials: number; factorViiiIu: number } | null;
+  expiry: { days: number; issuedMeanwhile: number; alsoExpired: number; cause: string[]; effect: string[] } | null;
+}
+
+export interface Concern {
+  id: string; category: string; categoryLabel: string; details: string; unitId: string | null; unitName: string | null;
+  createdOn: string; status: 'open' | 'resolved'; owner: string; level: number; levels: number; dueOn: string;
+  overdue: boolean; answered: boolean; canEscalate: boolean; nextOwner: string | null;
+  steps: { on: string; text: string }[];
 }
 
 export interface ImpactSummary {
@@ -52,7 +60,16 @@ export interface HealthData {
 }
 
 export interface CoverData {
-  policy: { sponsor: string; kind: string; premium: number };
+  policy: { sponsor: string; kind: string; premium: number; paidBy: string };
+  baseTerms: { label: string; value: string }[];
+  stack: {
+    layers: { name: string; insurer: string; cover: number; kind: 'base' | 'personal' | 'topup'; order: number; note: string; deductible?: number; premium?: number }[];
+    total: number; multiple: boolean;
+  };
+  discounts: {
+    rows: { id: string; label: string; rule: string; percent: number; met: boolean }[];
+    percentOff: number; cap: number; premiumsYouPay: { name: string; premium: number }[]; fullPremium: number; saving: number;
+  };
   baseCover: number; currentCover: number; eligibleCover: number; nextStep: number | null; pointsToNextStep: number | null;
   healthScore: number; relativeRisk: number; blockedBy: string | null; method: string;
   conditions: Record<string, { met: boolean; detail: string }>;
@@ -100,7 +117,7 @@ export interface CopilotReply {
 }
 
 export interface Slot { id: string; centreId: string; centre: string; district: string; date: string; time: string }
-export interface Appointment extends Slot { status: string; eventId?: string | null; emailSent?: boolean; emailError?: string }
+export interface Appointment extends Slot { status: string; eventId?: string | null; emailSent?: boolean; emailError?: string; checkInCode?: string; donorId?: string }
 export interface BookingLocation { label: string; lat: number; lng: number; source: 'gps' | 'manual' }
 export interface BookingPreferences {
   days: string[];
@@ -109,6 +126,8 @@ export interface BookingPreferences {
   avoidHolidays: boolean | null;
   reminderMinutes: number[];
   location: BookingLocation | null;
+  dateFrom?: string | null;
+  dateTo?: string | null;
   onboardingComplete: boolean;
   onboardingSkipped: boolean;
 }
@@ -118,6 +137,7 @@ export interface BookingTurn {
   prompt: string | null;
   chips: { id: string; label: string }[];
   ready: boolean;
+  places: { id: string; label: string }[];
 }
 export interface RankedSlot extends Slot {
   distanceKm: number | null;
@@ -228,7 +248,10 @@ export const api = {
   carePlan: (id: string, refresh = false) => post<CarePlan>(`/donors/${id}/care-plan${refresh ? '?refresh=1' : ''}`),
   extractLabs: (id: string, input: { text?: string; image?: string }) => post<Extraction>(`/donors/${id}/labs/extract`, input),
   saveLabs: (id: string, extraction: Extraction) => post<{ saved: number; date: string }>(`/donors/${id}/labs/save`, extraction),
-  story: (id: string, componentId: string) => post<Story>(`/donors/${id}/impact/${componentId}/story`),
+  story: (id: string, componentId: string, refresh = false) => post<Story>(`/donors/${id}/impact/${componentId}/story${refresh ? '?refresh=1' : ''}`),
+  concerns: (id: string) => request<Concern[]>(`/donors/${id}/concerns`),
+  raiseConcern: (id: string, body: { category: string; details: string; unitId?: string }) => post<Concern>(`/donors/${id}/concerns`, body),
+  concernAction: (id: string, concernId: string, action: 'escalate' | 'resolve') => post<Concern>(`/donors/${id}/concerns/${concernId}/${action}`),
   insight: (id: string) => request<Insight>(`/donors/${id}/insights`),
   network: () => request<Network>('/network'),
   aiStatus: () => request<AIStatus>('/ai/status'),

@@ -688,6 +688,19 @@ function cancelBooking(donorId, bookingId, { reschedule = false } = {}) {
   return view(donorId);
 }
 
+/** A donation booked through the guided booking chat also shows under "Coming up". */
+function recordBooking(donorId, appointment) {
+  const st = get(donorId);
+  if (st.bookings.some((x) => x.id === appointment.id)) return;
+  st.bookings.push({ id: appointment.id, kind: 'donate', date: appointment.date, time: appointment.time, place: appointment.centre });
+  log(st, `Booked to donate from the booking chat: ${slotLabel(appointment)} · ${appointment.centre}.`);
+}
+
+function forgetBooking(donorId, bookingId) {
+  const st = get(donorId);
+  st.bookings = st.bookings.filter((x) => x.id !== bookingId);
+}
+
 /* ------------------------------------------------------------------ snooze, hide, memory, readings */
 
 function snooze(donorId, cardId, option) {
@@ -941,7 +954,7 @@ function nextEvent(donorId) {
 }
 
 module.exports = {
-  get, view, answer, undo, snooze, cancelBooking, hide, reopen, forget, undoMemory, deleteReading, hideResult, nextEvent,
+  get, view, answer, undo, snooze, cancelBooking, recordBooking, forgetBooking, hide, reopen, forget, undoMemory, deleteReading, hideResult, nextEvent,
   openForWriting, setAi, words, label, setLanguage, offerCard, logReading, chatContext, chartPoints, readinessOf: (donorId) => readiness(get(donorId)),
   rememberText: (donorId, text, replacesPattern) => { const st = get(donorId); remember(st, text, replacesPattern ? new RegExp(replacesPattern, 'i') : null); return view(donorId); },
   BUDGETS, PRIORITY, BP_GOAL,

@@ -1,5 +1,6 @@
 /** Confirm a slot, write the calendar event, and email the donor. */
-const store = require('../data/store');
+const crypto = require('crypto');
+const drop = require('../domain/drop');
 const { findSlot, recommend } = require('../domain/bookingRank');
 const { normalise, missing } = require('../domain/bookingChat');
 const calendar = require('../calendar/googleCalendar');
@@ -9,6 +10,16 @@ function httpError(status, message) {
   const error = new Error(message);
   error.status = status;
   return error;
+}
+
+/** Short code the centre's scanner can verify; it cannot be guessed from the appointment id alone. */
+function checkInCode(appointmentId) {
+  const secret = process.env.SESSION_SECRET || 'tracedrop-local';
+  return crypto.createHmac('sha256', secret).update(`checkin:${appointmentId}`).digest('hex').slice(0, 8).toUpperCase();
+}
+
+function withCheckIn(appointment) {
+  return appointment && appointment.status === 'booked' ? { ...appointment, checkInCode: checkInCode(appointment.id) } : appointment;
 }
 
 function rangeFor(slots) {
@@ -22,17 +33,17 @@ function rangeFor(slots) {
 
 async function availability(user, donorId, preferences, accessToken) {
   const prefs = normalise(preferences);
-  let busy = [];
+  let busy = null;
   let calendarConnected = false;
   if (accessToken) {
     await calendar.assertCalendarOwner(accessToken, user);
     const generated = require('../domain/bookingRank').candidates(donorId, prefs);
     const range = rangeFor(generated.slots);
-    if (range) busy = await calendar.freeBusy(accessToken, range.timeMin, range.timeMax);
+    busy = range ? await calendar.freeBusy(accessToken, range.timeMin, range.timeMax) : [];
     calendarConnected = true;
   }
   const result = recommend(donorId, prefs, busy, 3);
-  return { ...result, calendarConnected, searchedBusy: busy.length };
+  return { ...result, calendarConnected, searchedBusy: busy ? busy.length : 0 };
 }
 
 async function confirm(user, donor, body) {
@@ -53,23 +64,26 @@ async function confirm(user, donor, body) {
     eventId: null,
     emailSent: false,
   };
+  const code = checkInCode(appointment.id);
 
   if (body.accessToken) {
     const email = await calendar.assertCalendarOwner(body.accessToken, user);
     const busy = await calendar.freeBusy(body.accessToken, `${slot.date}T00:00:00+05:30`, `${slot.date}T23:59:59+05:30`);
     if (calendarBusy(slot, busy)) throw httpError(409, 'That time is busy on your calendar. Choose another slot.');
-    const event = calendar.buildEvent({ slot, email, reminderMinutes: prefs.reminderMinutes });
+    const event = calendar.buildEvent({ slot, email, reminderMinutes: prefs.reminderMinutes, checkInCode: code });
     const created = await calendar.createEvent(body.accessToken, event);
     appointment.eventId = created.id;
     try {
-      await calendar.sendConfirmation(body.accessToken, calendar.confirmationMail({ to: email, slot, reminderMinutes: prefs.reminderMinutes }));
+      await calendar.sendConfirmation(body.accessToken, calendar.confirmationMail({ to: email, slot, reminderMinutes: prefs.reminderMinutes, checkInCode: code }));
       appointment.emailSent = true;
     } catch (error) {
       appointment.emailError = error.message;
     }
   }
 
-  return settings.saveAppointment(user, appointment);
+  const saved = await settings.saveAppointment(user, appointment);
+  drop.recordBooking(donor.id, saved);
+  return withCheckIn(saved);
 }
 
 function calendarBusy(slot, busy) {
@@ -87,7 +101,8 @@ async function cancel(user, donorId, appointmentId, accessToken) {
     await calendar.deleteEvent(accessToken, appointment.eventId);
   }
   appointment.status = 'cancelled';
+  drop.forgetBooking(donorId, appointment.id);
   return settings.saveAppointment(user, appointment);
 }
 
-module.exports = { availability, confirm, cancel };
+module.exports = { availability, confirm, cancel, checkInCode, withCheckIn };

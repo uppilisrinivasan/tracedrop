@@ -18,6 +18,7 @@ const copilot = require('../ai/copilot');
 const carePlan = require('../ai/carePlan');
 const labReader = require('../ai/labReader');
 const stories = require('../ai/stories');
+const concerns = require('../domain/concerns');
 const insights = require('../ai/insights');
 
 const router = express.Router();
@@ -138,7 +139,7 @@ router.get('/:donorId/appointments', async (req, res) => {
   try {
     const rows = await settings.listAppointments(req.user, req.donor.id);
     store.session.appointments.set(req.donor.id, rows);
-    ok(res, rows);
+    ok(res, rows.map(booking.withCheckIn));
   } catch (error) {
     fail(res, error.status || 400, error.message);
   }
@@ -181,7 +182,23 @@ router.post('/:donorId/labs/save', (req, res) => {
 router.post('/:donorId/impact/:componentId/story', (req, res) => {
   const journey = impact.donorJourneys(req.donor.id).find((j) => j.id === req.params.componentId);
   if (!journey || !journey.recipient) return fail(res, 404, 'No patient story for this unit yet');
-  return withFallback(res, () => stories.write(req.donor.id, req.params.componentId), () => stories.template(journey, req.donor));
+  return withFallback(res, () => stories.write(req.donor.id, req.params.componentId, { refresh: Boolean(req.query.refresh) }), () => stories.template(journey, req.donor));
+});
+
+router.get('/:donorId/concerns', (req, res) => ok(res, concerns.list(req.donor.id)));
+router.post('/:donorId/concerns', (req, res) => {
+  try {
+    ok(res, concerns.raise(req.donor.id, req.body || {}));
+  } catch (error) {
+    fail(res, 400, error.message);
+  }
+});
+router.post('/:donorId/concerns/:concernId/:action(escalate|resolve)', (req, res) => {
+  try {
+    ok(res, concerns[req.params.action](req.donor.id, req.params.concernId));
+  } catch (error) {
+    fail(res, 400, error.message);
+  }
 });
 
 router.get('/:donorId/insights', (req, res) => withFallback(res, () => insights.forDonor(req.donor.id), () => insights.fallback(req.donor.id)));

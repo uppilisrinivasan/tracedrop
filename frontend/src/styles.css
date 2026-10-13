@@ -309,3 +309,76 @@ table.table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 .chip:hover { border-color: var(--brand); color: var(--brand-ink); }
 .slot-choice { display: flex; justify-content: space-between; gap: 12px; align-items: center; border: 1px solid var(--border); border-radius: 14px; padding: 12px; }
 @media (max-width: 640px) { .slot-choice { align-items: flex-start; flex-direction: column; } }
+button.slot-choice { width: 100%; background: var(--surface); }
+button.slot-choice:hover, .slot-choice.selected { border-color: var(--brand); }
+.chip[aria-pressed='true'] { border-color: var(--brand); background: var(--brand-soft); color: var(--brand-ink); }
+label.chip { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; position: relative; }
+
+/* Collapsible sections */
+.section-toggle { display: flex; align-items: flex-start; gap: 8px; text-align: left; padding: 0; min-height: 36px; flex: 1; }
+.section-toggle > svg { margin-top: 2px; flex: none; transition: transform 0.15s; color: var(--muted); }
+.section-toggle .card-sub { display: block; }
+.rot90 { transform: rotate(90deg); }
+
+/* Drop's chat inside Home's middle column */
+.drop-main { display: grid; gap: 14px; align-content: start; min-width: 0; }
+.chat.chat-inline { position: static; width: auto; max-width: none; height: auto; max-height: 720px; border-radius: var(--radius); box-shadow: var(--shadow); z-index: auto; }
+.chat.chat-inline .chat-body { min-height: 120px; }
+.chat-flow { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px; }
+.suggestion-main { border-color: var(--brand); color: var(--brand-ink); background: var(--brand-soft); font-weight: 700; }
+
+/* Booking steps */
+.bflow { display: grid; gap: 14px; }
+.bflow-steps { display: flex; gap: 6px; list-style: none; margin: 0; padding: 0; flex-wrap: wrap; }
+.bflow-steps li { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--faint); font-weight: 600; }
+.bflow-steps li + li::before { content: ''; width: 14px; height: 1px; background: var(--border); }
+.bflow-steps li span { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--border); font-size: 11px; }
+.bflow-steps li.now { color: var(--text); }
+.bflow-steps li.now span { background: var(--brand); border-color: var(--brand); color: #fff; }
+.bflow-steps li.done { color: var(--good); }
+.bflow-steps li.done span { background: var(--good-soft); border-color: var(--good); }
+.bflow-check { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+.bflow-check.sys { justify-content: flex-start; color: var(--good); border-bottom: 0; background: var(--good-soft); border-radius: 10px; padding: 8px 12px; }
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; flex: none; }
+.seg button { min-height: 36px; min-width: 52px; font-weight: 600; font-size: 13px; color: var(--muted); }
+.seg button[aria-pressed='true']:first-child { background: var(--good-soft); color: var(--good); }
+.seg button[aria-pressed='true']:last-child { background: var(--bad-soft); color: var(--bad); }
+.bflow-date { border: 0; background: transparent; font: inherit; color: inherit; max-width: 140px; }
+.bflow-summary { display: grid; gap: 8px; background: var(--surface-2); border-radius: 12px; padding: 12px 14px; font-size: 14px; }
+.bflow-summary div { display: flex; align-items: center; gap: 8px; }
+
+/* Appointment pass */
+.pass { display: flex; gap: 18px; align-items: flex-start; flex-wrap: wrap; border: 1px dashed var(--brand); border-radius: 16px; padding: 16px; background: var(--surface); }
+.pass-qr { display: grid; justify-items: center; gap: 6px; }
+.pass-qr img { width: 150px; height: 150px; border-radius: 10px; background: #fff; }
+.pass-code { font-family: ui-monospace, monospace; font-weight: 700; letter-spacing: 0.12em; font-size: 14px; }
+.pass-body { flex: 1; min-width: 220px; display: grid; gap: 4px; align-content: start; justify-items: start; }
+a.btn { text-decoration: none; color: inherit; }
+a.btn.btn-wa { color: #fff; }
+.pass-when { font-size: 20px; font-weight: 800; }
+.pass-body .small, .pass-body .tiny { display: flex; align-items: center; gap: 6px; }
+.pass-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; align-items: center; }
+.pass-compact .pass-qr img { width: 110px; height: 110px; }
+
+/* Sharing */
+.btn-wa { background: #25d366; border-color: #25d366; color: #fff; }
+.btn-ig { background: linear-gradient(45deg, #f09433, #dc2743 50%, #bc1888); border-color: transparent; color: #fff; }
+
+/* Concerns and expired units */
+.expiry { background: var(--surface-2); border-radius: 14px; padding: 14px 16px; }
+.expiry ul { margin: 6px 0 0; padding-left: 18px; font-size: 13.5px; display: grid; gap: 4px; }
+.concern-form { border: 1px solid var(--border); border-radius: 14px; padding: 14px; }
+.concern { border: 1px solid var(--border); border-radius: 14px; padding: 14px; }
+.concern-steps { margin: 10px 0 0; padding-left: 18px; font-size: 13.5px; display: grid; gap: 4px; }
+
+/* Cover stack and terms */
+.stack-bar { display: flex; height: 34px; border-radius: 10px; overflow: hidden; gap: 2px; }
+.stack-bar span { display: grid; place-items: center; color: #fff; font-size: 12px; font-weight: 700; min-width: 48px; }
+.stack-base { background: #15803d; }
+.stack-personal { background: #1d4ed8; }
+.stack-topup { background: #6d28d9; }
+.stack-layer { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.stack-layer:last-child { border-bottom: 0; }
+.stack-dot { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 12px; font-weight: 700; flex: none; }
+.terms { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.terms div { display: grid; gap: 2px; }

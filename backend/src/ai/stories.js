@@ -31,13 +31,13 @@ Hard privacy rules: use ONLY the facts in the journey data. No names, no exact a
 Tone: warm, specific, not saccharine. Explain in one clause what the component does medically.
 List anything you added beyond the data in addedDetails (should be empty).`;
 
-async function write(donorId, componentId) {
+async function write(donorId, componentId, { refresh = false } = {}) {
   const donor = store.getDonor(donorId);
   const journey = impact.donorJourneys(donorId).find((j) => j.id === componentId);
   if (!journey) throw new Error('Component not found');
   if (!journey.recipient) throw new Error('This unit has not reached a patient yet');
   const cached = store.session.stories.get(`${componentId}:${donor.language}`);
-  if (cached) return cached;
+  if (cached && !refresh) return cached;
 
   const facts = {
     component: journey.name, whatItDoes: journey.role, donatedOn: journey.donationDate, collectedAt: journey.centre,
@@ -62,7 +62,7 @@ function template(journey, donor) {
   const recovered = r.outcome === 'recovered';
   return {
     headline: `Your ${journey.name.toLowerCase()} reached a patient`,
-    story: `${donor.name.split(' ')[0]}, the ${journey.name.toLowerCase()} from your ${journey.donationDate} donation went to a ${r.patient.toLowerCase()} patient at a ${r.place}, for ${r.context.toLowerCase()}. ${journey.role}.${recovered ? ' The hospital recorded a good recovery.' : ''}`,
+    story: `${donor.name.split(' ')[0]}, the ${journey.name.toLowerCase()} from your ${new Date(`${journey.donationDate}T00:00:00Z`).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })} donation went to a patient (${r.patient.toLowerCase()}) at a ${r.place}, for ${r.context.toLowerCase()}. ${journey.role}.${recovered ? ' The hospital recorded a good recovery.' : ''}`,
     shareText: `My blood donation helped a patient with ${r.context.toLowerCase()}. One donation, up to three lives. #DonateBlood`,
     addedDetails: [],
     generatedBy: 'template',
