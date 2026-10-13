@@ -300,6 +300,7 @@ input[type='range'] { width: 100%; accent-color: var(--brand); }
 .chat-input { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--border); }
 .chat-input input { flex: 1; border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; background: var(--bg); }
 .suggestions { display: flex; flex-wrap: wrap; gap: 6px; }
+.suggestions-stay { padding: 10px 12px 0; border-top: 1px solid var(--border); }
 .suggestion { border: 1px solid var(--border); background: var(--surface); border-radius: 999px; padding: 6px 11px; font-size: 12.5px; }
 .suggestion:hover { border-color: var(--ai); color: var(--ai); }
 

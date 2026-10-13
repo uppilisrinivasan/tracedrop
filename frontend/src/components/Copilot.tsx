@@ -263,13 +263,7 @@ export default function Copilot({ donorId, go, clientId, inline = false, top }: 
       <div className="chat-body" ref={body}>
         {top}
         {turns.length === 0 && (
-          <div className="stack">
-            <div className="msg msg-ai">{inline ? 'Ask me anything, or book your next donation here.' : "Hi, I'm Drop. Ask me about your results, your blood's journey, your Plan or when you can donate. I'll answer in a sentence or two, and show you a card when it helps."}</div>
-            <div className="suggestions">
-              {stories.map((c) => <StoryChip key={c.id} card={c} onClick={() => watch(c)} />)}
-              {SUGGESTIONS.map((s) => <button key={s} className={`suggestion ${s === 'Book a donation' ? 'suggestion-main' : ''}`} style={{ minHeight: 36 }} onClick={() => send(s)}>{s}</button>)}
-            </div>
-          </div>
+          <div className="msg msg-ai">{inline ? 'Ask me anything, or book your next donation here.' : "Hi, I'm Drop. Ask me about your results, your blood's journey, your Plan or when you can donate. I'll answer in a sentence or two, and show you a card when it helps."}</div>
         )}
         {turns.map((t, i) => (
           <div key={i} className="stack" style={{ gap: 6, alignItems: t.role === 'user' ? 'flex-end' : 'flex-start' }}>
@@ -290,11 +284,12 @@ export default function Copilot({ donorId, go, clientId, inline = false, top }: 
           </div>
         ))}
         {busy && <Thinking label="Drop is checking your records…" />}
-        {turns.length > 0 && stories.length > 0 && (
-          <div className="suggestions">{stories.map((c) => <StoryChip key={c.id} card={c} onClick={() => watch(c)} />)}</div>
-        )}
       </div>
       {story?.story && <StoryViewer title={story.label} slides={story.story} onClose={storyDone} />}
+      <div className="suggestions suggestions-stay">
+        {stories.map((c) => <StoryChip key={c.id} card={c} onClick={() => watch(c)} />)}
+        {SUGGESTIONS.map((s) => <button key={s} className={`suggestion ${s === 'Book a donation' ? 'suggestion-main' : ''}`} style={{ minHeight: 36 }} disabled={busy} onClick={() => send(s)}>{s}</button>)}
+      </div>
       <form className="chat-input" onSubmit={(e) => { e.preventDefault(); send(input); }}>
         <input value={input} onChange={(e) => setInput(e.target.value)} placeholder={inline ? 'Ask Drop, or type "book a donation"' : 'Ask Drop anything'} aria-label="Message" />
         <button className="btn btn-ai" disabled={busy || !input.trim()} aria-label="Send" style={{ minWidth: 44 }}><Icon name="send" size={16} /></button>
