@@ -29,6 +29,8 @@ const BP_GOAL = { s: 135, d: 85 };
 
 const states = new Map();
 let seed = null;
+// Ids never repeat, across demo Resets and server restarts, so a browser still holding an old Card id can't act on a new Card
+const BOOT = Date.now().toString(36).slice(-4);
 let seq = 1;
 
 /* ------------------------------------------------------------------ dates */
@@ -42,7 +44,7 @@ const tickOf = (iso, part = 0) => dayNum(iso) * PARTS + part;
 const nowTick = () => tickOf(store.clock().date, store.clock().part);
 const fmt = (iso) => new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
 const clone = (x) => JSON.parse(JSON.stringify(x));
-const id = (prefix) => `${prefix}${seq++}`;
+const id = (prefix) => `${prefix}${BOOT}-${seq++}`;
 const partOfTime = (hhmm) => { const h = Number(String(hhmm).slice(0, 2)); return h < 12 ? 0 : h < 17 ? 1 : h < 21 ? 2 : 3; };
 const lcFirst = (t) => t.charAt(0).toLowerCase() + t.slice(1);
 const time12 = (hhmm) => { const [h, m] = String(hhmm).split(':').map(Number); const hr = ((h + 11) % 12) + 1; return `${hr}${m ? `:${String(m).padStart(2, '0')}` : ''} ${h < 12 ? 'am' : 'pm'}`; };
@@ -167,8 +169,8 @@ function detect(st) {
     });
   }
 
-  // Getting ready to donate: three weeks before they can
-  const ready = readiness(st);
+  // Getting ready to donate again: three weeks before they can (someone who has never donated books their first from the Intro or Home)
+  const ready = health.eligibility(donorId).lastDonationDate ? readiness(st) : null;
   if (ready) {
     const at = addDays(ready, -21) > createdOn ? addDays(ready, -21) : createdOn;
     if (at <= today) addEvent(st, { key: `donate:${ready}`, kind: 'donate', at, data: { from: ready } });
@@ -650,7 +652,7 @@ function answer(donorId, cardId, value) {
       } else {
         const v = Number(value.value);
         if (!(v >= 3 && v <= 25)) throw new Error('That Hb value looks out of range');
-        const obsId = `OBS-${donorId}-DROP-${seq++}`;
+        const obsId = `OBS-${donorId}-DROP-${BOOT}-${seq++}`;
         store.addObservations(donorId, [{ id: obsId, donorId, visitId: null, code: '718-7', key: 'hb', name: 'Haemoglobin', value: v, unit: 'g/dL', low: 12, high: 15.5, date: value.date || today, source: 'uploaded_report', labId: null }]);
         effects.push({ observation: obsId });
         st.readings.push({ id: id('rd'), marker: 'hb', value: v, date: value.date || today, observationId: obsId });
@@ -963,7 +965,7 @@ store.onStep(() => {
     deliver(st);
   }
 });
-store.onReset(() => { states.clear(); seed = null; seq = 1; });
+store.onReset(() => { states.clear(); seed = null; });
 
 /** Demo "Next event": move the clock until this Donor gets a new Card, not counting their routine Reminders (max two months). */
 function nextEvent(donorId) {

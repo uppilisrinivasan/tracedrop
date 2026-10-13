@@ -18,6 +18,8 @@ const fmtDay = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString(
 
 /** Cards the chat below already shows on Home, so the list above doesn't repeat them. */
 export const chatCards = new Set<string>();
+// After a demo Reset those Cards are gone
+window.addEventListener('demo:reset', () => chatCards.clear());
 
 export function askDrop(question: string) {
   window.dispatchEvent(new CustomEvent('drop:ask', { detail: question }));
@@ -43,8 +45,11 @@ export default function DropFeed({ donorId, version, refresh, calmLine, storiesI
   // A Card opened or answered in the Drop panel shows up here too
   useEffect(() => {
     const reload = () => api.drop(donorId).then(setView).catch(() => {});
+    // After a demo Reset the Cards on screen no longer exist: drop them at once, then load the fresh ones
+    const reset = () => { setView(null); setShowAll(false); setEarlierOpen(false); reload(); };
     window.addEventListener('drop:changed', reload);
-    return () => window.removeEventListener('drop:changed', reload);
+    window.addEventListener('demo:reset', reset);
+    return () => { window.removeEventListener('drop:changed', reload); window.removeEventListener('demo:reset', reset); };
   }, [donorId]);
   useEffect(() => {
     if (!version) return;

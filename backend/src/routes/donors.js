@@ -40,10 +40,11 @@ async function withFallback(res, aiFn, fallbackFn) {
 }
 
 router.get('/', (req, res) => {
-  const personas = ['D-001', 'D-002', 'D-003', 'D-017', 'D-050', 'D-033'];
+  // The New donor (a new user with no records) comes first; the rest are the demo Personas
+  const personas = ['D-NEW', 'D-001', 'D-002', 'D-003', 'D-017', 'D-050', 'D-033'];
   ok(res, personas.map((id) => {
     const d = store.getDonor(id);
-    return { id, name: d.name, bloodGroup: d.bloodGroup, language: d.language };
+    return { id, name: d.name, bloodGroup: d.bloodGroup, language: d.language, newUser: Boolean(d.newUser) };
   }));
 });
 

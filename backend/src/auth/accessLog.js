@@ -24,7 +24,7 @@ async function recordSignIn(user, req) {
       firstSeen: prev.firstSeen || now,
       lastSeen: now,
       signInCount: Number(prev.signInCount || 0) + 1,
-    });
+    }, { merge: true }); // keep booking preferences and anything else saved on the account
   });
   await store.collection('accessEvents').add({
     sub: user.sub,

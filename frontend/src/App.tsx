@@ -33,15 +33,21 @@ function readStored(key: string, fallback: string) {
   }
 }
 
+/** "Arjun Rao · B+", or just "New donor" for the new user, who has no blood group on record yet. */
+function personaLabel(p: { name: string; bloodGroup: string | null }) {
+  return p.bloodGroup ? `${p.name} · ${p.bloodGroup}` : p.name;
+}
+
 function initialScreen(): Screen {
   const hash = window.location.hash.replace('#', '') as Screen;
   return NAV.some((n) => n.id === hash) || hash === 'plan' || hash === 'labs' || hash === 'checkups' || hash === 'ai' ? hash : 'home';
 }
 
 export default function App({ user, clientId, onSignOut }: { user: AuthUser; clientId: string; onSignOut: () => void }) {
-  const [donorId, setDonorId] = useState(() => readStored('tracedrop.donor', 'D-001'));
+  // A first visit opens on the New donor, where a new user starts
+  const [donorId, setDonorId] = useState(() => readStored('tracedrop.donor', 'D-NEW'));
   const [screen, setScreen] = useState<Screen>(initialScreen);
-  const [personas, setPersonas] = useState<{ id: string; name: string; bloodGroup: string }[]>([]);
+  const [personas, setPersonas] = useState<{ id: string; name: string; bloodGroup: string | null; newUser?: boolean }[]>([]);
   const [version, setVersion] = useState(0); // bump to refresh data after a donation or upload
 
   useEffect(() => { api.personas().then(setPersonas).catch(() => setPersonas([])); }, []);
@@ -64,12 +70,12 @@ export default function App({ user, clientId, onSignOut }: { user: AuthUser; cli
 
   const personaPicker = (
     <select className="persona-select" value={donorId} onChange={(e) => { setDonorId(e.target.value); go('home'); }} aria-label="Signed in as (demo donor)">
-      {personas.map((p) => <option key={p.id} value={p.id}>{p.name} · {p.bloodGroup}</option>)}
+      {personas.map((p) => <option key={p.id} value={p.id}>{personaLabel(p)}</option>)}
     </select>
   );
 
   const donor = personas.find((p) => p.id === donorId);
-  const donorLabel = donor ? `${donor.name} · ${donor.bloodGroup}` : '';
+  const donorLabel = donor ? personaLabel(donor) : '';
 
   return (
     <div className="shell">

@@ -1,11 +1,18 @@
 /** Demo-only bar: moves the shared demo clock so Drop's behaviour over days and weeks can be shown. */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api, type DemoClock } from '../api';
 import { Icon } from '../ui';
 import DropKnows from './drop/DropKnows';
 import './drop/drop.css';
 
 const TIMES: Record<DemoClock['partName'], string> = { morning: '8 am', afternoon: '2 pm', evening: '7 pm', night: '9 pm' };
+
+/** Tell the rest of the app the demo was put back to the start, so the chat forgets what it showed. */
+export function announceReset() {
+  window.dispatchEvent(new CustomEvent('demo:reset'));
+}
+
+const tick = (c: DemoClock) => `${c.date}:${c.part}`;
 
 function fmt(iso: string) {
   return new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
@@ -18,21 +25,32 @@ export default function DemoBar({ donorId, onChange }: { donorId: string; onChan
   const [hidden, setHidden] = useState(false);
   const [knows, setKnows] = useState(false);
 
-  // Stay in step with the server: it can restart (which resets the demo) or move on elsewhere
+  const last = useRef<DemoClock | null>(null);
+
+  // Stay in step with the server: it can restart (which resets the demo) or move on elsewhere.
+  // A clock that went backwards means someone reset the demo (or the server restarted).
   useEffect(() => {
-    const load = () => api.demoClock().then(setClock).catch(() => setClock(null));
+    const see = (next: DemoClock) => {
+      if (last.current && tick(next) < tick(last.current)) announceReset();
+      last.current = next;
+      setClock(next);
+    };
+    const load = () => api.demoClock().then(see).catch(() => setClock(null));
     load();
-    const onClock = (e: Event) => setClock((e as CustomEvent<DemoClock>).detail);
+    const onClock = (e: Event) => see((e as CustomEvent<DemoClock>).detail);
     window.addEventListener('demo:clock', onClock);
     window.addEventListener('focus', load);
     return () => { window.removeEventListener('demo:clock', onClock); window.removeEventListener('focus', load); };
   }, []);
   if (!clock) return null; // demo mode is off
 
-  async function run(action: Promise<DemoClock>) {
+  async function run(action: Promise<DemoClock>, reset = false) {
     setBusy(true);
     try {
-      setClock(await action);
+      const next = await action;
+      last.current = next;
+      setClock(next);
+      if (reset) announceReset();
       onChange();
     } finally {
       setBusy(false);
@@ -52,7 +70,7 @@ export default function DemoBar({ donorId, onChange }: { donorId: string; onChan
       <button className="b" disabled={busy} onClick={() => run(api.demoAdvance(4))}>+1 day</button>
       <button className="b" disabled={busy} onClick={() => run(api.demoAdvance(28))}>+1 week</button>
       <button className="b" disabled={busy} onClick={() => run(api.demoNext(donorId))}>Next event</button>
-      <button className="b" disabled={busy} aria-label="Reset the demo" title="Reset the demo" onClick={() => run(api.demoReset())}><Icon name="refresh" size={16} /></button>
+      <button className="b" disabled={busy} aria-label="Reset the demo" title="Reset the demo" onClick={() => run(api.demoReset(), true)}><Icon name="refresh" size={16} /></button>
       <button className="b" aria-pressed={knows} onClick={() => setKnows(!knows)}><Icon name="cpu" size={15} /> What Drop knows</button>
       {knows && <DropKnows donorId={donorId} onClose={() => setKnows(false)} />}
       {info && (

@@ -9,7 +9,7 @@ A person registered to give blood, whether eligible, deferred or lapsed. Everyon
 _Avoid_: User, patient, member
 
 **Persona**:
-One of the fixed demo Donors (e.g. Arjun, Meera, Ananya) chosen from the persona switcher, so the whole app shows that Donor's view.
+One of the fixed demo Donors (e.g. Arjun, Meera, Ananya) chosen from the persona switcher; choosing one means using the app as that Donor. One Persona, the New donor, is a new user with no records yet, so it starts with the Intro.
 _Avoid_: Test user, demo account
 
 **Drop**:
@@ -19,6 +19,20 @@ _Avoid_: Copilot, chatbot, coach, bot
 **Plan**:
 The Donor's single, living set of health goals, Reminders and weekly activity target. It is first written from their results and then kept up to date by Drop.
 _Avoid_: Care plan, follow-up plan, programme
+
+**Intro**:
+Drop's scripted first conversation with a newly registered Donor, in Home's chat: what TraceDrop is, their blood's journey, health between donations, their data, their Choices and booking preferences. Replayable; can be skipped.
+_Avoid_: Onboarding wizard, tutorial, tour
+
+## Sharing
+
+**Choices**:
+The Donor's three sharing switches: share their health score with their insurer (off unless they turn it on), appear on their Circles' leaderboards, and be counted in their Circles' totals. In the demo they belong to the Persona being viewed, like the rest of its state.
+_Avoid_: Consent settings, privacy settings, permissions
+
+**Circle**:
+One group of Donors who see their impact together: a family, a workplace or a club. Members see only totals, and names on a leaderboard only for those whose Choices allow it.
+_Avoid_: Community (the Community page lists a Donor's Circles), group, team
 
 ## Talking to the donor
 

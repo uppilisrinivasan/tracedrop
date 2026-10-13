@@ -234,7 +234,7 @@ export const api = {
   savePreferences: (preferences: Partial<BookingPreferences>) => request<BookingPreferences>('/auth/preferences', { method: 'PUT', body: JSON.stringify(preferences) }),
   bookingTurn: (preferences?: Partial<BookingPreferences>, answer?: { step: string; value: string | BookingPreferences['location'] }) =>
     post<BookingTurn>('/auth/booking/turn', { preferences, answer }),
-  personas: () => request<{ id: string; name: string; bloodGroup: string; language: string }[]>('/donors'),
+  personas: () => request<{ id: string; name: string; bloodGroup: string | null; language: string; newUser: boolean }[]>('/donors'),
   overview: (id: string) => request<Overview>(`/donors/${id}/overview`),
   impact: (id: string) => request<{ summary: ImpactSummary; journeys: Journey[]; k: number }>(`/donors/${id}/impact`),
   stakeholders: (id: string) => request<Stakeholder[]>(`/donors/${id}/stakeholders`),

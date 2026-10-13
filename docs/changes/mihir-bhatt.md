@@ -1,8 +1,19 @@
 # Changes by Mihir Bhatt
 
-One entry per commit on the Drop-first redesign (branch `feature/drop-home`), newest first, so any change can be traced or reverted.
+One entry per commit, newest first, so any change can be traced or reverted: the Drop-first redesign (branch `feature/drop-home`) and the New donor's Intro and "Your data" (branch `feature/onboarding`).
 To revert one: find it with `git log --oneline --grep "<commit title>"`, then `git revert <hash>`.
 The design behind these changes is in `CONTEXT.md` (vocabulary) and the build plan.
+
+## 2026-10-14 · Onboarding step 1: glossary, two fixes, and the New donor
+
+- **What and why:**
+  - `CONTEXT.md` gets the onboarding vocabulary: **Intro**, **Choices** and **Circle**, and the **Persona** entry now says choosing one means using the app as that Donor, with the New donor as a new user who starts with the Intro.
+  - **Sign-in wiped saved preferences:** every Google sign-in rewrote the user record in Firestore without merging, so saved donation preferences disappeared. It now merges. This matters more now that the Intro saves donation preferences with the account.
+  - **Demo Reset left old chat behind:** Drop's Card ids restarted at 1 after a Reset, so the chat could show a new Card under an old one's id. Ids now never repeat (they also carry a per-server-start stamp). The demo bar announces a Reset (also when it sees the demo clock go backwards because someone else reset it), and the chat clears its saved conversation and its list of Cards it showed; the Card list on Home drops its old Cards straight away.
+  - **The New donor:** the demo overlay loader accepts donors, so `data/demo/overlay.json` adds one without touching the synthetic data: a new id (`D-NEW`) and no records at all (no donations, results, blood group, Circles, insurer or Plan; Choices at their defaults: insurer off, leaderboard on, totals on; English). `data/demo/drop-seed.json` gives Drop an empty start for them. Drop no longer sends "Get ready to donate" to someone who has never donated (they book their first donation from Home or the Intro). The New donor is kept out of the Ecosystem view's network figures, which stay about the 300 synthetic donors.
+  - The donor picker lists **New donor** first, and a first visit (nothing saved in the browser) opens on them. Their screens are fixed in the next commit; until then Home shows an error for them, and the server stays up.
+- **Files:** `CONTEXT.md`, `backend/src/auth/accessLog.js`, `backend/src/domain/drop.js`, `backend/src/data/store.js`, `backend/src/routes/donors.js`, `backend/src/routes/platform.js`, `backend/test/newdonor.test.js` (new), `backend/test/domain.test.js` (the cover test covers donors with an insurer), `data/demo/overlay.json`, `data/demo/drop-seed.json`, `frontend/src/App.tsx`, `frontend/src/api.ts`, `frontend/src/components/DemoBar.tsx`, `frontend/src/components/Copilot.tsx`, `frontend/src/components/drop/DropFeed.tsx`.
+- **Revert:** safe to revert on its own, but the onboarding commits after it need the New donor.
 
 ## 2026-10-13 · Change or cancel bookings any time; Home uses the full width on ultra-wide screens
 

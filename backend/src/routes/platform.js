@@ -18,7 +18,8 @@ store.onReset(() => { networkCache = null; });
 
 function network() {
   if (networkCache) return networkCache;
-  const donors = store.allDonors();
+  // The network figures cover the synthetic donors; the New donor has no records to add
+  const donors = store.allDonors().filter((d) => !d.newUser);
   const donations = store.allDonations();
   const completed = donations.filter((d) => d.status === 'completed');
   const components = store.allComponents();

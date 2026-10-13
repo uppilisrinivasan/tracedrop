@@ -200,17 +200,27 @@ export default function Copilot({ donorId, go, clientId, inline = false, top }: 
     const onChanged = () => reloadView();
     const onBook = () => bookRef.current();
     const onCheckup = () => checkupRef.current();
+    // The demo went back to the start: the saved conversation and the Cards it showed no longer exist
+    const onReset = () => {
+      conversations.clear();
+      setTurns([]);
+      setHistory(null);
+      setStory(null);
+      reloadView();
+    };
     window.addEventListener('drop:ask', onAsk);
     window.addEventListener('drop:open', onOpen);
     window.addEventListener('drop:changed', onChanged);
     window.addEventListener('drop:book', onBook);
     window.addEventListener('drop:checkup', onCheckup);
+    window.addEventListener('demo:reset', onReset);
     return () => {
       window.removeEventListener('drop:ask', onAsk);
       window.removeEventListener('drop:open', onOpen);
       window.removeEventListener('drop:changed', onChanged);
       window.removeEventListener('drop:book', onBook);
       window.removeEventListener('drop:checkup', onCheckup);
+      window.removeEventListener('demo:reset', onReset);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [donorId]);

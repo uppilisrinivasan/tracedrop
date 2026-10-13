@@ -31,7 +31,6 @@ function groupBy(items, key) {
 }
 
 const institutions = read('institutions.json');
-const donors = new Map(read('donors.json').map((d) => [d.id, d]));
 let donationsByDonor;
 let observationsByDonor;
 let componentsByDonor;
@@ -44,6 +43,13 @@ function readDemo(name) {
   const file = path.join(DATA_DIR, 'demo', name);
   return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : null;
 }
+
+/** The synthetic donors plus any the demo overlay adds (the New donor), without changing the synthetic ones. */
+function loadDonors() {
+  const overlay = readDemo('overlay.json') || {};
+  return new Map([...read('donors.json'), ...(overlay.donors || [])].map((d) => [d.id, d]));
+}
+const donors = loadDonors();
 
 /** (Re)load the records that demo sessions can change, plus the demo overlay (e.g. Arjun's 3 Oct donation). */
 function loadRecords() {

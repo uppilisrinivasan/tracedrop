@@ -47,7 +47,7 @@ test("Arjun's 3 Oct donation (demo overlay) shows stage 1 BP on top of the risin
 });
 
 test('cover never goes below base and never above the cap', () => {
-  for (const d of store.allDonors()) {
+  for (const d of store.allDonors().filter((x) => x.policyId)) {
     const c = cover.evaluate(d.id);
     assert.ok(c.currentCover >= c.baseCover, d.id);
     assert.ok(c.currentCover <= 800000, d.id);

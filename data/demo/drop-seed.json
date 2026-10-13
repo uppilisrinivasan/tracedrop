@@ -1,5 +1,14 @@
 {
   "_note": "Drop's starting state for each demo Persona on the demo start date (10 Oct 2026). Read by backend/src/domain/drop.js. Text here is the rule-based wording; the AI may rewrite open Cards.",
+  "D-NEW": {
+    "language": "en",
+    "budget": "healthy",
+    "memory": [],
+    "plan": null,
+    "reminders": [],
+    "earlier": [],
+    "open": []
+  },
   "D-001": {
     "language": "en",
     "budget": "goal",

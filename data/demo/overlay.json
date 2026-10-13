@@ -1,5 +1,27 @@
 {
-  "_note": "Demo additions applied on top of data/synthetic at load time (kept separate so regenerating synthetic data does not remove them). Records with availableOn stay hidden until the demo clock reaches that date.",
+  "_note": "Demo additions applied on top of data/synthetic at load time: donors (the New donor, a new user with no records), donations, observations and components (kept separate so regenerating synthetic data does not remove them). Records with availableOn stay hidden until the demo clock reaches that date.",
+  "donors": [
+    {
+      "id": "D-NEW",
+      "name": "New donor",
+      "newUser": true,
+      "sex": null,
+      "age": null,
+      "bloodGroup": null,
+      "language": "en",
+      "district": null,
+      "heightCm": null,
+      "smoker": null,
+      "familyHistory": [],
+      "policyId": null,
+      "consent": {
+        "shareHealthWithInsurer": false,
+        "showOnLeaderboard": true,
+        "includeInCommunityStats": true
+      },
+      "communityIds": []
+    }
+  ],
   "donations": [
     {
       "id": "D-001-V4",
