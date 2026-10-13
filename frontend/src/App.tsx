@@ -3,6 +3,7 @@ import { api, type AuthUser } from './api';
 import { Icon } from './ui';
 import Copilot from './components/Copilot';
 import DemoBar from './components/DemoBar';
+import AccountMenu from './components/AccountMenu';
 import Home from './pages/Home';
 import Impact from './pages/Impact';
 import Health from './pages/Health';
@@ -67,6 +68,9 @@ export default function App({ user, clientId, onSignOut }: { user: AuthUser; cli
     </select>
   );
 
+  const donor = personas.find((p) => p.id === donorId);
+  const donorLabel = donor ? `${donor.name} · ${donor.bloodGroup}` : '';
+
   return (
     <div className="shell">
       <aside className="sidebar">
@@ -77,19 +81,14 @@ export default function App({ user, clientId, onSignOut }: { user: AuthUser; cli
           </button>
         ))}
         <div className="sidebar-foot">
-          <span className="tiny faint">{user.local ? 'Local development' : 'Google account'}</span>
-          <span className="tiny bold">{user.local ? 'Sign-in skipped' : user.email}</span>
-          {!user.local && <button className="btn btn-ghost btn-sm" onClick={onSignOut}>Sign out</button>}
-          <span className="tiny faint">Demo donor</span>
-          {personaPicker}
-          <span className="tiny faint">All data is synthetic.</span>
+          <AccountMenu user={user} donorPicker={personaPicker} donorLabel={donorLabel} onSignOut={onSignOut} />
         </div>
       </aside>
 
       <main className="main">
         <div className="mobile-top">
           <div className="brand" style={{ padding: 0 }}><span className="brand-mark"><Icon name="drop" size={18} stroke={2.4} /></span>TraceDrop</div>
-          <div style={{ maxWidth: 180 }}>{personaPicker}</div>
+          <AccountMenu user={user} donorPicker={personaPicker} donorLabel={donorLabel} onSignOut={onSignOut} compact />
         </div>
         <DemoBar donorId={donorId} onChange={refresh} />
         {screen === 'home' && <Home {...page} />}

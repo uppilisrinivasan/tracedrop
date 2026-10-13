@@ -104,7 +104,29 @@ p { margin: 0; }
 }
 .nav-item:hover { background: var(--surface-2); color: var(--text); }
 .nav-item.active { background: var(--brand-soft); color: var(--brand-ink); font-weight: 600; }
-.sidebar-foot { margin-top: auto; display: flex; flex-direction: column; gap: 8px; padding: 8px; }
+.sidebar-foot { margin-top: auto; padding: 8px 0 0; border-top: 1px solid var(--border); }
+
+/* Account chip and menu */
+.account { position: relative; }
+.account-chip { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px; border-radius: 12px; text-align: left; color: var(--text); }
+.account-chip:hover, .account-chip[aria-expanded='true'] { background: var(--surface-2); }
+.account-compact .account-chip { width: auto; padding: 2px; border-radius: 50%; }
+.avatar { border-radius: 50%; object-fit: cover; flex: none; display: block; }
+.avatar-initials { display: grid; place-items: center; background: var(--brand-soft); color: var(--brand-ink); font-weight: 700; }
+.account-who { display: flex; flex-direction: column; min-width: 0; flex: 1; line-height: 1.25; }
+.account-who b { font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account-who span { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account-caret { color: var(--faint); transform: rotate(-90deg); flex: none; }
+.account-menu { position: absolute; bottom: calc(100% + 8px); left: 0; right: 0; min-width: 240px; z-index: 40; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35); padding: 6px; display: grid; gap: 2px; }
+.account-compact .account-menu { bottom: auto; top: calc(100% + 8px); left: auto; right: 0; width: 280px; }
+.account-head { display: flex; align-items: center; gap: 10px; padding: 10px; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+.account-section { display: grid; gap: 6px; padding: 8px 10px; }
+.account-label { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--faint); }
+.account-links { display: flex; gap: 14px; padding: 6px 10px 8px; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+.account-links a { font-size: 12.5px; color: var(--muted); text-decoration: none; }
+.account-links a:hover { color: var(--text); }
+.account-item { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 10px; font-size: 13.5px; font-weight: 600; text-align: left; color: var(--text); }
+.account-item:hover { background: var(--surface-2); }
 .persona-select { width: 100%; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); }
 
 .main {
