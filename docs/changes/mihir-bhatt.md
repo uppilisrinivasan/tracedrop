@@ -4,6 +4,18 @@ One entry per commit, newest first, so any change can be traced or reverted: the
 To revert one: find it with `git log --oneline --grep "<commit title>"`, then `git revert <hash>`.
 The design behind these changes is in `CONTEXT.md` (vocabulary) and the build plan.
 
+## 2026-10-14 · Share images and share buttons on a Story's last slide
+
+- **What and why:** step 3 of the Story and Badge build plan (spec sections 3 and 4). A component's Story now ends on its summary postcard as an image you can save or share, and the old text share is gone.
+  - `shareImage.ts` draws the two "Keepsakes" images on a 1080×1920 canvas: the postcard (tilted card on the component's tint, perforated stamp, postmark, Fraunces headline, context or role, month, lifetime patients, the mark) and the Badge (felt, ribbon, gold medal with the ring glyph, name, rule, earned month, 8 pins, "n of 8 Badges"). Numbers are drawn as type; check, five-drop, vial and heart as icons. It waits for Fraunces with `document.fonts.load` and keeps the top 220px and bottom 260px free of key content. A long name or rule lifts the medal so the text never reaches the pins.
+  - `ShareButtons.tsx`: Download image, Copy image, and Share… only when `navigator.canShare({ files })` is true, then the help line and the feedback notes. Copy or Share… falling over saves the image instead. Files are `tracedrop-{component}-{mon}-{year}.png` and `tracedrop-badge-{badge}.png`. The PNG is drawn as the buttons mount. No caption, no WhatsApp link, no Copy text.
+  - `StoryViewer` takes an optional `last` (postcard or Badge). With it, the last slide is the image under dark top and bottom scrims with the share buttons; without it there is no share at all (Weekly report, Intro). The "Share to WhatsApp status" text share and its `wa.me` fallback are removed. It now renders through a portal to `document.body`: inside Home's chat it sat under a `.fade-in` transform, which pushed the fixed overlay (and so the share buttons) off-screen.
+  - Drop's impact Card now carries `last: { postcard }` from `componentStory`, and Home's chat and the Drop feed pass it to the viewer.
+  - `ShareBar.tsx` and My Impact's "Share my impact" button are removed; the Badge shelf replaces them in step 4.
+  - Fraunces is loaded in `index.html` for the images.
+- **Files:** `frontend/src/components/share/shareImage.ts` (new), `frontend/src/components/share/ShareButtons.tsx` (new), `frontend/src/components/drop/StoryViewer.tsx`, `frontend/src/components/drop/drop.css`, `frontend/src/components/drop/DropFeed.tsx`, `frontend/src/components/Copilot.tsx` (one prop), `frontend/src/components/impact/ShareBar.tsx` (deleted), `frontend/src/pages/Impact.tsx`, `frontend/src/api.ts` (`Postcard`, `Badge`, `StoryLast`, `badges` on the impact response), `frontend/index.html`, `backend/src/domain/drop.js` (the impact Card's `last`).
+- **Revert:** safe to revert on its own before step 4 lands; the Story goes back to its text share and My Impact gets "Share my impact" back.
+
 ## 2026-10-14 · Keep the share-image prototype off the feature branch
 
 - **What and why:** the step 1 commit brought `docs/wayfinder/story-and-badge/share-images.prototype.html` onto `feature/story-and-badge` along with the wayfinder docs. Prototypes live only on their throwaway branch, so it is removed here. It stays on `prototype/share-images` (commit 747ef00), which the spec, build plan and ticket already point to.

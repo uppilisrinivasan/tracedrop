@@ -426,10 +426,13 @@ function words(st, c) {
     case 'impact:impact': {
       const j = impact.donorJourneys(donorId).find((x) => x.id === d.componentId);
       const r = j.recipient;
+      const s = componentStory(donorId, j.id);
       return {
         text: `My ${j.name.toLowerCase()} from ${fmt(j.donationDate)} helped a patient: ${r.context.toLowerCase()} (${r.patient.toLowerCase()}, ${r.place}).`,
         main: { label: 'Watch the story', value: 'seen', story: true },
-        story: componentStory(donorId, j.id).slides,
+        story: s.slides,
+        // The Story ends on the summary postcard, which can be shared as an image
+        last: { postcard: s.postcard },
       };
     }
     case 'results:results': {
@@ -823,7 +826,7 @@ function cardView(st, c) {
     text: demoBookingCard ? w.text : ai ? c.aiText : w.text, ruleText: w.text, byAi: ai && !demoBookingCard,
     main: relabel(w.main, l.main), out: relabel(w.out, l.out),
     chips: (w.chips || []).map((chip, i) => relabel(chip, l.chips?.[i])), wheel: w.wheel || null,
-    upload: Boolean(w.upload), story: w.story || null, snoozes: c.snoozes,
+    upload: Boolean(w.upload), story: w.story || null, last: w.last || null, snoozes: c.snoozes,
   };
 }
 

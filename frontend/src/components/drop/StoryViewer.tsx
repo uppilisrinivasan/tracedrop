@@ -1,10 +1,20 @@
-/** Tap-through Story: click or tap the left/right half, arrow keys, Esc to close. The last slide can be shared. */
+/**
+ * Tap-through Story: click or tap the left/right half, arrow keys, Esc to close.
+ * When `last` is given (a postcard or a Badge), the Story ends on that share image
+ * with its share buttons. Without it there is no share at all (Weekly report, Intro).
+ */
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
+import type { StoryLast } from '../../api';
+import ShareButtons from '../share/ShareButtons';
 
-export default function StoryViewer({ title, slides, onClose }: { title: string; slides: string[]; onClose: () => void }) {
+export default function StoryViewer({ title, slides, last, onClose }: { title: string; slides: string[]; last?: StoryLast | null; onClose: () => void }) {
+  const count = slides.length + (last ? 1 : 0);
   const [i, setI] = useState(0);
-  const last = i === slides.length - 1;
-  const go = (step: number) => setI((n) => Math.max(0, Math.min(slides.length - 1, n + step)));
+  const [image, setImage] = useState('');
+  const onShare = Boolean(last) && i === count - 1;
+  const alt = !last ? '' : 'postcard' in last ? last.postcard.headline : `Badge: ${last.badge.name}`;
+  const go = (step: number) => setI((n) => Math.max(0, Math.min(count - 1, n + step)));
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -17,33 +27,25 @@ export default function StoryViewer({ title, slides, onClose }: { title: string;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const share = async () => {
-    const text = `${slides.join(' ')}\n\nShared from TraceDrop.`;
-    try {
-      if (navigator.share) {
-        await navigator.share({ text });
-        return;
-      }
-    } catch {
-      return; // the donor closed the share sheet
-    }
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
-  };
-
-  return (
+  // A portal, so an animated (transformed) parent can't pull the fixed overlay off-screen
+  return createPortal(
     <div className="story-back" role="dialog" aria-modal="true" aria-label={title} onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="story">
-        <div className="story-prog">{slides.map((_, n) => <i key={n} className={n <= i ? 'on' : ''} />)}</div>
+      <div className={`story${onShare ? ' story-image' : ''}`}>
+        {onShare && (image
+          ? <img className="story-img" src={image} alt={alt} />
+          : <div className="story-img" />)}
+        <div className="story-prog">{Array.from({ length: count }, (_, n) => <i key={n} className={n <= i ? 'on' : ''} />)}</div>
         <div className="story-top"><span>{title}</span><button className="story-close" aria-label="Close" onClick={onClose}>×</button></div>
-        <div className="story-body" aria-live="polite">{slides[i]}</div>
+        <div className="story-body" aria-live="polite">{onShare ? null : slides[i]}</div>
         <div className="story-zones">
           <button aria-label="Previous" onClick={() => go(-1)} />
           <button aria-label="Next" onClick={() => go(1)} />
         </div>
-        {last
-          ? <button className="story-share" onClick={share}>Share to WhatsApp status</button>
-          : <div className="story-hint">Tap the right side or press → for the next part</div>}
+        {onShare
+          ? <ShareButtons last={last!} onImage={setImage} />
+          : <div className="story-hint">{i < count - 1 && 'Tap the right side or press → for the next part'}</div>}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

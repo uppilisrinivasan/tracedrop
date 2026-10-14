@@ -194,8 +194,17 @@ export interface DropAction { label: string; value: unknown; story?: boolean; as
 export interface DropCard {
   id: string; type: DropCardType; variant: string; label: string; urgent: boolean; counted: boolean; createdOn: string;
   text: string; ruleText: string; byAi: boolean; main: DropAction | null; out: DropAction | null; chips: DropAction[];
-  wheel: { kind: 'bp'; s: number; d: number } | null; upload: boolean; story: string[] | null; snoozes: number;
+  wheel: { kind: 'bp'; s: number; d: number } | null; upload: boolean; story: string[] | null; last: StoryLast | null; snoozes: number;
 }
+/** The summary postcard that ends a component's Story (backend/src/domain/story.js). */
+export interface Postcard { kind: string; component: string; headline: string; context: string; month: string; patientsHelped: number }
+/** One of the 8 Badges (backend/src/domain/badges.js). */
+export interface Badge {
+  id: string; name: string; ring: string; rule: string; goal: string; earned: boolean;
+  earnedMonth: string | null; earnedLabel: string | null; completedBy: { componentId?: string; donationId?: string } | null; progress: string | null;
+}
+/** A Story's shareable last slide: the postcard, or a Badge with how many of the 8 the Donor holds. */
+export type StoryLast = { postcard: Postcard } | { badge: Badge; held: number };
 export interface DropReading { id: string; marker: 'bp' | 'hb'; date: string; s?: number; d?: number; value?: number; observationId?: string }
 export interface DropPlan {
   goals: { marker: string; label: string }[]; activity: { label: string; minutesPerWeek: number } | null; notes?: string[];
@@ -294,7 +303,7 @@ export const api = {
     post<BookingTurn>('/auth/booking/turn', { preferences, answer }),
   personas: () => request<{ id: string; name: string; bloodGroup: string | null; language: string; newUser: boolean }[]>('/donors'),
   overview: (id: string) => request<Overview>(`/donors/${id}/overview`),
-  impact: (id: string) => request<{ summary: ImpactSummary; journeys: Journey[]; k: number }>(`/donors/${id}/impact`),
+  impact: (id: string) => request<{ summary: ImpactSummary; journeys: Journey[]; badges: Badge[]; k: number }>(`/donors/${id}/impact`),
   stakeholders: (id: string) => request<Stakeholder[]>(`/donors/${id}/stakeholders`),
   health: (id: string) => request<HealthData>(`/donors/${id}/health`),
   cover: (id: string) => request<CoverData | CoverNotLinked>(`/donors/${id}/cover`),

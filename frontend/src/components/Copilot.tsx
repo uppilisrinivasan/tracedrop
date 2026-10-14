@@ -377,7 +377,7 @@ export default function Copilot({ donorId, go, clientId, inline = false, top, fi
         ))}
         {busy && <Thinking label="Drop is checking your records…" />}
       </div>
-      {story?.story && <StoryViewer title={story.label} slides={story.story} onClose={storyDone} />}
+      {story?.story && <StoryViewer title={story.label} slides={story.story} last={story.last} onClose={storyDone} />}
       {!introLive && <div className="suggestions suggestions-stay">
         {stories.map((c) => <StoryChip key={c.id} card={c} onClick={() => watch(c)} />)}
         {(firstTime ? FIRST_TIME_SUGGESTIONS : SUGGESTIONS).map((s, i) => <button key={s} className={`suggestion ${i === 0 ? 'suggestion-main' : ''}`} style={{ minHeight: 36 }} disabled={busy} onClick={() => send(s)}>{s}</button>)}

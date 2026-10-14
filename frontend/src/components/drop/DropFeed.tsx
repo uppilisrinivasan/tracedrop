@@ -169,7 +169,7 @@ export default function DropFeed({ donorId, version, refresh, calmLine, storiesI
       {error && <ErrorNote error={error} />}
 
       {story && story.story && (
-        <StoryViewer title={story.label} slides={story.story} onClose={() => { const c = story; setStory(null); answer(c, c.main?.value ?? 'seen'); }} />
+        <StoryViewer title={story.label} slides={story.story} last={story.last} onClose={() => { const c = story; setStory(null); answer(c, c.main?.value ?? 'seen'); }} />
       )}
       {upload && (
         <ReportUpload donorId={donorId} onClose={() => setUpload(null)} onSave={(value) => { const c = upload; setUpload(null); answer(c, value); }} />

@@ -3,7 +3,6 @@ import { api, fmtDate, type Journey, type Stakeholder } from '../api';
 import type { PageProps } from '../App';
 import { AIBadge, ErrorNote, Icon, Loading, Section, useLoad } from '../ui';
 import DropLine from '../components/drop/DropLine';
-import ShareBar from '../components/impact/ShareBar';
 import { ConcernForm, ConcernList } from '../components/impact/Concerns';
 import DonationCalendar from '../components/impact/DonationCalendar';
 
@@ -25,7 +24,6 @@ export default function Impact({ donorId, version }: PageProps) {
   const [tab, setTab] = useState<'units' | 'institutions'>('units');
   const [date, setDate] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
-  const [sharing, setSharing] = useState(false);
   const top = useRef<HTMLDivElement>(null);
 
   const byDonation = useMemo(() => {
@@ -69,7 +67,6 @@ export default function Impact({ donorId, version }: PageProps) {
           <div className="page-sub">Every donation is separated into components. Follow each one to the patient it helped — privately.</div>
         </div>
         <div className="row wrap">
-          <button className="btn btn-primary btn-sm" onClick={() => setSharing(!sharing)}><Icon name="share" size={15} /> Share my impact</button>
           <div className="tabs">
             <button className={`tab ${tab === 'units' ? 'active' : ''}`} onClick={() => setTab('units')}>My donations</button>
             <button className={`tab ${tab === 'institutions' ? 'active' : ''}`} onClick={() => setTab('institutions')}>Who benefited</button>
@@ -77,16 +74,6 @@ export default function Impact({ donorId, version }: PageProps) {
         </div>
       </div>
       <DropLine donorId={donorId} screen="impact" version={version} />
-
-      {sharing && (
-        <div className="card fade-in">
-          <ShareBar item={{
-            headline: `My blood has helped ${s.patientsHelped} patient${s.patientsHelped === 1 ? '' : 's'}`,
-            story: `${s.components} components came from my donations; ${s.patientsHelped} reached patients${s.children ? `, including ${s.children} for children` : ''}. ${s.medicineDosesShare ? `My plasma also helped make about ${s.medicineDosesShare} medicine doses.` : ''} TraceDrop let me follow them privately.`,
-            shareText: `My blood donations have helped ${s.patientsHelped} patients so far. One donation can help up to three people. #DonateBlood`,
-          }} />
-        </div>
-      )}
 
       <div className="grid grid-4">
         <Stat value={s.patientsHelped} label="patients treated" />
