@@ -222,7 +222,7 @@ export default function Copilot({ donorId, go, clientId, inline = false, top, fi
       const { text, questions } = (e as CustomEvent).detail as { text: string; questions: string[] };
       setOpen(true);
       reloadView();
-      setTurns((t) => [...t, { role: 'ai', text: `${text} What would you like to know?`, questions }]);
+      if (text) setTurns((t) => [...t, { role: 'ai', text: `${text} What would you like to know?`, questions }]);
     };
     const onChanged = () => reloadView();
     // Mid-Intro the chat is busy with the Intro, so booking opens on the Donate screen instead

@@ -205,3 +205,52 @@ test('the Detailed analysis route is gone', () => {
   assert.ok(!routes.includes('/:donorId/care-plan'));
   assert.equal(store.session.carePlans, undefined);
 });
+
+/* ------------------------------------------------------------------ Health shows Goals (build plan step 4) */
+
+const screenLines = require('../src/domain/screenLines');
+const DAY = 4; // parts of a day on the demo clock
+
+test("Arjun's results Card opens his Goal's Chat; there is no Save my Plan, and the Plan comes with the results", () => {
+  for (let i = 0; i < DAY; i += 1) store.stepClock(); // Sun 11 Oct: his 3 Oct lab panel arrives
+  const v = drop.view('D-001');
+  const results = v.open.find((c) => c.type === 'results' && c.variant === 'results');
+  // The lab panel adds prediabetes to the same lifestyle Goal, which takes its new name
+  assert.equal(results.main.label, 'Open BP, blood sugar and cholesterol');
+  assert.equal(results.main.value, 'goal');
+  assert.equal(results.main.open.goalId, 'lifestyle');
+  assert.match(results.main.open.text, /^BP, blood sugar and cholesterol\. Target: BP under 130\/80\. Up at each of your last 4 donations: 126\/78 → 148\/94\.$/);
+  assert.deepEqual(results.chips.map((c) => c.label), ['Try demo check-up slots', 'Explain my results']);
+  assert.ok(drop._state('D-001').plan.nextCheckin, 'the Plan and its first Check-in come with the results');
+  drop.answer('D-001', results.id, 'goal');
+  assert.equal(drop.view('D-001').receipts[0].receipt, 'Results seen · opened BP, blood sugar and cholesterol');
+  for (let i = 0; i < DAY * 3; i += 1) store.stepClock();
+  assert.ok(!drop._state('D-001').cards.some((c) => c.variant === 'plan'), 'no "Your Plan is ready" Card');
+  // ALT came with the panel: no Goal, kept an eye on
+  assert.deepEqual(drop.view('D-001').keepAnEye.map((f) => f.id), ['ALT_HIGH']);
+});
+
+test("Health's view of a Goal: the write-up, the trend against the target and what opens its Chat", () => {
+  const [g] = drop.view('D-001').goals;
+  assert.equal(g.name, 'BP and cholesterol');
+  assert.equal(g.trend.marker, 'bp');
+  assert.equal(g.trend.line, 130);
+  assert.deepEqual(g.trend.points.map((p) => p.value), [126, 132, 136, 148]);
+  assert.deepEqual(g.also, ['Triglycerides 138 → 152 → 168']);
+  assert.equal(g.nextCheck, 'By 31 Oct'); // BP-G1 follow-up, 21 days from 10 Oct
+  assert.deepEqual(g.chat.questions, ['What could I do this week?', 'Why does my BP and cholesterol Goal matter?', 'Show my BP trend']);
+  assert.equal(g.writeup.by, 'rules');
+});
+
+test('a BP reading added from the Goal joins its trend as your own point, and never changes the Health score', () => {
+  const health = require('../src/domain/health');
+  const before = health.currentScore('D-001').score;
+  drop.logReading('D-001', { s: 128, d: 78 });
+  const [g] = drop.view('D-001').goals;
+  assert.deepEqual(g.trend.points.at(-1), { date: store.today(), value: 128, value2: 78, source: 'yours' });
+  assert.equal(health.currentScore('D-001').score, before);
+});
+
+test('"Your Plan has the next steps" is gone from Drop\'s line', () => {
+  for (const id of ['D-001', 'D-002', 'D-017', 'D-050', 'D-033', 'D-003']) assert.doesNotMatch(screenLines.line(id, 'health').text, /Your Plan has the next steps/);
+});

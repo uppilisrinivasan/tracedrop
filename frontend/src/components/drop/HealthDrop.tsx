@@ -1,35 +1,11 @@
 /**
- * The Health screen's view of what Drop keeps: the Donor's Plan, the readings
- * they added (deletable) and the blood centre's results (hideable from the
- * app; hiding never changes eligibility, which the blood centre decides).
+ * The Health screen's view of what Drop keeps: the readings the Donor added
+ * (deletable) and the blood centre's results (hideable from the app; hiding
+ * never changes eligibility, which the blood centre decides).
  */
 import { useState } from 'react';
 import { api, fmtDate, type DropView, type HealthData } from '../../api';
 import { Icon, Section } from '../../ui';
-
-const time12 = (hhmm: string) => {
-  const [h, m] = hhmm.split(':').map(Number);
-  return `${((h + 11) % 12) + 1}${m ? `:${String(m).padStart(2, '0')}` : ''} ${h < 12 ? 'am' : 'pm'}`;
-};
-
-export function PlanSection({ view }: { view: DropView | null }) {
-  const plan = view?.plan;
-  const goals = (view?.goals || []).filter((g) => g.state !== 'done');
-  return (
-    <Section title={<><Icon name="drop" size={18} /> Your Plan</>} sub="What Drop follows up with you between donations. It changes as you answer Drop's cards.">
-      {!plan && !goals.length && <p className="muted small">Your Plan appears after Drop explains your results. Nothing to do yet.</p>}
-      {goals.map((g) => <div key={g.id} className="row small"><span className="pill pill-ai">Goal</span><span>{g.name}: {g.target}</span></div>)}
-      {plan && (
-        <div className="stack mt-8" style={{ gap: 10 }}>
-          {plan.activity && <div className="row small"><span className="pill pill-good">Weekly</span><span>{plan.activity.label}</span></div>}
-          {plan.reminders.map((r) => <div key={r.id} className="row small"><span className="pill pill-info">Reminder</span><span>{r.label}, {time12(r.time)} daily</span></div>)}
-          {(plan.notes || []).map((n) => <div key={n} className="row small"><span className="pill pill-neutral">Note</span><span>{n}</span></div>)}
-          {plan.nextCheckin && <div className="tiny muted">Next check-in from Drop: {fmtDate(plan.nextCheckin.date)}</div>}
-        </div>
-      )}
-    </Section>
-  );
-}
 
 export function ReadingsSection({ donorId, view, data, onChange }: { donorId: string; view: DropView | null; data: HealthData; onChange: (v: DropView) => void }) {
   const [showHidden, setShowHidden] = useState(false);
@@ -54,7 +30,7 @@ export function ReadingsSection({ donorId, view, data, onChange }: { donorId: st
         {added.map((r) => (
           <div key={r.id} className="row" style={{ minHeight: 48, borderBottom: '1px solid var(--border)' }}>
             <span style={{ flex: 1 }}>{r.marker === 'bp' ? `BP ${r.s}/${r.d}` : `Hb ${r.value} g/dL`} <span className="tiny muted">· {fmtDate(r.date)}</span></span>
-            <button className="btn btn-sm" style={{ minHeight: 40 }} onClick={() => run(api.dropDeleteReading(donorId, r.id))}>Delete</button>
+            <button className="btn btn-sm" style={{ minHeight: 44 }} onClick={() => run(api.dropDeleteReading(donorId, r.id))}>Delete</button>
           </div>
         ))}
       </div>
@@ -64,13 +40,13 @@ export function ReadingsSection({ donorId, view, data, onChange }: { donorId: st
         {shown.map((o) => (
           <div key={o.id} className="row" style={{ minHeight: 48, borderBottom: '1px solid var(--border)' }}>
             <span style={{ flex: 1 }}>{o.name} <b>{o.value}</b> <span className="tiny muted">{o.unit} · {fmtDate(o.date)}</span></span>
-            <button className="btn btn-ghost btn-sm" style={{ minHeight: 40 }} onClick={() => run(api.dropHideResult(donorId, o.id))}>Hide from my app</button>
+            <button className="btn btn-ghost btn-sm" style={{ minHeight: 44 }} onClick={() => run(api.dropHideResult(donorId, o.id))}>Hide from my app</button>
           </div>
         ))}
       </div>
       {hiddenList.length > 0 && (
         <>
-          <button className="btn btn-ghost btn-sm mt-8" style={{ minHeight: 40 }} onClick={() => setShowHidden(!showHidden)}>{showHidden ? 'Hide' : 'Show'} {hiddenList.length} hidden result{hiddenList.length === 1 ? '' : 's'}</button>
+          <button className="btn btn-ghost btn-sm mt-8" style={{ minHeight: 44 }} onClick={() => setShowHidden(!showHidden)}>{showHidden ? 'Hide' : 'Show'} {hiddenList.length} hidden result{hiddenList.length === 1 ? '' : 's'}</button>
           {showHidden && hiddenList.map((o) => <div key={o.id} className="small muted" style={{ padding: '6px 0' }}>{o.name} {o.value} {o.unit} · {fmtDate(o.date)}</div>)}
         </>
       )}

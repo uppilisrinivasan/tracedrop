@@ -132,7 +132,7 @@ function fallback(donorId, message) {
   if (/\btrend\b/.test(m)) return out('Which result would you like to see over time: BP, ferritin, haemoglobin or another marker?');
   if (/result|explain|mean/.test(m)) {
     const f = health.findings(donorId);
-    return out(f.length ? `Your latest results: ${f.slice(0, 3).map((x) => `${x.title} (${x.detail})`).join('; ')}. Your Plan on the Health screen has the next steps; a doctor confirms all findings.` : 'All your latest results are in the healthy range.');
+    return out(f.length ? `Your latest results: ${f.slice(0, 3).map((x) => `${x.title} (${x.detail})`).join('; ')}. A doctor confirms all findings.` : 'All your latest results are in the healthy range.');
   }
   if (/what happens|at a donation|how long does/.test(m)) {
     return out('You answer a few health questions, then the centre checks your haemoglobin, blood pressure and pulse. Giving blood takes about 10 minutes and the whole visit about 45, and your sample gets a free health check.');

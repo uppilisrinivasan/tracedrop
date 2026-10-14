@@ -53,6 +53,8 @@ router.post('/bookings/:bookingId/cancel', act((donorId, req) => drop.cancelBook
 router.post('/memory/undo', act((donorId) => drop.undoMemory(donorId)));
 router.delete('/memory/:memoryId', act((donorId, req) => drop.forget(donorId, req.params.memoryId)));
 router.delete('/memory', act((donorId) => drop.forget(donorId, null)));
+// A BP reading added from a Goal on My health
+router.post('/readings', act((donorId, req) => { drop.logReading(donorId, req.body || {}); return drop.view(donorId); }));
 router.delete('/readings/:readingId', act((donorId, req) => drop.deleteReading(donorId, req.params.readingId)));
 router.post('/results/:observationId/hide', act((donorId, req) => drop.hideResult(donorId, req.params.observationId)));
 

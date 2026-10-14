@@ -18,7 +18,7 @@ const { componentStory } = require('./story');
 const badgeRules = require('./badges');
 const goalRules = require('./goals');
 
-const PRIORITY = { urgent: 1, results: 2, donate: 3, checkin: 4, plan: 4, goal: 5, impact: 6, fold: 7 };
+const PRIORITY = { urgent: 1, results: 2, donate: 3, checkin: 4, goal: 5, impact: 6, fold: 7 };
 const BUDGETS = {
   goal: { perDay: 1, perWeek: 2, report: 'week' },
   healthy: { perDay: 1, perWeek: 1, report: 'month' },
@@ -318,7 +318,7 @@ function deliver(st) {
 function send(st, e, { counted }) {
   e.status = 'delivered';
   const map = {
-    results: ['results', 'results'], plan: ['results', 'plan'], goal: ['results', 'goal'], urgent: ['urgent', 'urgent'],
+    results: ['results', 'results'], goal: ['results', 'goal'], urgent: ['urgent', 'urgent'],
     impact: ['impact', 'impact'], donate: ['slots', 'donate'], checkin: ['checkin', e.data?.marker], postvisit: ['checkin', 'visit'],
   };
   const [type, variant] = map[e.kind];
@@ -329,8 +329,12 @@ function send(st, e, { counted }) {
     st.sentByDay[today] = (st.sentByDay[today] || 0) + 1;
     st.sentByWeek[weekStart(today)] = (st.sentByWeek[weekStart(today)] || 0) + 1;
   }
-  // Results that make a Goal lead to a Plan the next day
-  if (e.kind === 'results' && !st.plan && activeGoals(st).length) addEvent(st, { key: `plan:${e.data.visitId}`, kind: 'plan', at: addDays(store.today(), 1), data: { visitId: e.data.visitId } });
+  // Goals appear with the results, and so does the Plan they belong to: there is no "Save my Plan" step
+  if (e.kind === 'results' && !st.plan && activeGoals(st).length) {
+    st.plan = draftPlan();
+    const first = firstCheckinMarker(st);
+    if (first) st.plan.nextCheckin = { date: addDays(store.today(), CHECKIN_DAYS), marker: first };
+  }
   log(st, `Sent "${eventName(e)}"${counted ? '' : ' (outside the budget)'}.`);
 }
 
@@ -418,7 +422,7 @@ function impactLine(donorId, componentId) {
 
 function eventName(e) {
   return {
-    results: 'Results are in', plan: 'Your Plan is ready', goal: 'Goal reached', urgent: 'Urgent finding', impact: 'Your blood reached a patient',
+    results: 'Results are in', goal: 'Goal reached', urgent: 'Urgent finding', impact: 'Your blood reached a patient',
     donate: 'Get ready to donate', checkin: 'Check-in', postvisit: 'How did the check-up go?', fold: 'More of your blood was used',
   }[e.kind] || e.kind;
 }
@@ -473,7 +477,7 @@ const slotLabel = (s) => `${fmt(s.date)} · ${s.time}`;
 
 function label(c) {
   return {
-    'results:results': 'Results', 'results:plan': 'Your Plan', 'results:goal': 'Goal reached', 'urgent:urgent': 'Urgent',
+    'results:results': 'Results', 'results:goal': 'Goal reached', 'urgent:urgent': 'Urgent',
     'impact:impact': 'Impact', 'slots:donate': 'Demo donation slots', 'slots:care': 'Demo check-up', 'checkin:bp': 'Check-in · BP goal',
     'checkin:hb': 'Check-in · Hb goal', 'checkin:visit': 'Check-in', 'reminder:setup': 'Reminder', 'reminder:due': `Reminder · ${time12(c.data?.time || '21:00')}`,
     'report:week': 'Weekly report', 'report:month': 'Monthly report',
@@ -509,15 +513,19 @@ function words(st, c) {
       const acts = health.findings(donorId).filter((f) => f.severity !== 'watch');
       const others = health.findings(donorId).filter((f) => f.severity === 'watch' && f.concept !== 'hypertension').map((f) => lcFirst(f.title));
       if (!acts.length) return { text: `Your results from ${fmt(visit.date)} are in. All in the healthy range${others.length ? `, apart from ${others.join(' and ')} to watch` : ''}. Nothing to do.`, main: { label: 'Got it', value: 'ok' } };
-      return {
-        text: `Your results from ${fmt(visit.date)} are in. BP ${visit.vitals.systolic}/${visit.vitals.diastolic}${rising ? `, up for the third donation in a row (${series.join(', ')})` : ''}. ${acts.length > 1 ? `Also: ${acts.filter((f) => f.concept !== 'hypertension').map((f) => lcFirst(f.title)).join(', ')}. ` : ''}Worth discussing with a real clinician. Want to try demo check-up slots? No clinic will be contacted.`,
-        main: { label: 'Try demo check-up slots', value: 'book' },
-        chips: [{ label: 'Explain my results', value: 'explain', ask: 'Can you explain my latest results?' }],
-      };
-    }
-    case 'results:plan': {
-      const p = draftPlan(st);
-      return { text: `Your Plan is ready: ${activeGoals(st).map((g) => `${g.name} (${lcFirst(g.target.text)})`).join('; ')}, plus ${p.activity.label.toLowerCase()}.`, main: { label: 'Save my Plan', value: 'save' } };
+      const results = `Your results from ${fmt(visit.date)} are in. BP ${visit.vitals.systolic}/${visit.vitals.diastolic}${rising ? `, up for the third donation in a row (${series.join(', ')})` : ''}. ${acts.length > 1 ? `Also: ${acts.filter((f) => f.concept !== 'hypertension').map((f) => lcFirst(f.title)).join(', ')}. ` : ''}`;
+      const live = activeGoals(st);
+      const book = { label: 'Try demo check-up slots', value: 'book' };
+      const explain = { label: 'Explain my results', value: 'explain', ask: 'Can you explain my latest results?' };
+      // The button opens the Goal's Chat (the Drop panel, until the Chat side sheet is built)
+      if (live.length) {
+        return {
+          text: `${results}${live.length > 1 ? 'Your Goals' : 'Your Goal'}: ${live.map((g) => g.name).join(' and ')}, on My health. Worth discussing with a real clinician; demo check-up slots contact no clinic.`,
+          main: { label: `Open ${live[0].name}`, value: 'goal', open: goalChat(st, live[0]) },
+          chips: [book, explain],
+        };
+      }
+      return { text: `${results}Worth discussing with a real clinician. Want to try demo check-up slots? No clinic will be contacted.`, main: book, chips: [explain] };
     }
     case 'results:goal': {
       if (d.marker === 'hb') return { text: `Hb ${d.value}. You did it: that's above ${d.target}, so you can donate again.`, main: { label: 'Try demo slots', value: 'book' }, out: { label: 'Later', value: 'ok' } };
@@ -622,15 +630,8 @@ function answer(donorId, cardId, value) {
       done(`${c.variant === 'week' ? 'Weekly' : 'Monthly'} report seen`);
       break;
     case 'results:results':
-      if (value === 'book') { handOff('Results seen · chose demo check-up options'); pushCard(st, 'slots', 'care', { purpose: 'care' }); } else done('Results seen · in Health');
+      if (value === 'book') { handOff('Results seen · chose demo check-up options'); pushCard(st, 'slots', 'care', { purpose: 'care' }); } else if (value === 'goal') done(`Results seen · opened ${activeGoals(st)[0]?.name || 'your Goal'}`); else done('Results seen · in Health');
       break;
-    case 'results:plan': {
-      st.plan = draftPlan();
-      const first = firstCheckinMarker(st);
-      if (first) st.plan.nextCheckin = { date: addDays(today, CHECKIN_DAYS), marker: first };
-      done('Plan saved · in Health');
-      break;
-    }
     case 'results:goal':
       // Goal reached: Drop keeps an eye on it monthly instead of every two weeks
       if (st.plan?.nextCheckin) st.plan.nextCheckin = { date: addDays(today, 28), marker: st.plan.nextCheckin.marker };
@@ -913,7 +914,8 @@ function view(donorId) {
     memory: st.memory.map(({ id: mid, text }) => ({ id: mid, text })),
     memReceipt: st.memReceipt ? st.memReceipt.text : null,
     plan: st.plan ? { ...st.plan, reminders: st.reminders } : (st.reminders.length ? { activity: null, notes: [], reminders: st.reminders } : null),
-    goals: goalsOf(st).map(goalView),
+    goals: goalsOf(st).map((g) => goalView(st, g)),
+    keepAnEye: goalRules.keepAnEye(donorId).map(({ id: fid, title, detail }) => ({ id: fid, title, detail })),
     readings: st.readings,
     hiddenResults: st.hiddenResults,
     bookings: st.bookings.filter((x) => x.date >= today).sort((a, z) => `${a.date}${a.time}`.localeCompare(`${z.date}${z.time}`)),
@@ -926,12 +928,27 @@ function view(donorId) {
   };
 }
 
-/** A Goal as the app shows it: name, state, target and why it's first. */
-function goalView(g) {
+/** The facts code writes for a Goal; its trend includes the readings the Donor added. */
+const goalFacts = (st, g) => goalRules.facts(g, st.donorId, (marker) => chartPoints(st.donorId, marker));
+
+/** What opens a Goal's Chat: Drop's opening line and questions (the Drop panel, until the Chat side sheet is built). */
+function goalChat(st, g, facts = goalFacts(st, g)) {
+  const { trend } = facts;
+  return {
+    goalId: g.id,
+    text: `${g.name}. Target: ${lcFirst(g.target.text)}. ${trend.words}: ${trend.range}.`,
+    questions: ['What could I do this week?', `Why does my ${g.name} Goal matter?`, `Show my ${trend.label} trend`],
+  };
+}
+
+/** A Goal as the app shows it: name, state, target, the write-up and the facts code writes. */
+function goalView(st, g) {
   if (g.state === 'done') return { id: g.id, name: g.name, state: g.state, createdOn: g.createdOn, doneOn: g.doneOn };
+  const facts = goalFacts(st, g);
   return {
     id: g.id, name: g.name, state: g.state, severity: g.severity, stopsDonation: g.stopsDonation, target: g.target.text,
     createdOn: g.createdOn, startsWhen: g.startsWhen || null, findings: g.findings.map((f) => f.id), writeup: g.writeup,
+    ...facts, chat: goalChat(st, g, facts),
   };
 }
 

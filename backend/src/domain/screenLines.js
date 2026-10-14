@@ -38,7 +38,7 @@ function healthLine(donorId) {
   const hb = view.readings.filter((r) => r.marker === 'hb').pop();
   if (hbGoal && hb) return `Hb ${hb.value} on ${fmt(hb.date)}. Target: ${hbGoal.target.hb.toFixed(1)} or more, so you can donate again.`;
   const f = health.findings(donorId).find((x) => x.severity !== 'watch') || health.findings(donorId)[0];
-  if (f) return `${f.title}: ${f.detail}.${goal || hbGoal ? ' Your Plan has the next steps.' : ''}`;
+  if (f) return `${f.title}: ${f.detail}.`;
   const latest = new Set(store.getObservations(donorId).map((o) => o.key)).size;
   return `All ${latest} of your results are in the healthy range.`;
 }

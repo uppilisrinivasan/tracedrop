@@ -5,6 +5,7 @@
 import { useRef, useState } from 'react';
 import type { DropAction, DropCard, SnoozeOption } from '../../api';
 import ScrollWheel from './ScrollWheel';
+import { openChat } from './chat';
 
 interface Props {
   card: DropCard;
@@ -38,6 +39,10 @@ export default function DropCardView({ card, busy, onAnswer, onSnooze, onHide, o
   const act = (a: DropAction) => {
     if (a.story) return onStory();
     if (a.ask) return onAsk(a.ask);
+    if (a.open) {
+      openChat(a.open);
+      return onAnswer(a.value);
+    }
     if (a.value === 'upload') return onUpload();
     if (a.value === 'wheel') return bpValid ? onAnswer(bp) : undefined;
     return onAnswer(a.value);

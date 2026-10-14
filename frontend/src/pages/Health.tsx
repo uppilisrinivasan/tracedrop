@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
-import { CartesianGrid, Line, LineChart, ReferenceArea, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { api, fmtDate, type Extraction, type HealthData } from '../api';
+import { CartesianGrid, LabelList, Line, LineChart, ReferenceArea, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { api, fmtDate, type DropGoal, type Extraction, type HealthData } from '../api';
 import type { PageProps, Screen } from '../App';
-import { AIBadge, ErrorNote, Icon, Loading, Section, Thinking, severityPill, useLoad } from '../ui';
+import { AIBadge, ErrorNote, Icon, Loading, Section, Thinking, useLoad } from '../ui';
 import DropLine from '../components/drop/DropLine';
-import { PlanSection, ReadingsSection } from '../components/drop/HealthDrop';
+import { ReadingsSection } from '../components/drop/HealthDrop';
 import type { DropReading, DropView } from '../api';
 import Checkup from '../components/drop/Checkup';
 import { bookCheckup } from '../components/Copilot';
+import { openChat } from '../components/drop/chat';
+import './health.css';
 
 const MARKERS: { key: string; label: string; unit: string; good?: [number, number] }[] = [
   { key: 'bp', label: 'Blood pressure', unit: 'mmHg', good: [90, 120] },
@@ -18,6 +20,34 @@ const MARKERS: { key: string; label: string; unit: string; good?: [number, numbe
   { key: 'ferritin', label: 'Ferritin (iron)', unit: 'ng/mL' },
   { key: 'weight', label: 'Weight', unit: 'kg' },
 ];
+
+/** The three Habits (CONTEXT.md). Week plans come in build plan step 6; until then each shows "Plan this week". */
+const HABITS = [
+  { id: 'movement', name: 'Movement', icon: 'walk' },
+  { id: 'food', name: 'Food', icon: 'food' },
+  { id: 'mind', name: 'Mind', icon: 'mind' },
+];
+
+const TAGS: Record<string, { label: string; pill: string }> = {
+  movement: { label: 'Movement', pill: 'pill-brand' },
+  food: { label: 'Food', pill: 'pill-good' },
+  mind: { label: 'Mind', pill: 'pill-ai' },
+  doctor: { label: 'See a doctor', pill: 'pill-warn' },
+  reading: { label: 'Add a reading', pill: 'pill-info' },
+};
+
+const day = (iso: string, opts: Intl.DateTimeFormatOptions) => new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-GB', { ...opts, timeZone: 'UTC' });
+const addDays = (iso: string, n: number) => new Date(Date.parse(`${iso}T00:00:00Z`) + n * 864e5).toISOString().slice(0, 10);
+
+/** "Mon 12 – Sun 18 Oct": the week ends on Sunday, with the Weekly report. */
+function weekLabel(today: string) {
+  const monday = addDays(today, -((new Date(`${today}T00:00:00Z`).getUTCDay() + 6) % 7));
+  const sunday = addDays(monday, 6);
+  const sameMonth = monday.slice(0, 7) === sunday.slice(0, 7);
+  return `${day(monday, sameMonth ? { weekday: 'short', day: 'numeric' } : { weekday: 'short', day: 'numeric', month: 'short' })} – ${day(sunday, { weekday: 'short', day: 'numeric', month: 'short' })}`;
+}
+
+const planHabit = (name: string) => openChat({ text: `${name}: no Week plan yet.`, questions: [`Help me plan this week's ${name.toLowerCase()}`] });
 
 export default function Health({ donorId, go, version, refresh, focus }: PageProps & { focus: Screen }) {
   const { data, error, loading } = useLoad(() => api.health(donorId), [donorId, version]);
@@ -39,13 +69,13 @@ export default function Health({ donorId, go, version, refresh, focus }: PagePro
 
   if (loading && !data) return <Loading />;
   if (error || !data) return <ErrorNote error={error || 'Could not load'} />;
-  const latest = data.currentScore;
-  const checkups = <div ref={checkupsRef}><CheckupsSection donorId={donorId} view={dropView} onChange={(v) => { setDropView(v); window.dispatchEvent(new CustomEvent('drop:changed')); }} /></div>;
+  const changed = (v: DropView) => { setDropView(v); window.dispatchEvent(new CustomEvent('drop:changed')); };
+  const checkups = <CheckupsSection donorId={donorId} view={dropView} onChange={changed} />;
 
   // No donations yet: no results, score or trends to show
   if (!data.vitals.length) {
     return (
-      <div className="stack fade-in">
+      <div className="stack fade-in health-page">
         <div className="page-head">
           <div>
             <div className="page-title">Your health</div>
@@ -53,13 +83,17 @@ export default function Health({ donorId, go, version, refresh, focus }: PagePro
           </div>
         </div>
         <div className="card empty">No results yet. Every donation includes a free health check, and your results will show here after your first one.</div>
-        {checkups}
+        <div ref={checkupsRef}>{checkups}</div>
       </div>
     );
   }
 
+  const goals = dropView?.goals || [];
+  const active = goals.filter((g) => g.state === 'active');
+  const upNext = goals.filter((g) => g.state === 'upnext');
+
   return (
-    <div className="stack fade-in">
+    <div className="stack fade-in health-page">
       <div className="page-head">
         <div>
           <div className="page-title">Your health</div>
@@ -69,46 +103,246 @@ export default function Health({ donorId, go, version, refresh, focus }: PagePro
       </div>
       <DropLine donorId={donorId} screen="health" version={version} />
 
-      <div className="grid split">
-        <div className="card">
-          <div className="stat-label">Health score</div>
-          <div className="row" style={{ alignItems: 'baseline' }}><span className="stat-value" style={{ fontSize: 44 }}>{latest?.score ?? '—'}</span><span className="muted">/100</span></div>
-          <div className="stack mt-12" style={{ gap: 8 }}>
-            {latest?.parts.map((p) => (
-              <div key={p.name}>
-                <div className="row between small"><span>{p.name} <span className="faint tiny">· {p.value}</span></span><span className="bold">{p.points}</span></div>
-                <div className="progress" style={{ height: 6 }}><span style={{ width: `${p.points}%`, background: p.points >= 80 ? 'var(--good)' : p.points >= 55 ? 'var(--warn)' : 'var(--bad)' }} /></div>
-              </div>
-            ))}
-          </div>
-          <div className="tiny faint mt-12">Demo score from fixed rules (not AI), including uploaded results. Feeds the illustrative cover model; earlier donation scores stay unchanged.</div>
-        </div>
-
-        <Section title="What your results say" sub={`${data.findings.length} finding${data.findings.length === 1 ? '' : 's'}${data.bmi != null ? ` · BMI ${data.bmi}` : ''}`}>
-          {data.findings.length === 0 && <div className="callout" style={{ background: 'var(--good-soft)' }}><Icon name="check" /> Everything is in the healthy range. Keep it up!</div>}
-          <div className="stack" style={{ gap: 10 }}>
-            {data.findings.map((f) => (
-              <div key={f.id} className="row" style={{ alignItems: 'flex-start', gap: 12, padding: 12, borderRadius: 12, background: 'var(--surface-2)' }}>
-                <span className={`pill ${severityPill[f.severity]}`}>{f.severity}</span>
-                <div style={{ flex: 1 }}>
-                  <div className="bold small">{f.title}</div>
-                  <div className="small muted">{f.detail}</div>
-                  {f.protocolId && <div className="tiny faint mt-8">Protocol {f.protocolId}</div>}
-                </div>
-              </div>
-            ))}
-          </div>
-        </Section>
+      <div ref={planRef} className="stack">
+        <HabitShelf />
+        {dropView && <ThisWeek view={dropView} />}
+        {active.map((g) => <GoalCard key={g.id} goal={g} donorId={donorId} go={go} onChange={(v) => { changed(v); refresh(); }} />)}
+        {upNext.map((g) => <UpNextCard key={g.id} goal={g} />)}
       </div>
 
-      {checkups}
+      <div className="grid split">
+        <ScoreCard donorId={donorId} data={data} version={version} />
+        <ChatsCard goals={goals} since={data.eligibility.lastDonationDate} today={dropView?.clock.date || null} />
+      </div>
 
-      <div ref={planRef}><PlanSection view={dropView} /></div>
-      <Trends data={data} added={dropView?.readings || []} />
-      <ReadingsSection donorId={donorId} view={dropView} data={data} onChange={(v) => { setDropView(v); refresh(); }} />
+      <div className="grid grid-3">
+        <KeepAnEye view={dropView} />
+        <section className="card">
+          <div className="card-title">From your doctor</div>
+          <div className="card-sub">Diagnoses and advice you've confirmed from a prescription</div>
+          <p className="small muted mt-12">Nothing added yet.</p>
+        </section>
+        <div ref={checkupsRef}>{checkups}</div>
+      </div>
 
       <div ref={labsRef}><LabReader key={focus === 'labs' ? 'labs' : 'reader'} donorId={donorId} onSaved={refresh} focusLabs={focus === 'labs'} /></div>
+      <Trends data={data} added={dropView?.readings || []} />
+      <ReadingsSection donorId={donorId} view={dropView} data={data} onChange={(v) => { setDropView(v); refresh(); }} />
     </div>
+  );
+}
+
+/** Movement, Food and Mind, each with this week's line. Empty until Week plans are built (step 6). */
+function HabitShelf() {
+  return (
+    <section className="card">
+      <div className="row wrap" style={{ alignItems: 'baseline', gap: 8, marginBottom: 12 }}><span className="card-title">Habits</span><span className="muted small">· no Week plan yet</span></div>
+      <div className="habit-row">
+        {HABITS.map((h) => (
+          <button key={h.id} className="hb idle" onClick={() => planHabit(h.name)}>
+            <span className="disc"><Icon name={h.icon} size={22} /></span>
+            <span><b>{h.name}</b><span className="s">Plan this week</span></span>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/** One row per Habit for the week, ending on Sunday. Week plans fill it in at step 6. */
+function ThisWeek({ view }: { view: DropView }) {
+  return (
+    <section className="card">
+      <div className="row between wrap">
+        <div className="card-title">This week</div>
+        <span className="tiny muted">{weekLabel(view.clock.date)}{view.budget.report === 'week' ? ' · ends with your Weekly report' : ''}</span>
+      </div>
+      <div className="stack mt-12" style={{ gap: 8 }}>
+        {HABITS.map((h) => (
+          <div key={h.id} className="item">
+            <span className="disc sm"><Icon name={h.icon} size={18} /></span>
+            <span className="grow"><b>{h.name}</b><small>No Week plan</small></span>
+            <button className="btn btn-sm" onClick={() => planHabit(h.name)}>Plan this week</button>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function GoalCard({ goal: g, donorId, go, onChange }: { goal: DropGoal; donorId: string; go: (s: Screen) => void; onChange: (v: DropView) => void }) {
+  const [adding, setAdding] = useState(false);
+  const steps = g.writeup?.steps || [];
+  const addReading = () => (g.trend?.marker === 'bp' ? setAdding(!adding) : go('labs'));
+  return (
+    <section className="card goal-card">
+      <div className="row between wrap" style={{ marginBottom: 14 }}>
+        <div className="card-title">Your Goal <span className="card-sub" style={{ margin: 0, fontWeight: 500 }}>· from your results, up to two at a time</span></div>
+        <div className="row wrap" style={{ gap: 6 }}>
+          {g.severity === 'urgent' && <span className="pill pill-bad">Urgent</span>}
+          {g.stopsDonation && <span className="pill pill-warn">Your next donation waits on this</span>}
+        </div>
+      </div>
+      <div className="goal-grid">
+        <div>
+          <div className="goal-name">{g.name}</div>
+          <div className="row small bold mt-8"><Icon name="flag" size={16} />Target: {g.target}</div>
+          {g.writeup && <p className="small mt-12" style={{ lineHeight: 1.55 }}><span className="pill pill-neutral" style={{ marginRight: 6 }}>Why it matters</span>{g.writeup.why}</p>}
+          <div className="tiny muted bold mt-16">This week</div>
+          <div className="item muted mt-8">Nothing planned yet. Open {g.name} to plan this week.</div>
+          {steps.length > 0 && <div className="tiny muted bold mt-16">Steps that help</div>}
+          <div className="stack mt-8" style={{ gap: 8 }}>
+            {steps.map((s) => (
+              <div key={s.text} className="item"><span className={`pill ${TAGS[s.tag].pill}`}>{TAGS[s.tag].label}</span><span className="grow">{s.text}</span></div>
+            ))}
+          </div>
+          <div className="row wrap mt-16">
+            <button className="btn btn-primary" onClick={() => g.chat && openChat(g.chat)}>Open {g.name}</button>
+            <button className="btn" aria-expanded={g.trend?.marker === 'bp' ? adding : undefined} onClick={addReading}>Add a reading</button>
+          </div>
+          {adding && <BpReading donorId={donorId} onSaved={(v) => { setAdding(false); onChange(v); }} />}
+          <details className="goal-more mt-12">
+            <summary className="small bold"><Icon name="chevron" size={16} />Where these steps come from</summary>
+            <ul className="small muted">{steps.map((s) => <li key={s.text}><b>{s.text}:</b> {s.evidence.join('; ')}</li>)}</ul>
+            <p className="small muted"><b>Note for your doctor:</b> {g.doctorNote}</p>
+            <p className="tiny faint">From fixed rules, not AI. Not a diagnosis: a doctor confirms every finding and decides on any treatment.</p>
+          </details>
+        </div>
+        {g.trend && (
+          <div className="trend-box">
+            <div className="small muted">{g.trend.words}</div>
+            <div className="trend-range">{g.trend.range}</div>
+            <GoalChart trend={g.trend} />
+            {(g.also || []).map((a) => <div key={a} className="row wrap small muted mt-8"><span className="pill pill-info">Also in this Goal</span>{a}</div>)}
+            <div className="small muted mt-8"><Icon name="calendar" size={14} /> Next check: {g.nextCheck}</div>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+/** The lead marker over time against the target line. Values are printed on the points, so nothing needs hover. */
+function GoalChart({ trend }: { trend: NonNullable<DropGoal['trend']> }) {
+  const points = trend.points.map((p) => ({ ...p, label: fmtDate(p.date), text: trend.marker === 'bp' ? `${p.value}/${p.value2}` : String(p.value) }));
+  const values = points.map((p) => p.value).concat(trend.line != null ? [trend.line] : []);
+  const pad = Math.max((Math.max(...values) - Math.min(...values)) * 0.25, Math.max(...values) * 0.04);
+  const home = (p: { source?: string }) => p.source === 'yours' || p.source === 'report' || p.source === 'uploaded_report';
+  return (
+    <>
+    <div style={{ height: 190 }} role="img" aria-label={`${trend.label} ${points.map((p) => p.text).join(', ')}${trend.line != null ? ` against a target of ${trend.line}` : ''}`}>
+      <ResponsiveContainer>
+        <LineChart data={points} margin={{ top: 22, right: 28, left: -16, bottom: 0 }}>
+          <XAxis dataKey="label" tick={{ fontSize: 11, fill: 'var(--muted)' }} />
+          <YAxis tick={{ fontSize: 11, fill: 'var(--muted)' }} domain={[Math.floor(Math.min(...values) - pad), Math.ceil(Math.max(...values) + pad)]} />
+          {trend.line != null && <ReferenceLine y={trend.line} stroke="var(--good)" strokeDasharray="5 4" label={{ value: `Target ${trend.line}`, position: 'insideTopRight', fill: 'var(--good)', fontSize: 11 }} />}
+          <Line type="monotone" dataKey="value" stroke="var(--brand)" strokeWidth={2.5} isAnimationActive={false}
+            dot={(props: { cx?: number; cy?: number; index?: number }) => {
+              const p = points[props.index ?? 0];
+              return <circle key={props.index} cx={props.cx} cy={props.cy} r={4.5} fill={home(p) ? 'var(--surface)' : 'var(--brand)'} stroke="var(--brand)" strokeWidth={2} />;
+            }}>
+            <LabelList dataKey="text" position="top" style={{ fontSize: 11, fill: 'var(--text)' }} />
+          </Line>
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+    {points.some(home) && <div className="tiny faint">Hollow points: readings and reports you added.</div>}
+    </>
+  );
+}
+
+/** A BP reading from a pharmacy machine or home monitor, added to the Goal's trend. */
+function BpReading({ donorId, onSaved }: { donorId: string; onSaved: (v: DropView) => void }) {
+  const [bp, setBp] = useState({ s: 0, d: 0 });
+  const [err, setErr] = useState<string | null>(null);
+  const valid = bp.s >= 70 && bp.s <= 250 && bp.d >= 40 && bp.d <= 150 && bp.s > bp.d;
+  async function save() {
+    setErr(null);
+    try { onSaved(await api.dropAddReading(donorId, bp)); } catch (e) { setErr((e as Error).message); }
+  }
+  return (
+    <form className="numbers mt-12" onSubmit={(e) => { e.preventDefault(); if (valid) save(); }}>
+      <label>Top number<input type="number" inputMode="numeric" min={70} max={250} value={bp.s || ''} onChange={(e) => setBp((v) => ({ ...v, s: Number(e.target.value) }))} /></label>
+      <span className="slash">/</span>
+      <label>Bottom number<input type="number" inputMode="numeric" min={40} max={150} value={bp.d || ''} onChange={(e) => setBp((v) => ({ ...v, d: Number(e.target.value) }))} /></label>
+      <span className="unit">mmHg</span>
+      <button type="submit" className="btn btn-primary" disabled={!valid}>Save reading</button>
+      {err && <span className="numbers-error">{err}</span>}
+    </form>
+  );
+}
+
+function UpNextCard({ goal: g }: { goal: DropGoal }) {
+  return (
+    <section className="card">
+      <div className="row between wrap">
+        <div>
+          <div className="tiny muted bold">Up next</div>
+          <div className="card-title mt-8">{g.name}</div>
+          <div className="small muted">{g.trend ? `${g.trend.words}: ${g.trend.range}` : ''} · Starts when {g.startsWhen} is done</div>
+        </div>
+        <button className="btn" onClick={() => g.chat && openChat(g.chat)}>Open</button>
+      </div>
+    </section>
+  );
+}
+
+/** The Health score, from results only (self-reported habits never change it), with the cover line under it. */
+function ScoreCard({ donorId, data, version }: { donorId: string; data: HealthData; version: number }) {
+  const latest = data.currentScore;
+  const [cover, setCover] = useState<string | null>(null);
+  useEffect(() => { api.dropLine(donorId, 'cover').then((l) => setCover(l.text)).catch(() => setCover(null)); }, [donorId, version]);
+  return (
+    <section className="card">
+      <div className="row between"><div className="card-title">Health score</div><span className="tiny faint">From results only</span></div>
+      <div className="row mt-8" style={{ alignItems: 'baseline' }}><span className="stat-value" style={{ fontSize: 40 }}>{latest?.score ?? '—'}</span><span className="muted">/100</span></div>
+      <div className="stack mt-12" style={{ gap: 8 }}>
+        {latest?.parts.map((p) => (
+          <div key={p.name}>
+            <div className="row between small"><span>{p.name} <span className="faint tiny">· {p.value}</span></span><span className="bold">{p.points}</span></div>
+            <div className="progress" style={{ height: 6 }}><span style={{ width: `${p.points}%`, background: p.points >= 80 ? 'var(--good)' : p.points >= 55 ? 'var(--warn)' : 'var(--bad)' }} /></div>
+          </div>
+        ))}
+      </div>
+      {cover && <div className="callout callout-info small mt-12"><Icon name="shield" size={16} /><span>{cover}</span></div>}
+      <div className="tiny faint mt-12">Demo score from fixed rules (not AI), including uploaded results. Feeds the illustrative cover model; earlier donation scores stay unchanged.</div>
+    </section>
+  );
+}
+
+const STATE_LINE: Record<string, string> = { upnext: 'Up next', done: 'Done', stopped: 'Stopped' };
+
+/** The Chats with Drop. Until Chats are stored and the side sheet is built, each opens the Drop panel. */
+function ChatsCard({ goals, since, today }: { goals: DropGoal[]; since: string | null; today: string | null }) {
+  // A Cycle runs from one donation to the next, or 120 days for a Donor who isn't donating
+  const inCycle = since && today && Date.parse(today) - Date.parse(since) < 120 * 864e5;
+  return (
+    <section className="card">
+      <div className="card-title">Your Chats with Drop</div>
+      <button className="row-btn mt-8" onClick={() => openChat()}><span className="grow"><b className="small">General</b><small>{inCycle ? `This Cycle, since your ${day(since, { day: 'numeric', month: 'short' })} donation` : 'This Cycle'}</small></span></button>
+      {goals.length > 0 && <div className="group-h">{goals.length > 1 ? 'Goals' : 'Goal'}</div>}
+      {goals.map((g) => (
+        <button key={g.id} className="row-btn" onClick={() => openChat(g.chat || { text: `${g.name}.`, questions: [] })}>
+          <span className="grow"><b className="small">{g.name}</b><small>{g.state === 'active' ? `Target: ${g.target}` : STATE_LINE[g.state]}</small></span>
+        </button>
+      ))}
+      <div className="group-h">Habits</div>
+      {HABITS.map((h) => <button key={h.id} className="row-btn" onClick={() => planHabit(h.name)}><span className="grow"><b className="small">{h.name}</b><small>Not started</small></span></button>)}
+    </section>
+  );
+}
+
+function KeepAnEye({ view }: { view: DropView | null }) {
+  const list = view?.keepAnEye || [];
+  return (
+    <section className="card">
+      <div className="card-title">Keep an eye on</div>
+      <div className="card-sub">Rechecked at your next donation, no Goal of their own</div>
+      {!list.length && <div className="callout mt-12" style={{ background: 'var(--good-soft)' }}><span style={{ color: 'var(--good)' }}><Icon name="check" /></span><span className="small">Nothing else. Your other results are in the healthy range.</span></div>}
+      <div className="stack mt-12" style={{ gap: 8 }}>
+        {list.map((f) => <div key={f.id} className="item"><span className="grow"><b>{f.title}</b><small>{f.detail}</small></span></div>)}
+      </div>
+    </section>
   );
 }
 
@@ -132,15 +366,16 @@ function CheckupsSection({ donorId, view, onChange }: { donorId: string; view: D
   }
 
   return (
-    <Section title={<><Icon name="doctor" size={18} /> Demo check-up planning</>}
-      sub={checkups.length ? `${checkups.length} simulated visit${checkups.length === 1 ? '' : 's'} coming up` : 'Example clinic times, not confirmed availability'}
-      right={<button className="btn btn-sm" onClick={() => bookCheckup()}><Icon name="calendar" size={14} /> Explore demo times</button>}>
-      {checkups.length === 0 && <div className="small muted">Explore illustrative clinic times here and on Home. These do not reserve a visit; contact a real care provider to arrange one.</div>}
-      <div className="stack" style={{ gap: 10 }}>
+    <section className="card">
+      <div className="card-title">Check-ups</div>
+      <div className="card-sub">{checkups.length ? `${checkups.length} simulated visit${checkups.length === 1 ? '' : 's'} coming up` : 'Example clinic times, not confirmed availability'}</div>
+      {checkups.length === 0 && <p className="small muted mt-12">No check-up booked. These demo times don't reserve a visit; contact a real care provider to arrange one.</p>}
+      <div className="stack mt-12" style={{ gap: 10 }}>
         {checkups.map((b) => <Checkup key={b.id} booking={b} busy={busy} onChange={() => cancel(b.id, true)} onCancel={() => cancel(b.id, false)} />)}
       </div>
+      <button className="btn btn-sm mt-12" onClick={() => bookCheckup()}><Icon name="calendar" size={14} /> Book a demo check-up</button>
       {error && <ErrorNote error={error} />}
-    </Section>
+    </section>
   );
 }
 
@@ -159,7 +394,7 @@ function Trends({ data, added }: { data: HealthData; added: DropReading[] }) {
   const available = MARKERS.filter((m) => m.key === 'bp' || m.key === 'weight' || (data.labs[m.key] || []).length);
 
   return (
-    <Section title={<><Icon name="trend" size={18} /> Trends across your donations</>} sub="Each point is one donation visit, an uploaded report or a reading you added"
+    <Section title={<><Icon name="trend" size={18} /> Trends across your donations</>} sub="Each point is one donation visit, an uploaded report or a reading you added" collapsible defaultOpen={false}
       right={<div className="tabs">{available.map((m) => <button key={m.key} className={`tab ${marker === m.key ? 'active' : ''}`} onClick={() => setMarker(m.key)}>{m.label}</button>)}</div>}>
       <div style={{ height: 260 }}>
         <ResponsiveContainer>

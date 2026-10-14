@@ -185,7 +185,9 @@ export interface UploadedValue { id: string; name: string; value: number; unit: 
 export interface DemoClock { date: string; part: number; partName: 'morning' | 'afternoon' | 'evening' | 'night'; start: string }
 
 export type DropCardType = 'results' | 'urgent' | 'checkin' | 'slots' | 'reminder' | 'impact' | 'report' | 'chart';
-export interface DropAction { label: string; value: unknown; story?: boolean; ask?: string }
+/** Opens a Chat with Drop's line and questions (the Drop panel, until the Chat side sheet is built). */
+export interface ChatOpen { text: string; questions: string[]; goalId?: string }
+export interface DropAction { label: string; value: unknown; story?: boolean; ask?: string; open?: ChatOpen }
 export interface DropCard {
   id: string; type: DropCardType; variant: string; label: string; urgent: boolean; counted: boolean; createdOn: string;
   text: string; ruleText: string; byAi: boolean; main: DropAction | null; out: DropAction | null; chips: DropAction[];
@@ -209,6 +211,9 @@ export interface DropGoal {
   id: string; name: string; state: GoalState; createdOn: string; doneOn?: string;
   severity?: 'urgent' | 'high' | 'moderate'; stopsDonation?: boolean; target?: string; startsWhen?: string | null; findings?: string[];
   writeup?: GoalWriteup;
+  /** What code writes: the trend against the target, the Goal's other findings, the doctor note and the next check */
+  urgency?: string; also?: string[]; doctorNote?: string; nextCheck?: string; chat?: ChatOpen;
+  trend?: { marker: string; label: string; unit: string; points: ChartPoint[]; line: number | null; up: boolean; words: string; range: string };
 }
 /** Written once per Goal, when it is made or its findings change: "why this matters" and 2-3 tagged steps with evidence. */
 export interface GoalWriteup {
@@ -260,6 +265,8 @@ export interface DropView {
   clock: DemoClock; intro: IntroStatus; language: string; preferredLanguage: string;
   open: DropCard[]; receipts: { id: string; receipt: string; undo: boolean }[]; earlier: { id: string; label: string; receipt: string; on: string }[];
   memory: { id: string; text: string }[]; memReceipt: string | null; plan: DropPlan | null; goals: DropGoal[]; readings: DropReading[]; hiddenResults: string[];
+  /** Findings with no Goal of their own, rechecked at the next donation */
+  keepAnEye: { id: string; title: string; detail: string }[];
   bookings: DropBooking[];
   donate: { from: string | null; daysTo: number | null };
   budget: { kind: 'goal' | 'healthy'; today: number; perDay: number; week: number; perWeek: number; weekOf: string; report: 'week' | 'month'; quiet: boolean };
@@ -351,6 +358,7 @@ export const api = {
   dropCancelBooking: (id: string, bookingId: string, reschedule: boolean) => post<DropView>(`/donors/${id}/drop/bookings/${bookingId}/cancel`, { reschedule }),
   dropMemoryUndo: (id: string) => post<DropView>(`/donors/${id}/drop/memory/undo`),
   dropForget: (id: string, memoryId?: string) => request<DropView>(`/donors/${id}/drop/memory${memoryId ? `/${memoryId}` : ''}`, { method: 'DELETE' }),
+  dropAddReading: (id: string, reading: { s: number; d: number }) => post<DropView>(`/donors/${id}/drop/readings`, reading),
   dropDeleteReading: (id: string, readingId: string) => request<DropView>(`/donors/${id}/drop/readings/${readingId}`, { method: 'DELETE' }),
   dropHideResult: (id: string, observationId: string) => post<DropView>(`/donors/${id}/drop/results/${observationId}/hide`),
   dropLanguage: (id: string, language: string) => post<DropView>(`/donors/${id}/drop/language`, { language }),
