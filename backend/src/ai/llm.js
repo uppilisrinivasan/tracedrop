@@ -1,6 +1,6 @@
 /** Gemini on Vertex AI. Cloud Run uses its service account; a laptop uses Application Default Credentials. No API key. */
 const { GoogleAuth } = require('google-auth-library');
-const MODEL = process.env.LLM_MODEL || 'gemini-2.5-flash-lite';
+const MODEL = process.env.LLM_MODEL || 'gemini-3.1-flash-lite';
 const PROJECT = process.env.GOOGLE_CLOUD_PROJECT || process.env.GCP_PROJECT || '';
 const LOCATION = process.env.VERTEX_LOCATION || 'global';
 const ENDPOINT = LOCATION === 'global' ? 'aiplatform.googleapis.com' : `${LOCATION}-aiplatform.googleapis.com`;
@@ -51,12 +51,14 @@ async function acquire() {
 function toPart(block) {
   if (block.type === 'text') return { text: block.text };
   if (block.type === 'image') return { inlineData: { mimeType: block.source.media_type, data: block.source.data } };
-  if (block.type === 'tool_use') return { functionCall: { name: block.name, args: block.input },
+  if (block.type === 'tool_use') return { functionCall: { name: block.name, args: block.input, ...(block.callId ? { id: block.callId } : {}) },
     ...(block.thoughtSignature ? { thoughtSignature: block.thoughtSignature } : {}) };
   if (block.type === 'tool_result') {
     let value;
     try { value = JSON.parse(block.content); } catch { value = block.content; }
-    return { functionResponse: { name: block.name || block.tool_use_id.split(':')[0], response: functionResponseBody(value) } };
+    // Gemini 3 matches each response to its call by id when the call carried one
+    return { functionResponse: { name: block.name || block.tool_use_id.split(':')[0], response: functionResponseBody(value),
+      ...(block.call_id ? { id: block.call_id } : {}) } };
   }
   throw new Error(`Unsupported message block: ${block.type}`);
 }
@@ -96,7 +98,8 @@ function normalise(raw) {
     if (p.thought) return [];
     if (p.text) return [{ type: 'text', text: p.text }];
     if (p.functionCall) return [{ type: 'tool_use', id: `${p.functionCall.name}:${index}`, name: p.functionCall.name,
-      input: p.functionCall.args || {}, ...(p.thoughtSignature ? { thoughtSignature: p.thoughtSignature } : {}) }];
+      input: p.functionCall.args || {}, ...(p.functionCall.id ? { callId: p.functionCall.id } : {}),
+      ...(p.thoughtSignature ? { thoughtSignature: p.thoughtSignature } : {}) }];
     return [];
   });
   if (!content.length) throw new LLMUnavailable(`AI returned no content (${candidate?.finishReason || raw.promptFeedback?.blockReason || 'unknown'})`);
@@ -113,7 +116,7 @@ async function call({ feature, system, messages, tools, maxTokens = 4000, output
   const jsonMode = Boolean(outputSchema) && !(tools && tools.length);
   const defs = declarations(tools, jsonMode ? null : outputSchema);
   const body = { systemInstruction: { parts: [{ text: !outputSchema || jsonMode ? system : `${system}\n\nFinish by calling ${SUBMIT} with the final result.` }] },
-    contents: toContents(messages), generationConfig: { maxOutputTokens: Math.min(maxTokens, 6000), temperature: 0.2 } };
+    contents: toContents(messages), generationConfig: { maxOutputTokens: Math.min(maxTokens, 6000) } };
   if (jsonMode) {
     body.generationConfig.responseMimeType = 'application/json';
     body.generationConfig.responseSchema = cleanSchema(outputSchema);

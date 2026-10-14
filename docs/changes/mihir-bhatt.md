@@ -4,6 +4,16 @@ One entry per commit, newest first, so any change can be traced or reverted: the
 To revert one: find it with `git log --oneline --grep "<commit title>"`, then `git revert <hash>`.
 The design behind these changes is in `CONTEXT.md` (vocabulary) and the build plan.
 
+## 2026-10-15 · Gemini 2.5 Flash-Lite swapped for 3.1 Flash-Lite before its retirement
+
+- **What and why:** branch `chore/gemini-3.1-flash-lite` (from `main`). Google's Vertex AI model versions page (checked 15 Oct 2026) says `gemini-2.5-flash-lite` retires on 20 Oct 2026. It names `gemini-3.8-flash`, `gemini-3.1-flash-lite` or Gemma 4 as replacements. 3.1 Flash-Lite is GA, available on the `global` endpoint, with the same 65,536 output and 1,048,576 context limits, the same image types and 7 MB inline cap, and structured output and function calling. Every AI feature (Drop's chat, lab reader, care plan, Drop's and the Intro's wording, home insight) uses this one model.
+  - The model id changes in `llm.js` (the default), the Cloud Run deploy workflow (`LLM_MODEL`), `.env.example` and `docs/RUN_LOCALLY.md`.
+  - Request changes from Google's 2.5 → 3.x migration guide: `temperature: 0.2` is removed, since Google says to drop sampling parameters on 3.x models. Gemini's own function-call `id`, when it sends one, now goes back on the call and on its `functionResponse` (3.x matches results to calls by id; a mismatch can give an empty reply).
+  - No change needed: JSON schema mode (`responseMimeType` + `responseSchema`) and image input (`inlineData`) keep the same shape. Thinking defaults to `MINIMAL` on 3.1 Flash-Lite, and thought signatures already go back with each tool call.
+  - Two new tests in `backend/test/llm.test.js`. All 119 backend tests pass. Not yet checked against live Vertex.
+- **Files:** `backend/src/ai/llm.js`, `backend/src/ai/agent.js`, `backend/test/llm.test.js`, `.github/workflows/deploy-cloud-run.yml`, `.env.example`, `docs/RUN_LOCALLY.md`.
+- **Revert:** safe to revert on its own until 20 Oct; after that the reverted model id stops answering and every AI feature falls back to rules.
+
 ## 2026-10-14 · An impact Card's own unit is no longer repeated in the report
 
 - **What and why:** a bug fix in `detect()`, branch `fix/impact-fold-first-unit` (from `feature/story-and-badge`). The first transfused unit of a donation raises the impact Card. On every later check the "fold the rest into the report" branch also caught that same unit, so it came back in the next Weekly or monthly report as "My red blood cells … helped a patient". Seen with Vikram's (D-017) test donation: red cells transfused 12 Oct, repeated in the 18 Oct Weekly report.

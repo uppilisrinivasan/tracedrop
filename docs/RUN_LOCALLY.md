@@ -39,7 +39,7 @@ These values turn Gemini on. `.env.example` already contains them:
 ```sh
 GOOGLE_CLOUD_PROJECT=project-6055aa98-bf59-48b5-a50
 VERTEX_LOCATION=global
-LLM_MODEL=gemini-2.5-flash-lite
+LLM_MODEL=gemini-3.1-flash-lite
 LLM_RATE_LIMIT_RPS=2
 LLM_RATE_LIMIT_TOKENS_PER_DAY=50000
 LLM_MAX_CALLS_PER_DAY=200
@@ -60,7 +60,7 @@ Open http://localhost:5173. The API is at http://localhost:8080. Vite proxies `/
 The backend log should include:
 
 ```text
-AI: gemini-2.5-flash-lite via aiplatform.googleapis.com (budget 50000 tokens/day, 2 req/s)
+AI: gemini-3.1-flash-lite via aiplatform.googleapis.com (budget 50000 tokens/day, 2 req/s)
 ```
 
 `AI offline` means `GOOGLE_CLOUD_PROJECT` is unset. The app still runs, and each AI feature uses its rule-based fallback.

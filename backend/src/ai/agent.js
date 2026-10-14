@@ -88,7 +88,8 @@ async function runAgent({ feature, system, messages, donorId, toolNames, maxToke
         const { _ui, ...rest } = output;
         modelOutput = rest;
       }
-      return { type: 'tool_result', tool_use_id: call.id, name: call.name, content: JSON.stringify(modelOutput), ...(isError ? { is_error: true } : {}) };
+      return { type: 'tool_result', tool_use_id: call.id, name: call.name, ...(call.callId ? { call_id: call.callId } : {}),
+        content: JSON.stringify(modelOutput), ...(isError ? { is_error: true } : {}) };
     }));
     convo.push({ role: 'user', content: results });
   }
