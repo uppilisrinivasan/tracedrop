@@ -101,7 +101,7 @@ footer{margin-top:60px;font-size:13px;color:var(--faint)}
 <div class="callout warn"><b>What Drop is not:</b> a calorie or food tracker, or an app that pings all day. No meal logs, no streaks, no daily nagging. Drop sends few messages, merges them, and stays quiet when nothing matters. Every screen still works without Drop.</div>
 
 <h2 id="donors">The demo donors</h2>
-<p>Pick a donor in the account menu (your photo or initials, bottom left, then "Viewing donor"). Choosing one means using the app as that donor. A first visit opens on the <b>New donor</b>. The demo starts on <b>Saturday 10 Oct 2026, 8 am</b>. All data is synthetic.</p>
+<p>Pick who you are in <b>Viewing as</b> at the top of every screen. Choosing one means using the app as that donor. <b>You (new donor)</b> comes first and is where a first visit opens: it stands for you, a new user (shared by everyone trying the demo). The demo starts on <b>Saturday 10 Oct 2026, 8 am</b>. All data is synthetic.</p>
 <div class="grid">
   <div class="card"><div class="who"><span class="av" style="background:var(--ai-soft);color:var(--ai)">N</span><h4>New donor · just joined</h4></div><p>A new user with no records at all: no donations, results, Circles, insurer or Plan. Home greets them by your Google first name ("Hello" with sign-in off), and Drop's chat starts the Intro.</p></div>
   <div class="card"><div class="who"><span class="av" style="background:var(--ai-soft);color:var(--ai)">A</span><h4>Arjun · rising BP</h4></div><p>Donated 3 Oct, BP 148/94 (third rise: 132 → 136 → 148). Opens with "Watch my impact story" above Drop's chat; his results arrive the next day. <b>The main demo.</b></p></div>
@@ -218,7 +218,7 @@ footer{margin-top:60px;font-size:13px;color:var(--faint)}
 <tr><th>Control</th><th>What it does</th></tr>
 <tr><td>Demo bar (yellow, top of Home)</td><td>Shows the demo date and time. <b>+ few hours</b> (8 am → 2 pm → 7 pm → 9 pm), <b>+1 day</b>, <b>+1 week</b>, <b>Next event</b> (the next card for the donor you're viewing), <b>Reset</b> (also clears Drop's chat and brings the New donor's Intro back), <b>ⓘ</b> (what the bar is). Tap the date to hide the bar.</td></tr>
 <tr><td>What Drop knows</td><td>Side panel with the engine's real state: budget used, what's on Home and whether it counted, what's waiting and why, snoozed and folded cards, what's coming up, a log of what just happened, Plan and memory.</td></tr>
-<tr><td>Donor switcher</td><td>In the account menu (bottom left), with Your data and, for the New donor, Replay intro. Switching donors keeps the same demo date.</td></tr>
+<tr><td>Viewing as</td><td>Top of every screen (beside the demo bar on Home). "You (new donor)" first, then the demo donors. Switching keeps the same demo date. Your data and, for the New donor, Replay intro are in the account menu (bottom left).</td></tr>
 <tr><td>Language</td><td>Next to Drop on Home: English or the donor's own language (Arjun: ಕನ್ನಡ; the New donor: whatever they chose in the Intro).</td></tr>
 </table>
 
@@ -267,7 +267,7 @@ footer{margin-top:60px;font-size:13px;color:var(--faint)}
 <script>
 const SCRIPTS = [
   { id: 'arjun-results', title: 'Arjun: results to a free check-up', why: 'The main demo. Drop notices a trend and books care.', steps: [
-    ['Reset, then pick Arjun Rao in the account menu.', 'A "Watch my impact story" chip above Drop\'s chat: his platelets helped a child.'],
+    ['Reset, then pick Arjun Rao in Viewing as (top).', 'A "Watch my impact story" chip above Drop\'s chat: his platelets helped a child.'],
     ['Click +1 day.', 'Sun 11 Oct. A Results card on top: BP 148/94, third rise (132, 136, 148).'],
     ['Click "Explain my results".', 'Drop answers in Home\'s chat in about two sentences.'],
     ['Click "Book a free check-up".', 'A Free check-up card with Saturday slots (his memory says Saturdays suit him). No receipt: the slots card is the answer.'],
@@ -326,7 +326,7 @@ const SCRIPTS = [
     ['On My health, click "Hide from my app" on a blood-centre result.', 'It moves under "Show 1 hidden result". Eligibility does not change.'],
   ]},
   { id: 'intro', title: 'New donor: the Intro, start to finish', why: 'A new user meets Drop: what TraceDrop is, their data, their Choices.', steps: [
-    ['Reset. In the account menu pick New donor.', 'Home says Hello (your Google first name when signed in), "No donations yet" and plain empty tiles. Drop\'s chat shows "Getting started · 1 of 8" and six languages.'],
+    ['Reset. In Viewing as (top) pick You (new donor).', 'Home says Hello (your Google first name when signed in), "No donations yet" and plain empty tiles. Drop\'s chat shows "Getting started · 1 of 8" and six languages.'],
     ['Click English, then Show me.', 'Step 3: an Example donation from 3 Oct and its three parts. The "Your blood has helped" tile has a purple ring and moves to the top.'],
     ['Click Watch the story, step through, press Esc.', 'The story closes and Drop moves to step 4 with an Example results card; Health score and Demo doctor check-up are ringed.'],
     ['Type in the chat: What is a health score?', 'Drop answers in the thread, then "Carry on: Health between donations" and "Skip intro".'],

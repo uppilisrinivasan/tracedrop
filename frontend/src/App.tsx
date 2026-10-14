@@ -36,8 +36,9 @@ function readStored(key: string, fallback: string) {
   }
 }
 
-/** "Arjun Rao · B+", or just "New donor" for the new user, who has no blood group on record yet. */
-function personaLabel(p: { name: string; bloodGroup: string | null }) {
+/** "Arjun Rao · B+", or "You (new donor)": the New donor stands for the signed-in person, a new user with no records yet. */
+function personaLabel(p: { name: string; bloodGroup: string | null; newUser?: boolean }) {
+  if (p.newUser) return 'You (new donor)';
   return p.bloodGroup ? `${p.name} · ${p.bloodGroup}` : p.name;
 }
 
@@ -75,10 +76,15 @@ export default function App({ user, clientId, onSignOut }: { user: AuthUser; cli
   const refresh = () => setVersion((v) => v + 1);
   const page = { donorId, go, version, refresh, clientId };
 
-  const personaPicker = (
-    <select className="persona-select" value={donorId} onChange={(e) => { setDonorId(e.target.value); go('home'); }} aria-label="Signed in as (demo donor)">
-      {personas.map((p) => <option key={p.id} value={p.id}>{personaLabel(p)}</option>)}
-    </select>
+  // Choosing who to view is part of the demo, so it sits at the top of every screen
+  const viewingAs = (
+    <label className="viewing-as">
+      <span className="viewing-as-label"><Icon name="users" size={15} /> Viewing as</span>
+      <select className="persona-select" value={donorId} onChange={(e) => { setDonorId(e.target.value); go('home'); }} aria-label="Viewing as (demo donor)">
+        {personas.map((p) => <option key={p.id} value={p.id}>{personaLabel(p)}</option>)}
+      </select>
+      <span className="viewing-as-hint">Demo: pick yourself, or step into a demo donor's shoes</span>
+    </label>
   );
 
   const donor = personas.find((p) => p.id === donorId);
@@ -101,16 +107,19 @@ export default function App({ user, clientId, onSignOut }: { user: AuthUser; cli
           </button>
         ))}
         <div className="sidebar-foot">
-          <AccountMenu user={user} donorPicker={personaPicker} donorLabel={donorLabel} onSignOut={onSignOut} onReplayIntro={replayIntro} onYourData={() => go('data')} />
+          <AccountMenu user={user} donorLabel={donorLabel} onSignOut={onSignOut} onReplayIntro={replayIntro} onYourData={() => go('data')} />
         </div>
       </aside>
 
       <main className="main">
         <div className="mobile-top">
           <div className="brand" style={{ padding: 0 }}><span className="brand-mark"><Icon name="drop" size={18} stroke={2.4} /></span>TraceDrop</div>
-          <AccountMenu user={user} donorPicker={personaPicker} donorLabel={donorLabel} onSignOut={onSignOut} onReplayIntro={replayIntro} onYourData={() => go('data')} compact />
+          <AccountMenu user={user} donorLabel={donorLabel} onSignOut={onSignOut} onReplayIntro={replayIntro} onYourData={() => go('data')} compact />
         </div>
-        {screen === 'home' && <DemoBar donorId={donorId} onChange={refresh} />}
+        <div className="topbar">
+          {viewingAs}
+          {screen === 'home' && <DemoBar donorId={donorId} onChange={refresh} />}
+        </div>
         {screen === 'home' && <Home key={donorId} {...page} user={user} />}
         {screen === 'impact' && <Impact {...page} />}
         {(screen === 'health' || screen === 'plan' || screen === 'labs' || screen === 'checkups') && <Health {...page} focus={screen} />}

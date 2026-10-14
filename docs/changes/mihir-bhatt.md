@@ -4,6 +4,12 @@ One entry per commit, newest first, so any change can be traced or reverted: the
 To revert one: find it with `git log --oneline --grep "<commit title>"`, then `git revert <hash>`.
 The design behind these changes is in `CONTEXT.md` (vocabulary) and the build plan.
 
+## 2026-10-14 · "Viewing as" at the top, with "You (new donor)" first
+
+- **What and why:** choosing who to view is part of the demo, but the picker was hidden in the account menu. It now sits at the top of every screen as **Viewing as**, beside the yellow demo bar on Home when there's room (1440 px and up; at 1280 px the demo bar takes its own row so its buttons stay on one line). The New donor is listed first as **You (new donor)**, since it stands for the signed-in person. It is still one shared demo record (option A): two people trying the demo at once share its Intro, Choices and memories. A private per-account "you" is for after the demo, with Drop's state in Firestore. The account menu keeps Your data, Replay intro, the links and Sign out. The team guide's steps point to Viewing as.
+- **Files:** `frontend/src/App.tsx`, `frontend/src/components/AccountMenu.tsx`, `frontend/src/styles.css`, `docs/drop/index.html`.
+- **Revert:** safe to revert on its own; the picker goes back into the account menu.
+
 ## 2026-10-14 · Merge Uppili's fixes from main into the onboarding work
 
 - **What and why:** `main` gained Uppili's commit `f06bbdf` ("corrected the small bugs and errors in logic and method": stricter AI checks, k-anonymity across all recipient fields, honest "demo / illustrative" labels for cover and booking, a current health score, and three new test files) while onboarding was being built. 10 files conflicted; each was resolved to keep both sides:

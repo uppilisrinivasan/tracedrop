@@ -1,5 +1,5 @@
 /** Signed-in account: avatar chip that opens a menu with the profile, the donor being viewed and sign out. */
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { AuthUser } from '../api';
 import { Icon } from '../ui';
 
@@ -18,7 +18,6 @@ export function Avatar({ user, size = 34 }: { user: AuthUser; size?: number }) {
 
 interface Props {
   user: AuthUser;
-  donorPicker: ReactNode;
   donorLabel: string;
   onSignOut: () => void;
   /** Only while viewing the New donor: play Drop's Intro again */
@@ -28,7 +27,7 @@ interface Props {
   compact?: boolean;
 }
 
-export default function AccountMenu({ user, donorPicker, donorLabel, onSignOut, onReplayIntro, onYourData, compact = false }: Props) {
+export default function AccountMenu({ user, donorLabel, onSignOut, onReplayIntro, onYourData, compact = false }: Props) {
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   const name = user.local ? 'Local development' : user.name || user.email;
@@ -61,10 +60,6 @@ export default function AccountMenu({ user, donorPicker, donorLabel, onSignOut, 
           <div className="account-head">
             <Avatar user={user} size={40} />
             <span className="account-who"><b>{name}</b><span>{email}</span></span>
-          </div>
-          <div className="account-section">
-            <span className="account-label">Viewing donor</span>
-            {donorPicker}
           </div>
           <button className="account-item" role="menuitem" onClick={() => { setOpen(false); onYourData(); }}>
             <Icon name="lock" size={15} /> Your data
