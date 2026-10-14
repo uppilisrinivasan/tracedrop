@@ -4,6 +4,15 @@ One entry per commit, newest first, so any change can be traced or reverted: the
 To revert one: find it with `git log --oneline --grep "<commit title>"`, then `git revert <hash>`.
 The design behind these changes is in `CONTEXT.md` (vocabulary) and the build plan.
 
+## 2026-10-14 · An impact Card's own unit is no longer repeated in the report
+
+- **What and why:** a bug fix in `detect()`, branch `fix/impact-fold-first-unit` (from `feature/story-and-badge`). The first transfused unit of a donation raises the impact Card. On every later check the "fold the rest into the report" branch also caught that same unit, so it came back in the next Weekly or monthly report as "My red blood cells … helped a patient". Seen with Vikram's (D-017) test donation: red cells transfused 12 Oct, repeated in the 18 Oct Weekly report.
+  - The unit that raises the impact Card is now marked as told (`impact_more:<unit>`), and so is a seeded impact Card's unit. Later units of the donation still fold into the report as before.
+  - It marks the unit, not "the first in the list": Arjun's (D-001) seeded Card is about platelets transfused 8 Oct, before Drop started, so the first unit Drop sees for that donation is his red cells (15 Oct), a later unit. Skipping index 0 would have dropped them from the report. His platelets were never repeated, since they fall before Drop's start.
+  - One new test in `backend/test/drop.test.js`: Vikram's report lists his platelets but not his red cells, and Arjun's lists his red cells.
+- **Files:** `backend/src/domain/drop.js`, `backend/test/drop.test.js`.
+- **Revert:** safe to revert on its own; the Card's unit shows up again in the next report.
+
 ## 2026-10-14 · New Badges in Stories, reports and Drop's line (Story and Badge complete)
 
 - **Feature summary (steps 1–5 on `feature/story-and-badge`):** every unit that reached a patient, or plasma that became medicines, has one Story, built in `story.js`. It plays from Drop's impact Card or "Watch the story" on My Impact, and ends on a shareable 1080×1920 postcard (Download image, Copy image, Share… where the browser can share files). Eight Badges are worked out from the Donor's own data (`badges.js`) and shown on My Impact's Badge shelf. Each earned Badge opens as a shareable medal image. A newly earned Badge is marked "New" and shows up in the Story, report or Drop's line, never as a new Card. The text share, the old "AI" story and "Share my impact" are gone.

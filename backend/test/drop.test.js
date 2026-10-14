@@ -283,6 +283,20 @@ test('a Badge completed by a later unit, by plasma or by Regular donor lands in 
   assert.ok(reportFrom('D-033', '2026-11-01').story.includes('New Badge: Regular donor. Share it from your Badges on My Impact.'));
 });
 
+test("an impact Card's own unit is not repeated in the report; a later unit of the same donation is", () => {
+  // Vikram: the red cells get the Card, the platelets two days later go in the report
+  vikramUnits([{ kind: 'PRBC', on: '2026-10-12' }, { kind: 'PLT', on: '2026-10-14' }]);
+  drop.view('D-017');
+  const week = reportFrom('D-017', '2026-10-18');
+  assert.deepEqual(week.story.filter((s) => /^My .* helped a patient/.test(s)).map((s) => s.split(' from ')[0]), ['My platelets']);
+
+  // Arjun: his seeded Card's platelets reached a patient before Drop started, so his red cells (15 Oct) are the first unit Drop sees, yet a later one
+  store.resetDemo();
+  drop.view('D-001');
+  const arjun = reportFrom('D-001', '2026-10-18');
+  assert.deepEqual(arjun.story.filter((s) => /^My .* helped a patient/.test(s)).map((s) => s.split(' from ')[0]), ['My red blood cells']);
+});
+
 test('two Badges at once: the Story carries the first, the report and Drop\'s line list the rest', () => {
   vikramUnits([{ kind: 'PRBC', on: '2026-10-12', age: 9 }]);
   drop.view('D-017');
