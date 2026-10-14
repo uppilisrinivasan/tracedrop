@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../../api';
 import { Icon } from '../../ui';
 import './drop.css';
+import { openChat } from './chat';
 
 const hiddenKey = (donorId: string, screen: string, date: string) => `tracedrop.line.${donorId}.${screen}.${date}`;
 
@@ -31,7 +32,7 @@ export default function DropLine({ donorId, screen, version }: { donorId: string
   };
   return (
     <div className="drop-line" role="note" aria-label="From Drop">
-      <button className="txt" onClick={() => window.dispatchEvent(new CustomEvent('drop:open', { detail: { text: line.text, questions: line.questions } }))}>
+      <button className="txt" onClick={() => openChat({ text: line.text, questions: line.questions })}>
         <Icon name="drop" size={16} className="icon" /><span>{line.text}</span>
       </button>
       <button className="x" aria-label="Hide for today" onClick={hide}>×</button>

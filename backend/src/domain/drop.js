@@ -517,7 +517,7 @@ function words(st, c) {
       const live = activeGoals(st);
       const book = { label: 'Try demo check-up slots', value: 'book' };
       const explain = { label: 'Explain my results', value: 'explain', ask: 'Can you explain my latest results?' };
-      // The button opens the Goal's Chat (the Drop panel, until the Chat side sheet is built)
+      // The button opens the Goal's Chat in the side sheet
       if (live.length) {
         return {
           text: `${results}${live.length > 1 ? 'Your Goals' : 'Your Goal'}: ${live.map((g) => g.name).join(' and ')}, on My health. Worth discussing with a real clinician; demo check-up slots contact no clinic.`,
@@ -931,25 +931,58 @@ function view(donorId) {
 /** The facts code writes for a Goal; its trend includes the readings the Donor added. */
 const goalFacts = (st, g) => goalRules.facts(g, st.donorId, (marker) => chartPoints(st.donorId, marker));
 
-/** What opens a Goal's Chat: Drop's opening line and questions (the Drop panel, until the Chat side sheet is built). */
-function goalChat(st, g, facts = goalFacts(st, g)) {
-  const { trend } = facts;
+/**
+ * What opens a Goal's Chat in the side sheet: Drop's opening line and questions, by the Goal's state (ticket 01).
+ * Up next stays open both ways but offers no Week plans; done and stopped are read-only.
+ * `answers` are fixed replies to a question, given by rules rather than the copilot.
+ */
+function goalChat(st, g, facts) {
+  if (g.state === 'done') return { goalId: g.id, text: `${g.name} is done: your results on ${fmt(g.doneOn)} left it at "watch" or better. This Chat is read-only now.`, questions: [] };
+  if (g.state === 'stopped') return { goalId: g.id, text: `You stopped ${g.name} on ${fmt(g.stoppedOn)}. This Chat is read-only; Start again picks it back up.`, questions: [] };
+  const { trend } = facts || goalFacts(st, g);
+  const why = `Why does my ${g.name} Goal matter?`;
+  const chart = `Show my ${trend.label} trend`;
+  if (g.state === 'upnext') {
+    const start = 'Can I start it now?';
+    return {
+      goalId: g.id,
+      text: `${g.name} is up next: it starts when ${g.startsWhen} is done. Target: ${lcFirst(g.target.text)}. ${trend.words}: ${trend.range}.`,
+      questions: [start, why, chart],
+      answers: { [start]: `It starts when ${g.startsWhen} is done. What you do for Movement helps it too.` },
+    };
+  }
   return {
     goalId: g.id,
     text: `${g.name}. Target: ${lcFirst(g.target.text)}. ${trend.words}: ${trend.range}.`,
-    questions: ['What could I do this week?', `Why does my ${g.name} Goal matter?`, `Show my ${trend.label} trend`],
+    questions: ['What could I do this week?', why, chart],
   };
 }
 
 /** A Goal as the app shows it: name, state, target, the write-up and the facts code writes. */
 function goalView(st, g) {
-  if (g.state === 'done') return { id: g.id, name: g.name, state: g.state, createdOn: g.createdOn, doneOn: g.doneOn };
+  if (g.state === 'done') return { id: g.id, name: g.name, state: g.state, createdOn: g.createdOn, doneOn: g.doneOn, chat: goalChat(st, g) };
   const facts = goalFacts(st, g);
   return {
     id: g.id, name: g.name, state: g.state, severity: g.severity, stopsDonation: g.stopsDonation, target: g.target.text,
-    createdOn: g.createdOn, startsWhen: g.startsWhen || null, findings: g.findings.map((f) => f.id), writeup: g.writeup,
+    createdOn: g.createdOn, startsWhen: g.startsWhen || null, stoppedOn: g.stoppedOn || null, findings: g.findings.map((f) => f.id), writeup: g.writeup,
     ...facts, chat: goalChat(st, g, facts),
   };
+}
+
+/** "Stop this Goal", from its Chat. An urgent Goal can't be stopped (goals.js throws). */
+function stopGoal(donorId, goalId) {
+  const st = get(donorId);
+  goalRules.stop(st.goals, donorId, goalId);
+  log(st, `Goal stopped: ${st.goals[goalId].name}.`);
+  return view(donorId);
+}
+
+/** "Start again" on a stopped Goal: back to active if there's room, otherwise Up next. */
+function startGoalAgain(donorId, goalId) {
+  const st = get(donorId);
+  goalRules.startAgain(st.goals, donorId, goalId);
+  log(st, `Goal started again: ${st.goals[goalId].name}.`);
+  return view(donorId);
 }
 
 /** Facts for the AI writer and the copilot: the open Cards with their data and rule wording. */
@@ -1079,7 +1112,7 @@ function nextEvent(donorId) {
 module.exports = {
   get, view, answer, undo, snooze, cancelBooking, recordBooking, forgetBooking, hide, reopen, forget, undoMemory, deleteReading, hideResult, nextEvent,
   openForWriting, setAi, words, label, setLanguage, offerCard, logReading, chatContext, chartPoints, readinessOf: (donorId) => readiness(get(donorId)),
-  newBadges, seeBadges, goals: (donorId) => goalsOf(get(donorId)),
+  newBadges, seeBadges, goals: (donorId) => goalsOf(get(donorId)), stopGoal, startGoalAgain, goalChatOf: goalChat,
   rememberText: (donorId, text, replacesPattern) => { const st = get(donorId); remember(st, text, replacesPattern ? new RegExp(replacesPattern, 'i') : null); return view(donorId); },
   BUDGETS, PRIORITY,
   _state: get, _addEvent: (donorId, ev) => addEvent(get(donorId), ev), _deliver: (donorId) => deliver(get(donorId)),

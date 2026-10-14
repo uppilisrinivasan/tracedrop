@@ -185,8 +185,8 @@ export interface UploadedValue { id: string; name: string; value: number; unit: 
 export interface DemoClock { date: string; part: number; partName: 'morning' | 'afternoon' | 'evening' | 'night'; start: string }
 
 export type DropCardType = 'results' | 'urgent' | 'checkin' | 'slots' | 'reminder' | 'impact' | 'report' | 'chart';
-/** Opens a Chat with Drop's line and questions (the Drop panel, until the Chat side sheet is built). */
-export interface ChatOpen { text: string; questions: string[]; goalId?: string }
+/** Opens a Chat in the side sheet with Drop's line and questions. `answers` are fixed replies to a question, by rules. */
+export interface ChatOpen { text: string; questions: string[]; goalId?: string; answers?: Record<string, string> }
 export interface DropAction { label: string; value: unknown; story?: boolean; ask?: string; open?: ChatOpen }
 export interface DropCard {
   id: string; type: DropCardType; variant: string; label: string; urgent: boolean; counted: boolean; createdOn: string;
@@ -208,11 +208,11 @@ export interface DropReading { id: string; marker: 'bp' | 'hb'; date: string; s?
 /** A Goal (CONTEXT.md): made from results by fixed rules (backend/src/domain/goals.js). */
 export type GoalState = 'active' | 'upnext' | 'done' | 'stopped';
 export interface DropGoal {
-  id: string; name: string; state: GoalState; createdOn: string; doneOn?: string;
+  id: string; name: string; state: GoalState; createdOn: string; doneOn?: string; stoppedOn?: string | null;
   severity?: 'urgent' | 'high' | 'moderate'; stopsDonation?: boolean; target?: string; startsWhen?: string | null; findings?: string[];
   writeup?: GoalWriteup;
   /** What code writes: the trend against the target, the Goal's other findings, the doctor note and the next check */
-  urgency?: string; also?: string[]; doctorNote?: string; nextCheck?: string; chat?: ChatOpen;
+  urgency?: string; also?: string[]; doctorNote?: string; nextCheck?: string; chat: ChatOpen;
   trend?: { marker: string; label: string; unit: string; points: ChartPoint[]; line: number | null; up: boolean; words: string; range: string };
 }
 /** Written once per Goal, when it is made or its findings change: "why this matters" and 2-3 tagged steps with evidence. */
@@ -359,6 +359,8 @@ export const api = {
   dropMemoryUndo: (id: string) => post<DropView>(`/donors/${id}/drop/memory/undo`),
   dropForget: (id: string, memoryId?: string) => request<DropView>(`/donors/${id}/drop/memory${memoryId ? `/${memoryId}` : ''}`, { method: 'DELETE' }),
   dropAddReading: (id: string, reading: { s: number; d: number }) => post<DropView>(`/donors/${id}/drop/readings`, reading),
+  dropStopGoal: (id: string, goalId: string) => post<DropView>(`/donors/${id}/drop/goals/${goalId}/stop`),
+  dropStartGoalAgain: (id: string, goalId: string) => post<DropView>(`/donors/${id}/drop/goals/${goalId}/start-again`),
   dropDeleteReading: (id: string, readingId: string) => request<DropView>(`/donors/${id}/drop/readings/${readingId}`, { method: 'DELETE' }),
   dropHideResult: (id: string, observationId: string) => post<DropView>(`/donors/${id}/drop/results/${observationId}/hide`),
   dropLanguage: (id: string, language: string) => post<DropView>(`/donors/${id}/drop/language`, { language }),

@@ -8,7 +8,8 @@ import { ReadingsSection } from '../components/drop/HealthDrop';
 import type { DropReading, DropView } from '../api';
 import Checkup from '../components/drop/Checkup';
 import { bookCheckup } from '../components/Copilot';
-import { openChat } from '../components/drop/chat';
+import { habitOpener, openChat } from '../components/drop/chat';
+import BpReading from '../components/drop/BpReading';
 import './health.css';
 
 const MARKERS: { key: string; label: string; unit: string; good?: [number, number] }[] = [
@@ -47,7 +48,7 @@ function weekLabel(today: string) {
   return `${day(monday, sameMonth ? { weekday: 'short', day: 'numeric' } : { weekday: 'short', day: 'numeric', month: 'short' })} – ${day(sunday, { weekday: 'short', day: 'numeric', month: 'short' })}`;
 }
 
-const planHabit = (name: string) => openChat({ text: `${name}: no Week plan yet.`, questions: [`Help me plan this week's ${name.toLowerCase()}`] });
+const planHabit = (name: string) => openChat(habitOpener(name));
 
 export default function Health({ donorId, go, version, refresh, focus }: PageProps & { focus: Screen }) {
   const { data, error, loading } = useLoad(() => api.health(donorId), [donorId, version]);
@@ -197,7 +198,7 @@ function GoalCard({ goal: g, donorId, go, onChange }: { goal: DropGoal; donorId:
             ))}
           </div>
           <div className="row wrap mt-16">
-            <button className="btn btn-primary" onClick={() => g.chat && openChat(g.chat)}>Open {g.name}</button>
+            <button className="btn btn-primary" onClick={() => openChat(g.chat)}>Open {g.name}</button>
             <button className="btn" aria-expanded={g.trend?.marker === 'bp' ? adding : undefined} onClick={addReading}>Add a reading</button>
           </div>
           {adding && <BpReading donorId={donorId} onSaved={(v) => { setAdding(false); onChange(v); }} />}
@@ -251,27 +252,6 @@ function GoalChart({ trend }: { trend: NonNullable<DropGoal['trend']> }) {
   );
 }
 
-/** A BP reading from a pharmacy machine or home monitor, added to the Goal's trend. */
-function BpReading({ donorId, onSaved }: { donorId: string; onSaved: (v: DropView) => void }) {
-  const [bp, setBp] = useState({ s: 0, d: 0 });
-  const [err, setErr] = useState<string | null>(null);
-  const valid = bp.s >= 70 && bp.s <= 250 && bp.d >= 40 && bp.d <= 150 && bp.s > bp.d;
-  async function save() {
-    setErr(null);
-    try { onSaved(await api.dropAddReading(donorId, bp)); } catch (e) { setErr((e as Error).message); }
-  }
-  return (
-    <form className="numbers mt-12" onSubmit={(e) => { e.preventDefault(); if (valid) save(); }}>
-      <label>Top number<input type="number" inputMode="numeric" min={70} max={250} value={bp.s || ''} onChange={(e) => setBp((v) => ({ ...v, s: Number(e.target.value) }))} /></label>
-      <span className="slash">/</span>
-      <label>Bottom number<input type="number" inputMode="numeric" min={40} max={150} value={bp.d || ''} onChange={(e) => setBp((v) => ({ ...v, d: Number(e.target.value) }))} /></label>
-      <span className="unit">mmHg</span>
-      <button type="submit" className="btn btn-primary" disabled={!valid}>Save reading</button>
-      {err && <span className="numbers-error">{err}</span>}
-    </form>
-  );
-}
-
 function UpNextCard({ goal: g }: { goal: DropGoal }) {
   return (
     <section className="card">
@@ -281,7 +261,7 @@ function UpNextCard({ goal: g }: { goal: DropGoal }) {
           <div className="card-title mt-8">{g.name}</div>
           <div className="small muted">{g.trend ? `${g.trend.words}: ${g.trend.range}` : ''} · Starts when {g.startsWhen} is done</div>
         </div>
-        <button className="btn" onClick={() => g.chat && openChat(g.chat)}>Open</button>
+        <button className="btn" onClick={() => openChat(g.chat)}>Open</button>
       </div>
     </section>
   );
@@ -312,7 +292,7 @@ function ScoreCard({ donorId, data, version }: { donorId: string; data: HealthDa
 
 const STATE_LINE: Record<string, string> = { upnext: 'Up next', done: 'Done', stopped: 'Stopped' };
 
-/** The Chats with Drop. Until Chats are stored and the side sheet is built, each opens the Drop panel. */
+/** The Chats with Drop: each opens in the side sheet. Past Cycles waits for stored Chats (build plan step 3). */
 function ChatsCard({ goals, since, today }: { goals: DropGoal[]; since: string | null; today: string | null }) {
   // A Cycle runs from one donation to the next, or 120 days for a Donor who isn't donating
   const inCycle = since && today && Date.parse(today) - Date.parse(since) < 120 * 864e5;
@@ -322,7 +302,7 @@ function ChatsCard({ goals, since, today }: { goals: DropGoal[]; since: string |
       <button className="row-btn mt-8" onClick={() => openChat()}><span className="grow"><b className="small">General</b><small>{inCycle ? `This Cycle, since your ${day(since, { day: 'numeric', month: 'short' })} donation` : 'This Cycle'}</small></span></button>
       {goals.length > 0 && <div className="group-h">{goals.length > 1 ? 'Goals' : 'Goal'}</div>}
       {goals.map((g) => (
-        <button key={g.id} className="row-btn" onClick={() => openChat(g.chat || { text: `${g.name}.`, questions: [] })}>
+        <button key={g.id} className="row-btn" onClick={() => openChat(g.chat)}>
           <span className="grow"><b className="small">{g.name}</b><small>{g.state === 'active' ? `Target: ${g.target}` : STATE_LINE[g.state]}</small></span>
         </button>
       ))}

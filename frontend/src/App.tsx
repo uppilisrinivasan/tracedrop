@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api, type AuthUser } from './api';
 import { Icon } from './ui';
-import Copilot from './components/Copilot';
+import ChatSheet from './components/drop/ChatSheet';
 import { introChanged } from './components/intro/Intro';
 import DemoBar from './components/DemoBar';
 import AccountMenu from './components/AccountMenu';
@@ -139,7 +139,7 @@ export default function App({ user, clientId, onSignOut }: { user: AuthUser; cli
         ))}
       </nav>
 
-      {screen !== 'home' && <Copilot key={donorId} donorId={donorId} go={go} clientId={clientId} />}
+      <ChatSheet key={donorId} donorId={donorId} go={go} clientId={clientId} screen={screen} />
     </div>
   );
 }

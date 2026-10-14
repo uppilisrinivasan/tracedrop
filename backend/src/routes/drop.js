@@ -56,6 +56,9 @@ router.delete('/memory', act((donorId) => drop.forget(donorId, null)));
 // A BP reading added from a Goal on My health
 router.post('/readings', act((donorId, req) => { drop.logReading(donorId, req.body || {}); return drop.view(donorId); }));
 router.delete('/readings/:readingId', act((donorId, req) => drop.deleteReading(donorId, req.params.readingId)));
+// "Stop this Goal" and "Start again", from a Goal's Chat
+router.post('/goals/:goalId/stop', act((donorId, req) => drop.stopGoal(donorId, req.params.goalId)));
+router.post('/goals/:goalId/start-again', act((donorId, req) => drop.startGoalAgain(donorId, req.params.goalId)));
 router.post('/results/:observationId/hide', act((donorId, req) => drop.hideResult(donorId, req.params.observationId)));
 
 module.exports = router;

@@ -1,5 +1,5 @@
 /**
- * Drop's side panel: the chat half of the Drop conversation. Replies are one or
+ * Drop's chat: Home's General Chat (inline) and each Chat in the side sheet (ChatSheet). Replies are one or
  * two sentences plus at most one Card (a chart, check-up slots or a reminder),
  * memory lines and receipts. Cards it opens also appear on Home.
  */
@@ -9,13 +9,13 @@ import { api, fmtDate, isStaleCard, type Appointment, type ChartPoint, type Copi
 import { Icon, Thinking } from '../ui';
 import type { Screen } from '../App';
 import DropCardView from './drop/DropCardView';
-import MemorySheet from './drop/MemorySheet';
 import BookingFlow from './BookingFlow';
 import AppointmentPass from './AppointmentPass';
 import StoryViewer, { badgeSeenOnSlide } from './drop/StoryViewer';
 import Checkup from './drop/Checkup';
 import { chatCards } from './drop/DropFeed';
 import { IntroBar, IntroFold, IntroThread, useIntro } from './intro/Intro';
+import { sheet, type ChatId } from './drop/chat';
 import './drop/drop.css';
 
 interface Turn { role: 'user' | 'ai'; text: string; offline?: boolean; actions?: CopilotAction[]; questions?: string[]; booking?: boolean; appointment?: Appointment; checkup?: DropBooking }
@@ -33,8 +33,12 @@ export function bookCheckup() {
 const CHECKUP_INTENT = /\b(check-?ups?|doctor|physician|gp)\b/i;
 const BOOK_INTENT = /\b(book|schedule|reserve)\b.*\b(donat\w*|slot|appointment|blood)\b|^book\b/i;
 
-// One conversation per donor, shared by the chat on Home and the side panel on other screens
+// One conversation per donor and Chat; the General one is shared by Home and the side sheet
 const conversations = new Map<string, { turns: Turn[]; history: unknown[] | null }>();
+const keyOf = (donorId: string, chat: ChatId) => (chat === 'general' ? donorId : `${donorId}|${chat}`);
+
+/** What the side sheet asks its Chat to do as it opens: show Drop's line, ask, book or offer check-ups. */
+export interface ChatOpener { id: number; kind: 'open' | 'say' | 'ask' | 'book' | 'checkup'; text?: string; questions?: string[] }
 
 const PLANNING = /^(the user\b|plan:|draft \d|critique \d|revise \d|final answer:)/i;
 
@@ -118,11 +122,15 @@ function ChartCard({ marker, points }: { marker: string; points: ChartPoint[] })
   );
 }
 
-export default function Copilot({ donorId, go, clientId, inline = false, top, firstTime = false }: { donorId: string; go: (s: Screen) => void; clientId: string; inline?: boolean; top?: ReactNode; firstTime?: boolean }) {
-  const [open, setOpen] = useState(inline);
-  const [turns, setTurns] = useState<Turn[]>(() => conversations.get(donorId)?.turns || []);
-  const [history, setHistory] = useState<unknown[] | null>(() => conversations.get(donorId)?.history || null);
-  useEffect(() => { conversations.set(donorId, { turns, history }); }, [donorId, turns, history]);
+export default function Copilot({ donorId, go, clientId, inline = false, top, firstTime = false, chat = 'general', opener, answers = {}, readOnly = false, placeholder }: {
+  donorId: string; go: (s: Screen) => void; clientId: string; inline?: boolean; top?: ReactNode; firstTime?: boolean;
+  /** In the side sheet: which Chat, what to do as it opens, fixed rule replies, and read-only for a done or stopped Goal */
+  chat?: ChatId; opener?: ChatOpener | null; answers?: Record<string, string>; readOnly?: boolean; placeholder?: string;
+}) {
+  const key = keyOf(donorId, chat);
+  const [turns, setTurns] = useState<Turn[]>(() => conversations.get(key)?.turns || []);
+  const [history, setHistory] = useState<unknown[] | null>(() => conversations.get(key)?.history || null);
+  useEffect(() => { conversations.set(key, { turns, history }); }, [key, turns, history]);
   const historyRef = useRef<unknown[] | null>(history);
   function recordLocal(userText: string, reply: string) {
     const updated = [...(historyRef.current || []), { role: 'user', content: userText }, { role: 'assistant', content: reply }];
@@ -135,7 +143,6 @@ export default function Copilot({ donorId, go, clientId, inline = false, top, fi
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [view, setView] = useState<DropView | null>(null);
-  const [memoryOpen, setMemoryOpen] = useState(false);
   const [story, setStory] = useState<DropCard | null>(null);
   const body = useRef<HTMLDivElement>(null);
   const sendRef = useRef<(text: string) => void>(() => {});
@@ -155,7 +162,6 @@ export default function Copilot({ donorId, go, clientId, inline = false, top, fi
   const changed = () => window.dispatchEvent(new CustomEvent('drop:changed'));
 
   function book(said?: string) {
-    setOpen(true);
     setInput('');
     if (said) recordLocal(said, "Let's book your donation. It takes about a minute.");
     setTurns((t) => [
@@ -166,7 +172,6 @@ export default function Copilot({ donorId, go, clientId, inline = false, top, fi
   }
 
   async function offerCheckup(said?: string, text = 'Here are the next free check-up times. Tap one to book.') {
-    setOpen(true);
     setInput('');
     if (said) setTurns((t) => [...t, { role: 'user', text: said }]);
     try {
@@ -189,6 +194,12 @@ export default function Copilot({ donorId, go, clientId, inline = false, top, fi
     if (CHECKUP_INTENT.test(message) && /\b(book|schedule|reserve|see|visit|need|want|like)\b/i.test(message)) { offerCheckup(message); return; }
     if (BOOK_INTENT.test(message)) { book(message); return; }
     setInput('');
+    // A fixed reply by rules, such as when an Up next Goal starts
+    if (answers[message]) {
+      recordLocal(message, answers[message]);
+      setTurns((t) => [...t, { role: 'user', text: message }, { role: 'ai', text: answers[message] }]);
+      return;
+    }
     setTurns((t) => [...t, { role: 'user', text: message }]);
     setBusy(true);
     try {
@@ -215,53 +226,61 @@ export default function Copilot({ donorId, go, clientId, inline = false, top, fi
   bookRef.current = () => { book(); if (inline) body.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
   checkupRef.current = () => { offerCheckup('Book a doctor check-up'); if (inline) body.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
 
-  // Other parts of the app ask Drop things: a chip on a Card, or the line at the top of a screen
+  // Other parts of the app ask Drop things: a chip on a Card, or Book on Home. In the side sheet, ChatSheet passes them in as `opener`.
   useEffect(() => {
-    const onAsk = (e: Event) => { setOpen(true); reloadView(); sendRef.current(String((e as CustomEvent).detail)); };
-    const onOpen = (e: Event) => {
-      const { text, questions } = (e as CustomEvent).detail as { text: string; questions: string[] };
-      setOpen(true);
-      reloadView();
-      if (text) setTurns((t) => [...t, { role: 'ai', text: `${text} What would you like to know?`, questions }]);
-    };
+    const onAsk = (e: Event) => { if (sheet.open) return; reloadView(); sendRef.current(String((e as CustomEvent).detail)); };
     const onChanged = () => reloadView();
     // Mid-Intro the chat is busy with the Intro, so booking opens on the Donate screen instead
-    const onBook = () => (introLiveRef.current ? go('donate') : bookRef.current());
-    const onCheckup = () => checkupRef.current();
+    const onBook = () => { if (!sheet.open) (introLiveRef.current ? go('donate') : bookRef.current()); };
+    const onCheckup = () => { if (!sheet.open) checkupRef.current(); };
+    // The side sheet's General Chat is this one: pick up what was said there
+    const onSheetClosed = () => {
+      const saved = conversations.get(key);
+      if (saved) { setTurns(saved.turns); setHistory(saved.history); historyRef.current = saved.history; }
+    };
     // The demo went back to the start: the saved conversation and the Cards it showed no longer exist
     const onReset = () => {
       conversations.clear();
       setTurns([]);
       setHistory(null);
+      historyRef.current = null;
       setStory(null);
       reloadView();
     };
-    window.addEventListener('drop:ask', onAsk);
-    window.addEventListener('drop:open', onOpen);
+    if (inline) {
+      window.addEventListener('drop:ask', onAsk);
+      window.addEventListener('drop:book', onBook);
+      window.addEventListener('drop:checkup', onCheckup);
+      window.addEventListener('drop:sheet-closed', onSheetClosed);
+    }
     window.addEventListener('drop:changed', onChanged);
-    window.addEventListener('drop:book', onBook);
-    window.addEventListener('drop:checkup', onCheckup);
     window.addEventListener('demo:reset', onReset);
     return () => {
       window.removeEventListener('drop:ask', onAsk);
-      window.removeEventListener('drop:open', onOpen);
-      window.removeEventListener('drop:changed', onChanged);
       window.removeEventListener('drop:book', onBook);
       window.removeEventListener('drop:checkup', onCheckup);
+      window.removeEventListener('drop:sheet-closed', onSheetClosed);
+      window.removeEventListener('drop:changed', onChanged);
       window.removeEventListener('demo:reset', onReset);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [donorId]);
+  }, [key]);
 
+  useEffect(() => { reloadView(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [key]);
+
+  // The side sheet opened this Chat, or asked it something
   useEffect(() => {
-    if (!open) return undefined;
-    reloadView();
-    if (inline) return undefined;
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && !memoryOpen && setOpen(false);
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    if (!opener) return;
+    if (opener.kind === 'ask' && opener.text) sendRef.current(opener.text);
+    else if (opener.kind === 'book') bookRef.current();
+    else if (opener.kind === 'checkup') checkupRef.current();
+    else if (opener.text) {
+      const text = opener.kind === 'say' ? opener.text : `${opener.text} What would you like to know?`;
+      // Opening a Chat again doesn't repeat its opening line
+      setTurns((t) => (opener.kind === 'open' && t.some((x) => x.text === text) ? t : [...t, { role: 'ai', text, questions: opener.questions?.length ? opener.questions : undefined }]));
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, memoryOpen]);
+  }, [opener?.id]);
 
   async function act(p: Promise<DropView>) {
     try {
@@ -325,36 +344,15 @@ export default function Copilot({ donorId, go, clientId, inline = false, top, fi
     return null;
   }
 
-  if (!open) {
-    return (
-      <button className="fab" onClick={() => setOpen(true)} aria-label="Ask Drop, your assistant">
-        <Icon name="drop" size={20} /> Ask Drop
-      </button>
-    );
-  }
-
   return (
-    <div className={inline ? 'chat chat-inline' : 'chat fade-in'} role={inline ? 'region' : 'dialog'} aria-label="Drop, your TraceDrop assistant">
-      {!inline && <div className="chat-head">
-        <div className="row">
-          <span className="drop-avatar"><Icon name="drop" size={18} stroke={2.2} /></span>
-          <div>
-            <div className="bold">Drop</div>
-            <div className="tiny muted">Answers from your real records</div>
-          </div>
-        </div>
-        <div className="row" style={{ gap: 4 }}>
-          <button className="btn btn-ghost btn-sm" style={{ minHeight: 40 }} onClick={() => setMemoryOpen(true)}>What I remember</button>
-          <button className="btn btn-ghost btn-sm" style={{ minHeight: 40, minWidth: 40 }} onClick={() => setOpen(false)} aria-label="Close"><Icon name="x" /></button>
-        </div>
-      </div>}
+    <div className={inline ? 'chat chat-inline' : 'chat chat-sheet'} role="region" aria-label={inline ? 'Drop, your TraceDrop assistant' : 'Chat with Drop'}>
       {introLive && <IntroBar intro={intro} />}
       <div className="chat-body" ref={body}>
         {top}
         {introLive && <IntroThread intro={intro} renderAction={renderAction} renderText={(t) => <Rich text={spoken(t)} />} />}
         {!introLive && inline && <IntroFold intro={intro} />}
         {!introLive && turns.length === 0 && (
-          <div className="msg msg-ai">{inline ? `Ask me anything, or book your ${firstTime ? 'first' : 'next'} donation here.` : "Hi, I'm Drop. Ask me about your results, your blood's journey, your Plan or when you can donate. I'll answer in a sentence or two, and show you a card when it helps."}</div>
+          <div className="msg msg-ai">{inline ? `Ask me anything, or book your ${firstTime ? 'first' : 'next'} donation here.` : "Hi, I'm Drop. Ask me about your results, your blood's journey, your Goals or when you can donate. I'll answer in a sentence or two, and show you a card when it helps."}</div>
         )}
         {!introLive && turns.map((t, i) => (
           <div key={i} className="stack" style={{ gap: 6, alignItems: t.role === 'user' ? 'flex-end' : 'flex-start' }}>
@@ -363,7 +361,7 @@ export default function Copilot({ donorId, go, clientId, inline = false, top, fi
             </div>
             {(t.actions || []).filter((a) => a.type !== 'navigate').slice(0, 2).map(renderAction)}
             {t.actions?.some((a) => a.type === 'navigate') && <span className="pill pill-ai"><Icon name="arrow" size={12} /> Opened {t.actions.find((a) => a.type === 'navigate')?.screen}</span>}
-            {t.questions && <div className="suggestions">{t.questions.map((q) => <button key={q} className="suggestion" style={{ minHeight: 36 }} onClick={() => send(q)}>{q}</button>)}</div>}
+            {t.questions && !readOnly && <div className="suggestions">{t.questions.map((q) => <button key={q} className="suggestion" style={{ minHeight: 36 }} onClick={() => send(q)}>{q}</button>)}</div>}
             {t.offline && <span className="tiny faint">AI offline: answered by rules</span>}
             {t.booking && (
               <div className="chat-flow">
@@ -378,18 +376,15 @@ export default function Copilot({ donorId, go, clientId, inline = false, top, fi
         {busy && <Thinking label="Drop is checking your records…" />}
       </div>
       {story?.story && <StoryViewer title={story.label} slides={story.story} last={story.last} onSlide={badgeSeenOnSlide(donorId, story)} onClose={storyDone} />}
-      {!introLive && <div className="suggestions suggestions-stay">
+      {!introLive && chat === 'general' && !readOnly && <div className="suggestions suggestions-stay">
         {stories.map((c) => <StoryChip key={c.id} card={c} onClick={() => watch(c)} />)}
         {(firstTime ? FIRST_TIME_SUGGESTIONS : SUGGESTIONS).map((s, i) => <button key={s} className={`suggestion ${i === 0 ? 'suggestion-main' : ''}`} style={{ minHeight: 36 }} disabled={busy} onClick={() => send(s)}>{s}</button>)}
       </div>}
-      <form className="chat-input" onSubmit={(e) => { e.preventDefault(); if (introLive) { intro.ask(input); setInput(''); } else send(input); }}>
+      {!readOnly && <form className="chat-input" onSubmit={(e) => { e.preventDefault(); if (introLive) { intro.ask(input); setInput(''); } else send(input); }}>
         <input value={input} onChange={(e) => setInput(e.target.value)} aria-label="Message"
-          placeholder={introLive ? intro.view?.ui.input : inline ? 'Ask Drop, or type "book a donation"' : 'Ask Drop anything'} />
+          placeholder={introLive ? intro.view?.ui.input : inline ? 'Ask Drop, or type "book a donation"' : placeholder || 'Ask Drop anything'} />
         <button className="btn btn-ai" disabled={busy || intro.busy || !input.trim()} aria-label="Send" style={{ minWidth: 44 }}><Icon name="send" size={16} /></button>
-      </form>
-      {memoryOpen && view && (
-        <MemorySheet memory={view.memory} onForget={(id) => act(api.dropForget(donorId, id))} onForgetAll={() => act(api.dropForget(donorId))} onClose={() => setMemoryOpen(false)} />
-      )}
+      </form>}
     </div>
   );
 }

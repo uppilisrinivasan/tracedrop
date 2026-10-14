@@ -254,3 +254,33 @@ test('a BP reading added from the Goal joins its trend as your own point, and ne
 test('"Your Plan has the next steps" is gone from Drop\'s line', () => {
   for (const id of ['D-001', 'D-002', 'D-017', 'D-050', 'D-033', 'D-003']) assert.doesNotMatch(screenLines.line(id, 'health').text, /Your Plan has the next steps/);
 });
+
+test("the Chat over the app: Stop this Goal and Start again through Drop, and each state's Chat (step 5)", () => {
+  const chat = () => drop.view('D-001').goals[0].chat;
+  assert.equal(chat().questions[0], 'What could I do this week?');
+  let v = drop.stopGoal('D-001', 'lifestyle');
+  assert.equal(v.goals[0].state, 'stopped');
+  assert.equal(v.goals[0].stoppedOn, store.today());
+  // Stopped: read-only, so no questions to tap
+  assert.match(chat().text, /^You stopped BP and cholesterol on .*read-only; Start again/);
+  assert.deepEqual(chat().questions, []);
+  v = drop.startGoalAgain('D-001', 'lifestyle');
+  assert.equal(v.goals[0].state, 'active');
+  assert.throws(() => drop.startGoalAgain('D-001', 'lifestyle'), /not stopped/);
+  // An urgent Goal can't be stopped
+  assert.throws(() => drop.stopGoal('D-017', 'lifestyle'), /urgent Goal can't be stopped/);
+  assert.equal(drop.view('D-017').goals[0].state, 'active');
+});
+
+test('an Up next Chat offers no Week plans, and says when it starts', () => {
+  const g = { id: 'iron', name: 'Iron', state: 'upnext', startsWhen: 'BP and cholesterol', target: { text: 'Ferritin 15 or more' } };
+  const st = drop._state('D-001');
+  const facts = { trend: { label: 'Ferritin', words: 'On 3 Oct', range: '12' } };
+  const c = drop.goalChatOf(st, g, facts);
+  assert.match(c.text, /^Iron is up next: it starts when BP and cholesterol is done\./);
+  assert.ok(!c.questions.includes('What could I do this week?'));
+  assert.equal(c.answers['Can I start it now?'], 'It starts when BP and cholesterol is done. What you do for Movement helps it too.');
+  const done = drop.goalChatOf(st, { id: 'iron', name: 'Iron', state: 'done', doneOn: '2026-10-10' });
+  assert.match(done.text, /^Iron is done: .*read-only/);
+  assert.deepEqual(done.questions, []);
+});
