@@ -4,6 +4,15 @@ One entry per commit, newest first, so any change can be traced or reverted: the
 To revert one: find it with `git log --oneline --grep "<commit title>"`, then `git revert <hash>`.
 The design behind these changes is in `CONTEXT.md` (vocabulary) and the build plan.
 
+## 2026-10-14 · My Impact: Watch the story and the Badge shelf
+
+- **What and why:** step 4 of the Story and Badge build plan (spec section 2, "The shelf").
+  - Every unit with a Story (transfused, or plasma made into medicines, and not withheld) has **Watch the story** in its detail. It loads the slides from `GET …/impact/:componentId/story` and plays them in the Story viewer, ending on the postcard with its share buttons. Expired, stored, in-progress and withheld units have no button. The rule matches `componentStory` for every Persona.
+  - The **Badge shelf** sits where "Share my impact" was, under Drop's line: "Badges · n of 8", then the 8 Badges in shelf order. Earned: small gold medal, name, "Earned {month}". Not earned: greyed medal at 40%, greyed name, goal and progress ("Reach 10 patients · 8 so far"). Clicking an earned Badge opens it alone in the Story viewer with its share buttons (`tracedrop-badge-{name}.png`).
+  - Small fix to step 3's postcard: a long component name ("Fresh frozen plasma") shrinks to fit inside the stamp.
+- **Files:** `frontend/src/pages/Impact.tsx`, `frontend/src/components/impact/BadgeShelf.tsx` (new), `frontend/src/components/impact/badges.css` (new), `frontend/src/api.ts` (`api.impactStory`), `frontend/src/components/share/shareImage.ts`.
+- **Revert:** safe to revert on its own before step 5; My Impact loses the shelf and the Watch buttons.
+
 ## 2026-10-14 · Share images and share buttons on a Story's last slide
 
 - **What and why:** step 3 of the Story and Badge build plan (spec sections 3 and 4). A component's Story now ends on its summary postcard as an image you can save or share, and the old text share is gone.

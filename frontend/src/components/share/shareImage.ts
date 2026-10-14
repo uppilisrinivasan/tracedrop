@@ -193,7 +193,10 @@ function drawPostcard(ctx: Ctx, p: Postcard) {
   ctx.textBaseline = 'middle';
   font(ctx, `800 92px ${SANS}`, '-1.84px');
   ctx.fillText(tile.short, scx, sy + 170);
-  font(ctx, `600 28px ${SANS}`);
+  // Long names ("Fresh frozen plasma") shrink to stay inside the perforations
+  let size = 28;
+  font(ctx, `600 ${size}px ${SANS}`);
+  while (size > 18 && ctx.measureText(p.component).width > sw - 36) font(ctx, `600 ${--size}px ${SANS}`);
   ctx.fillText(p.component, scx, sy + 240);
 
   // Round postmark with the short month

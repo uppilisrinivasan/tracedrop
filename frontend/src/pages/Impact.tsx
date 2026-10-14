@@ -1,8 +1,10 @@
 import { useMemo, useRef, useState } from 'react';
-import { api, fmtDate, type Journey, type Stakeholder } from '../api';
+import { api, fmtDate, type Journey, type Stakeholder, type StoryLast } from '../api';
 import type { PageProps } from '../App';
 import { AIBadge, ErrorNote, Icon, Loading, Section, useLoad } from '../ui';
 import DropLine from '../components/drop/DropLine';
+import StoryViewer from '../components/drop/StoryViewer';
+import BadgeShelf from '../components/impact/BadgeShelf';
 import { ConcernForm, ConcernList } from '../components/impact/Concerns';
 import DonationCalendar from '../components/impact/DonationCalendar';
 
@@ -17,6 +19,11 @@ const KIND_STYLE: Record<string, { bg: string; fg: string; short: string }> = {
 const STAGES = ['collected', 'separated', 'tested', 'stored', 'issued', 'transfused', 'outcome'];
 const PLASMA_STAGES = ['collected', 'separated', 'tested', 'fractionation', 'products_released'];
 
+/** Units with a Story, as backend/src/domain/story.js decides: transfused, or plasma made into medicines. */
+const hasStory = (u: Journey) => !u.withheld && (u.events.some((e) => e.type === 'transfused') || (Boolean(u.fractionation) && u.status === 'products_released'));
+
+interface OpenStory { title: string; slides: string[]; last: StoryLast }
+
 export default function Impact({ donorId, version }: PageProps) {
   const { data, error, loading } = useLoad(() => api.impact(donorId), [donorId, version]);
   const stake = useLoad(() => api.stakeholders(donorId), [donorId, version]);
@@ -24,6 +31,7 @@ export default function Impact({ donorId, version }: PageProps) {
   const [tab, setTab] = useState<'units' | 'institutions'>('units');
   const [date, setDate] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
+  const [story, setStory] = useState<OpenStory | null>(null);
   const top = useRef<HTMLDivElement>(null);
 
   const byDonation = useMemo(() => {
@@ -75,6 +83,11 @@ export default function Impact({ donorId, version }: PageProps) {
       </div>
       <DropLine donorId={donorId} screen="impact" version={version} />
 
+      {data.badges && (
+        <BadgeShelf badges={data.badges}
+          onOpen={(badge) => setStory({ title: 'Your Badges', slides: [], last: { badge, held: data.badges.filter((b) => b.earned).length } })} />
+      )}
+
       <div className="grid grid-4">
         <Stat value={s.patientsHelped} label="patients treated" />
         <Stat value={s.components} label="components from your donations" />
@@ -111,7 +124,7 @@ export default function Impact({ donorId, version }: PageProps) {
             <div className="unit-tabs mt-12" role="tablist" aria-label="Components from this donation">
               {units.map((u) => <UnitRow key={u.id} unit={u} selected={current?.id === u.id} onClick={() => setSelected(u.id)} />)}
             </div>
-            {current && <UnitDetail key={current.id} donorId={donorId} unit={current} onConcern={concerns.reload} />}
+            {current && <UnitDetail key={current.id} donorId={donorId} unit={current} onConcern={concerns.reload} onWatch={setStory} />}
           </div>
         </div>
       )}
@@ -122,6 +135,7 @@ export default function Impact({ donorId, version }: PageProps) {
         <Icon name="lock" size={16} />
         <span>Recipients are never named. Age band and sex, treatment, hospital type and district, and recorded outcome are shown only when the complete combination covers at least {data.k} transfused units; sparse details are generalised or suppressed. Dates of use are rounded to the month.</span>
       </div>
+      {story && <StoryViewer title={story.title} slides={story.slides} last={story.last} onClose={() => setStory(null)} />}
     </div>
   );
 }
@@ -145,13 +159,28 @@ function UnitRow({ unit, selected, onClick }: { unit: Journey; selected: boolean
   );
 }
 
-function UnitDetail({ donorId, unit, onConcern }: { donorId: string; unit: Journey; onConcern: () => void }) {
+function UnitDetail({ donorId, unit, onConcern, onWatch }: { donorId: string; unit: Journey; onConcern: () => void; onWatch: (story: OpenStory) => void }) {
   const [concernOpen, setConcernOpen] = useState(false);
+  const [watching, setWatching] = useState(false);
+  const [storyError, setStoryError] = useState<string | null>(null);
   const [concernSent, setConcernSent] = useState<string | null>(null);
   const stages = (unit.kind === 'PLASMA' || unit.events.some((e) => e.type === 'fractionation') ? PLASMA_STAGES : STAGES)
     .concat(unit.withheld ? ['withheld'] : unit.status === 'expired' ? ['expired'] : []);
   const reached = new Set(unit.events.map((e) => e.type));
   const style = KIND_STYLE[unit.kind];
+
+  async function watch() {
+    setWatching(true);
+    setStoryError(null);
+    try {
+      const st = await api.impactStory(donorId, unit.id);
+      onWatch({ title: `Your ${unit.name.toLowerCase()} · ${st.postcard.month}`, slides: st.slides, last: { postcard: st.postcard } });
+    } catch (e) {
+      setStoryError(e instanceof Error ? e.message : 'Could not load the story');
+    } finally {
+      setWatching(false);
+    }
+  }
 
   return (
     <div className="unit-detail fade-in">
@@ -210,6 +239,13 @@ function UnitDetail({ donorId, unit, onConcern }: { donorId: string; unit: Journ
       {unit.fractionation && unit.status === 'products_released' && (
         <div className="mt-16 small" style={{ background: 'var(--ai-soft)', borderRadius: 14, padding: 16 }}>
           Your plasma joined a pool of {unit.fractionation.poolSize.toLocaleString()} donations to make life-saving medicines — your share is about {unit.fractionation.albuminVials} vial of albumin, {unit.fractionation.ivigVials} dose of immunoglobulin (IVIG) and {unit.fractionation.factorViiiIu} IU of clotting factor VIII.
+        </div>
+      )}
+
+      {hasStory(unit) && (
+        <div className="mt-16">
+          <button className="btn btn-primary btn-sm" style={{ minHeight: 44 }} disabled={watching} onClick={watch}><Icon name="play" size={14} /> Watch the story</button>
+          {storyError && <ErrorNote error={storyError} />}
         </div>
       )}
 

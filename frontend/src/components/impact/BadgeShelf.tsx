@@ -1,0 +1,66 @@
+/**
+ * The Badge shelf on My Impact (spec section 2): all 8 Badges in shelf order.
+ * Earned slots show a small medal and the month; unearned ones are greyed with
+ * their goal and progress. Clicking an earned Badge opens it to share.
+ */
+import type { Badge } from '../../api';
+import './badges.css';
+
+const DROP = 'M12 2.5c-3.6 4.6-6.5 8.4-6.5 12A6.5 6.5 0 0 0 12 21a6.5 6.5 0 0 0 6.5-6.5c0-3.6-2.9-7.4-6.5-12z';
+const HEART = 'M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z';
+
+/** The ring glyph, as on the share image: a number, or an icon for check, five-drop, vial and heart. */
+function Glyph({ ring }: { ring: string }) {
+  const ink = '#fff6e6';
+  if (ring === 'heart') return <svg viewBox="0 0 24 24" aria-hidden="true"><path d={HEART} fill={ink} /></svg>;
+  if (ring === 'check') return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 12.5l3.8 3.8L17.8 8.5" fill="none" stroke={ink} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+  if (ring === 'vial') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M8 4h8M10 4v12a2 2 0 0 0 4 0V4" fill="none" stroke={ink} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M10 11.5h4V16a2 2 0 0 1-4 0z" fill={ink} />
+      </svg>
+    );
+  }
+  if (ring === 'five-drop') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        {[0, 1, 2, 3, 4].map((i) => {
+          const a = -Math.PI / 2 + (i * 2 * Math.PI) / 5;
+          const x = 12 + Math.cos(a) * 5.4 - 12 * 0.38;
+          const y = 12 + Math.sin(a) * 5.4 - 12 * 0.38;
+          return <path key={i} d={DROP} fill={ink} transform={`translate(${x} ${y}) scale(0.38)`} />;
+        })}
+      </svg>
+    );
+  }
+  return <span className={ring.length > 2 ? 'medal-num long' : 'medal-num'}>{ring}</span>;
+}
+
+export function Medal({ ring, grey }: { ring: string; grey?: boolean }) {
+  return <span className={`medal${grey ? ' grey' : ''}`}><span className="medal-disc"><Glyph ring={ring} /></span></span>;
+}
+
+export default function BadgeShelf({ badges, onOpen }: { badges: Badge[]; onOpen: (badge: Badge) => void }) {
+  const held = badges.filter((b) => b.earned).length;
+  return (
+    <div className="card badge-shelf">
+      <div className="badge-shelf-head"><b>Badges</b><span>· {held} of {badges.length}</span></div>
+      <div className="badge-slots">
+        {badges.map((b) => b.earned
+          ? (
+            <button key={b.id} className="badge-slot" onClick={() => onOpen(b)} aria-label={`${b.name}, earned ${b.earnedLabel}. Open to share`}>
+              <Medal ring={b.ring} />
+              <span className="badge-slot-text"><b>{b.name}</b><span>Earned {b.earnedLabel}</span></span>
+            </button>
+          )
+          : (
+            <div key={b.id} className="badge-slot locked">
+              <Medal ring={b.ring} grey />
+              <span className="badge-slot-text"><b>{b.name}</b><span>{b.goal}{b.progress ? ` · ${b.progress}` : ''}</span></span>
+            </div>
+          ))}
+      </div>
+    </div>
+  );
+}

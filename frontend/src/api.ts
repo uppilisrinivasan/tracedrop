@@ -304,6 +304,7 @@ export const api = {
   personas: () => request<{ id: string; name: string; bloodGroup: string | null; language: string; newUser: boolean }[]>('/donors'),
   overview: (id: string) => request<Overview>(`/donors/${id}/overview`),
   impact: (id: string) => request<{ summary: ImpactSummary; journeys: Journey[]; badges: Badge[]; k: number }>(`/donors/${id}/impact`),
+  impactStory: (id: string, componentId: string) => request<{ slides: string[]; postcard: Postcard }>(`/donors/${id}/impact/${componentId}/story`),
   stakeholders: (id: string) => request<Stakeholder[]>(`/donors/${id}/stakeholders`),
   health: (id: string) => request<HealthData>(`/donors/${id}/health`),
   cover: (id: string) => request<CoverData | CoverNotLinked>(`/donors/${id}/cover`),
