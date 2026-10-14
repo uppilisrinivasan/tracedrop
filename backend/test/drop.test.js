@@ -208,3 +208,120 @@ test('a booked check-up shows as coming up, and can be changed or cancelled late
   assert.ok(card('D-001', 'slots', 'care'), 'Change offers new slots');
   assert.ok(drop._state('D-001').events.every((e) => !e.key.startsWith('postvisit:') || e.status === 'cancelled'), 'no "how did it go?" for a cancelled visit');
 });
+
+/* ------------------------------------------------------------------ new Badges (Story and Badge spec section 5) */
+
+const donation = require('../src/domain/donation');
+
+/** Vikram (D-017, 4 patients) gets a 20 Sep 2026 donation whose units are transfused on the given days. */
+function vikramUnits(units) {
+  const adult = store.getComponents('D-017').find((c) => c.recipient).recipient;
+  const d = '2026-09-20';
+  store.addDonation({ id: 'D-017-T1', donorId: 'D-017', date: d, status: 'completed', centreId: 'BC-02', confidentialFollowUp: false });
+  store.getDonations('D-017').sort((a, z) => a.date.localeCompare(z.date));
+  store.addComponents('D-017', units.map(({ kind, on, age }) => ({
+    id: `D-017-T1-${kind}`, donationId: 'D-017-T1', donorId: 'D-017', kind, bloodGroup: 'A+', fractionation: null, recipient: { ...adult, age: age ?? adult.age },
+    events: [{ type: 'collected', date: d }, { type: 'separated', date: d }, { type: 'tested', date: '2026-09-21' }, { type: 'stored', date: '2026-09-21' }, { type: 'issued', date: on }, { type: 'transfused', date: on }],
+  })));
+}
+const until = (donorId, find, days = 30) => {
+  for (let i = 0; i < days * DAY; i += 1) { const c = find(open(donorId)); if (c) return c; store.stepClock(); }
+  return null;
+};
+const reportFrom = (donorId, from) => until(donorId, (list) => list.find((c) => c.type === 'report' && c.createdOn >= from));
+const newIds = (donorId) => drop.newBadges(donorId).map((b) => b.id);
+
+test('Badges earned before Drop started are never New, and a seeded impact Card keeps its postcard', () => {
+  for (const id of ['D-001', 'D-002', 'D-003', 'D-017', 'D-050', 'D-033']) assert.deepEqual(newIds(id), [], id);
+  const c = card('D-001', 'impact');
+  assert.equal(c.last.postcard.component, 'Platelets');
+  assert.equal(c.badgeSlide, null);
+  assert.equal(screenLines.line('D-001', 'impact').text.includes('Badge'), false);
+});
+
+test("a Badge completed by an impact Card's unit replaces the postcard", () => {
+  vikramUnits([{ kind: 'PRBC', on: '2026-10-12' }]);
+  drop.view('D-017');
+  const c = until('D-017', (list) => list.find((x) => x.type === 'impact'));
+  assert.ok(c, 'impact card sent');
+  assert.equal(c.last.badge.id, 'patients_5');
+  assert.equal(c.last.held, 6, 'his 4, Regular donor from the added donation, and this one');
+  assert.deepEqual(c.badgeSlide, { at: c.story.length, ids: ['patients_5'] });
+  assert.deepEqual(newIds('D-017'), ['patients_5'], 'New until the Donor reaches the slide');
+  assert.equal(screenLines.line('D-017', 'impact').text, "You earned 5 patients in October 2026. It's on your shelf below.");
+  drop.seeBadges('D-017', c.badgeSlide.ids);
+  assert.deepEqual(newIds('D-017'), []);
+  // Shown in the Story, so the report doesn't repeat it
+  assert.ok(!reportFrom('D-017', '2026-10-18').story.some((s) => /New Badge/.test(s)));
+});
+
+test('a Badge completed by a later unit, by plasma or by Regular donor lands in the report', () => {
+  // A later unit of the donation: Helped a child
+  vikramUnits([{ kind: 'PRBC', on: '2026-10-12' }, { kind: 'PLT', on: '2026-10-14', age: 9 }]);
+  drop.view('D-017');
+  const week = reportFrom('D-017', '2026-10-18');
+  assert.deepEqual(week.badgeSlide, { at: week.story.indexOf('New Badge: Helped a child. Share it from your Badges on My Impact.'), ids: ['helped_child'] });
+  assert.ok(week.badgeSlide.at >= 0);
+  assert.equal(week.last, null, 'no share buttons in a report');
+
+  // Plasma made into medicines, for the New donor (monthly report, first Sunday of the month)
+  store.resetDemo();
+  const plasma = store.allComponents().find((c) => c.kind === 'PLASMA' && c.fractionation);
+  drop.view('D-NEW');
+  store.addDonation({ id: 'D-NEW-T1', donorId: 'D-NEW', date: '2026-09-01', status: 'completed', centreId: 'BC-01', confidentialFollowUp: false });
+  store.addComponents('D-NEW', [{ id: 'D-NEW-T1-PLASMA', donationId: 'D-NEW-T1', donorId: 'D-NEW', kind: 'PLASMA', bloodGroup: 'O+', recipient: null, fractionation: plasma.fractionation,
+    events: [{ type: 'collected', date: '2026-09-01' }, { type: 'separated', date: '2026-09-01' }, { type: 'tested', date: '2026-09-02' }, { type: 'fractionation', date: '2026-09-20' }, { type: 'products_released', date: '2026-10-13' }] }]);
+  const month = reportFrom('D-NEW', '2026-11-01');
+  assert.ok(month.story.includes('New Badges: Nothing wasted, Plasma to medicine. Share them from your Badges on My Impact.'));
+
+  // Regular donor: Rohan (D-033) checks in a third donation
+  store.resetDemo();
+  drop.view('D-033');
+  const apt = { id: 'APT-T', date: store.today(), centreId: 'BC-01', status: 'booked' };
+  donation.checkIn('D-033', apt.id, {}, [apt]);
+  assert.deepEqual(newIds('D-033'), ['regular_donor'], 'New on the day it is earned');
+  assert.ok(reportFrom('D-033', '2026-11-01').story.includes('New Badge: Regular donor. Share it from your Badges on My Impact.'));
+});
+
+test('two Badges at once: the Story carries the first, the report and Drop\'s line list the rest', () => {
+  vikramUnits([{ kind: 'PRBC', on: '2026-10-12', age: 9 }]);
+  drop.view('D-017');
+  const c = until('D-017', (list) => list.find((x) => x.type === 'impact'));
+  assert.equal(c.last.badge.id, 'patients_5', 'first in shelf order');
+  assert.deepEqual(newIds('D-017'), ['patients_5', 'helped_child']);
+  assert.equal(screenLines.line('D-017', 'impact').text, 'You earned 2 new Badges: 5 patients and Helped a child.');
+  const week = reportFrom('D-017', '2026-10-18');
+  assert.ok(week.story.includes('New Badge: Helped a child. Share it from your Badges on My Impact.'));
+  assert.ok(!week.story.some((s) => /^New Badge.*5 patients/.test(s)), 'the Story already showed 5 patients');
+});
+
+test('"New" survives undo\'s snapshot and clears on reset', () => {
+  vikramUnits([{ kind: 'PRBC', on: '2026-10-12' }]);
+  drop.view('D-017');
+  const c = until('D-017', (list) => list.find((x) => x.type === 'impact'));
+  drop.answer('D-017', c.id, 'seen'); // closed the Story before its last slide
+  drop.undo('D-017');
+  assert.deepEqual(newIds('D-017'), ['patients_5'], 'still New after undo');
+  drop.seeBadges('D-017', c.badgeSlide.ids);
+  drop.answer('D-017', c.id, 'seen');
+  drop.undo('D-017');
+  assert.deepEqual(newIds('D-017'), [], 'undo cannot make a seen Badge New again');
+  assert.equal(card('D-017', 'impact').last.badge.id, 'patients_5', 'the Story keeps its Badge after undo');
+  store.resetDemo();
+  assert.deepEqual(newIds('D-017'), []);
+  assert.deepEqual(drop._state('D-017').badgesShown.filter((b) => b === 'patients_5'), [], 'reset starts Drop over');
+});
+
+test('earning a Badge never adds a Card or uses the budget', () => {
+  const before = drop.view('D-033');
+  const created = drop._state('D-033').created;
+  const apt = { id: 'APT-T', date: store.today(), centreId: 'BC-01', status: 'booked' };
+  donation.checkIn('D-033', apt.id, {}, [apt]);
+  drop._deliver('D-033');
+  const after = drop.view('D-033');
+  assert.deepEqual(newIds('D-033'), ['regular_donor']);
+  assert.equal(drop._state('D-033').created, created);
+  assert.deepEqual(after.open.map((c) => c.id), before.open.map((c) => c.id));
+  assert.equal(after.budget.today, before.budget.today);
+  assert.equal(after.budget.week, before.budget.week);
+});

@@ -65,5 +65,9 @@ Drop's single regular summary Card, rolling up Reminders, activity, goal progres
 _Avoid_: Digest, newsletter, adherence report
 
 **Story**:
-A short set of tap-through slides telling the Donor something worth sharing, such as where their blood went or their Weekly report.
-_Avoid_: Carousel, slideshow
+A short set of tap-through slides about one moment: a component reaching a patient, or the Weekly report. A component's Story can be replayed and shared; a Weekly report's is private.
+_Avoid_: Carousel, slideshow, impact story
+
+**Badge**:
+A lasting record of a real milestone in the Donor's impact, earned from their own data, kept on My Impact and made to be shared. Earning one never sends a Card.
+_Avoid_: Achievement, award, trophy, milestone

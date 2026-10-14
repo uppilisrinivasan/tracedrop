@@ -118,7 +118,6 @@ export interface ExtractedResult {
 }
 export interface Extraction { labName: string; reportDate: string; results: ExtractedResult[]; unmapped: string[]; notes: string }
 
-export interface Story { headline: string; story: string; shareText: string; generatedBy: string; aiUnavailable?: string }
 export interface Insight { title: string; message: string; cta: string; generatedBy: string; considered: string[]; aiUnavailable?: string }
 
 export interface ChartPoint { date: string; value: number; value2?: number; source: string }
@@ -195,8 +194,19 @@ export interface DropAction { label: string; value: unknown; story?: boolean; as
 export interface DropCard {
   id: string; type: DropCardType; variant: string; label: string; urgent: boolean; counted: boolean; createdOn: string;
   text: string; ruleText: string; byAi: boolean; main: DropAction | null; out: DropAction | null; chips: DropAction[];
-  wheel: { kind: 'bp'; s: number; d: number } | null; upload: boolean; story: string[] | null; snoozes: number;
+  wheel: { kind: 'bp'; s: number; d: number } | null; upload: boolean; story: string[] | null; last: StoryLast | null; snoozes: number;
+  /** The Story slide (index in the viewer) that shows these new Badges; reaching it clears their "New" mark. */
+  badgeSlide: { at: number; ids: string[] } | null;
 }
+/** The summary postcard that ends a component's Story (backend/src/domain/story.js). */
+export interface Postcard { kind: string; component: string; headline: string; context: string; month: string; patientsHelped: number }
+/** One of the 8 Badges (backend/src/domain/badges.js). */
+export interface Badge {
+  id: string; name: string; ring: string; rule: string; goal: string; earned: boolean;
+  earnedMonth: string | null; earnedLabel: string | null; completedBy: { componentId?: string; donationId?: string } | null; progress: string | null;
+}
+/** A Story's shareable last slide: the postcard, or a Badge with how many of the 8 the Donor holds. */
+export type StoryLast = { postcard: Postcard } | { badge: Badge; held: number };
 export interface DropReading { id: string; marker: 'bp' | 'hb'; date: string; s?: number; d?: number; value?: number; observationId?: string }
 export interface DropPlan {
   goals: { marker: string; label: string }[]; activity: { label: string; minutesPerWeek: number } | null; notes?: string[];
@@ -295,7 +305,8 @@ export const api = {
     post<BookingTurn>('/auth/booking/turn', { preferences, answer }),
   personas: () => request<{ id: string; name: string; bloodGroup: string | null; language: string; newUser: boolean }[]>('/donors'),
   overview: (id: string) => request<Overview>(`/donors/${id}/overview`),
-  impact: (id: string) => request<{ summary: ImpactSummary; journeys: Journey[]; k: number }>(`/donors/${id}/impact`),
+  impact: (id: string) => request<{ summary: ImpactSummary; journeys: Journey[]; badges: Badge[]; newBadges: string[]; k: number }>(`/donors/${id}/impact`),
+  impactStory: (id: string, componentId: string) => request<{ slides: string[]; postcard: Postcard }>(`/donors/${id}/impact/${componentId}/story`),
   stakeholders: (id: string) => request<Stakeholder[]>(`/donors/${id}/stakeholders`),
   health: (id: string) => request<HealthData>(`/donors/${id}/health`),
   cover: (id: string) => request<CoverData | CoverNotLinked>(`/donors/${id}/cover`),
@@ -316,7 +327,6 @@ export const api = {
   carePlan: (id: string, refresh = false) => post<CarePlan>(`/donors/${id}/care-plan${refresh ? '?refresh=1' : ''}`),
   extractLabs: (id: string, input: { text?: string; image?: string }) => post<Extraction>(`/donors/${id}/labs/extract`, input),
   saveLabs: (id: string, extraction: Extraction) => post<{ saved: number; date: string }>(`/donors/${id}/labs/save`, extraction),
-  story: (id: string, componentId: string, refresh = false) => post<Story>(`/donors/${id}/impact/${componentId}/story${refresh ? '?refresh=1' : ''}`),
   concerns: (id: string) => request<Concern[]>(`/donors/${id}/concerns`),
   raiseConcern: (id: string, body: { category: string; details: string; unitId?: string }) => post<Concern>(`/donors/${id}/concerns`, body),
   concernAction: (id: string, concernId: string, action: 'escalate' | 'resolve') => post<Concern>(`/donors/${id}/concerns/${concernId}/${action}`),
@@ -330,6 +340,7 @@ export const api = {
   dropSnooze: (id: string, cardId: string, option: SnoozeOption) => post<DropView>(`/donors/${id}/drop/cards/${cardId}/snooze`, { option }),
   dropHide: (id: string, cardId: string) => post<DropView>(`/donors/${id}/drop/cards/${cardId}/hide`),
   dropUndo: (id: string) => post<DropView>(`/donors/${id}/drop/undo`),
+  dropBadgesSeen: (id: string, ids: string[]) => post<{ newBadges: string[] }>(`/donors/${id}/drop/badges/seen`, { ids }),
   dropOffer: (id: string, kind: 'care_slots' | 'reminder') => post<{ cardId: string; view: DropView }>(`/donors/${id}/drop/offer`, { kind }),
   dropCancelBooking: (id: string, bookingId: string, reschedule: boolean) => post<DropView>(`/donors/${id}/drop/bookings/${bookingId}/cancel`, { reschedule }),
   dropMemoryUndo: (id: string) => post<DropView>(`/donors/${id}/drop/memory/undo`),

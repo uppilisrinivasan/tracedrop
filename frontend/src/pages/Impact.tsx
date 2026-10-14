@@ -1,9 +1,10 @@
 import { useMemo, useRef, useState } from 'react';
-import { api, fmtDate, type Journey, type Stakeholder, type Story } from '../api';
+import { api, fmtDate, type Journey, type Stakeholder, type StoryLast } from '../api';
 import type { PageProps } from '../App';
-import { AIBadge, ErrorNote, Icon, Loading, OfflineNote, Section, Thinking, useLoad } from '../ui';
+import { AIBadge, ErrorNote, Icon, Loading, Section, useLoad } from '../ui';
 import DropLine from '../components/drop/DropLine';
-import ShareBar from '../components/impact/ShareBar';
+import StoryViewer from '../components/drop/StoryViewer';
+import BadgeShelf from '../components/impact/BadgeShelf';
 import { ConcernForm, ConcernList } from '../components/impact/Concerns';
 import DonationCalendar from '../components/impact/DonationCalendar';
 
@@ -18,6 +19,11 @@ const KIND_STYLE: Record<string, { bg: string; fg: string; short: string }> = {
 const STAGES = ['collected', 'separated', 'tested', 'stored', 'issued', 'transfused', 'outcome'];
 const PLASMA_STAGES = ['collected', 'separated', 'tested', 'fractionation', 'products_released'];
 
+/** Units with a Story, as backend/src/domain/story.js decides: transfused, or plasma made into medicines. */
+const hasStory = (u: Journey) => !u.withheld && (u.events.some((e) => e.type === 'transfused') || (Boolean(u.fractionation) && u.status === 'products_released'));
+
+interface OpenStory { title: string; slides: string[]; last: StoryLast }
+
 export default function Impact({ donorId, version }: PageProps) {
   const { data, error, loading } = useLoad(() => api.impact(donorId), [donorId, version]);
   const stake = useLoad(() => api.stakeholders(donorId), [donorId, version]);
@@ -25,7 +31,8 @@ export default function Impact({ donorId, version }: PageProps) {
   const [tab, setTab] = useState<'units' | 'institutions'>('units');
   const [date, setDate] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
-  const [sharing, setSharing] = useState(false);
+  const [story, setStory] = useState<OpenStory | null>(null);
+  const [opened, setOpened] = useState<string[]>([]); // Badges opened here since the page loaded
   const top = useRef<HTMLDivElement>(null);
 
   const byDonation = useMemo(() => {
@@ -69,23 +76,23 @@ export default function Impact({ donorId, version }: PageProps) {
           <div className="page-sub">Every donation is separated into components. Follow each one to the patient it helped — privately.</div>
         </div>
         <div className="row wrap">
-          <button className="btn btn-primary btn-sm" onClick={() => setSharing(!sharing)}><Icon name="share" size={15} /> Share my impact</button>
           <div className="tabs">
             <button className={`tab ${tab === 'units' ? 'active' : ''}`} onClick={() => setTab('units')}>My donations</button>
             <button className={`tab ${tab === 'institutions' ? 'active' : ''}`} onClick={() => setTab('institutions')}>Who benefited</button>
           </div>
         </div>
       </div>
-      <DropLine donorId={donorId} screen="impact" version={version} />
+      {/* Re-read Drop's line once a New Badge is opened, since it names New Badges */}
+      <DropLine key={opened.length} donorId={donorId} screen="impact" version={version} />
 
-      {sharing && (
-        <div className="card fade-in">
-          <ShareBar item={{
-            headline: `My blood has helped ${s.patientsHelped} patient${s.patientsHelped === 1 ? '' : 's'}`,
-            story: `${s.components} components came from my donations; ${s.patientsHelped} reached patients${s.children ? `, including ${s.children} for children` : ''}. ${s.medicineDosesShare ? `My plasma also helped make about ${s.medicineDosesShare} medicine doses.` : ''} TraceDrop let me follow them privately.`,
-            shareText: `My blood donations have helped ${s.patientsHelped} patients so far. One donation can help up to three people. #DonateBlood`,
+      {data.badges && (
+        <BadgeShelf badges={data.badges} fresh={(data.newBadges || []).filter((b) => !opened.includes(b))}
+          onOpen={(badge) => {
+            setStory({ title: 'Your Badges', slides: [], last: { badge, held: data.badges.filter((b) => b.earned).length } });
+            if (data.newBadges?.includes(badge.id) && !opened.includes(badge.id)) {
+              api.dropBadgesSeen(donorId, [badge.id]).then(() => setOpened((o) => [...o, badge.id])).catch(() => { /* stays New */ });
+            }
           }} />
-        </div>
       )}
 
       <div className="grid grid-4">
@@ -124,7 +131,7 @@ export default function Impact({ donorId, version }: PageProps) {
             <div className="unit-tabs mt-12" role="tablist" aria-label="Components from this donation">
               {units.map((u) => <UnitRow key={u.id} unit={u} selected={current?.id === u.id} onClick={() => setSelected(u.id)} />)}
             </div>
-            {current && <UnitDetail key={current.id} donorId={donorId} unit={current} onConcern={concerns.reload} />}
+            {current && <UnitDetail key={current.id} donorId={donorId} unit={current} onConcern={concerns.reload} onWatch={setStory} />}
           </div>
         </div>
       )}
@@ -135,6 +142,7 @@ export default function Impact({ donorId, version }: PageProps) {
         <Icon name="lock" size={16} />
         <span>Recipients are never named. Age band and sex, treatment, hospital type and district, and recorded outcome are shown only when the complete combination covers at least {data.k} transfused units; sparse details are generalised or suppressed. Dates of use are rounded to the month.</span>
       </div>
+      {story && <StoryViewer title={story.title} slides={story.slides} last={story.last} onClose={() => setStory(null)} />}
     </div>
   );
 }
@@ -158,26 +166,26 @@ function UnitRow({ unit, selected, onClick }: { unit: Journey; selected: boolean
   );
 }
 
-function UnitDetail({ donorId, unit, onConcern }: { donorId: string; unit: Journey; onConcern: () => void }) {
-  const [story, setStory] = useState<Story | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
+function UnitDetail({ donorId, unit, onConcern, onWatch }: { donorId: string; unit: Journey; onConcern: () => void; onWatch: (story: OpenStory) => void }) {
   const [concernOpen, setConcernOpen] = useState(false);
+  const [watching, setWatching] = useState(false);
+  const [storyError, setStoryError] = useState<string | null>(null);
   const [concernSent, setConcernSent] = useState<string | null>(null);
   const stages = (unit.kind === 'PLASMA' || unit.events.some((e) => e.type === 'fractionation') ? PLASMA_STAGES : STAGES)
     .concat(unit.withheld ? ['withheld'] : unit.status === 'expired' ? ['expired'] : []);
   const reached = new Set(unit.events.map((e) => e.type));
   const style = KIND_STYLE[unit.kind];
 
-  async function makeStory(refresh = false) {
-    setBusy(true);
-    setErr(null);
+  async function watch() {
+    setWatching(true);
+    setStoryError(null);
     try {
-      setStory(await api.story(donorId, unit.id, refresh));
+      const st = await api.impactStory(donorId, unit.id);
+      onWatch({ title: `Your ${unit.name.toLowerCase()} · ${st.postcard.month}`, slides: st.slides, last: { postcard: st.postcard } });
     } catch (e) {
-      setErr((e as Error).message);
+      setStoryError(e instanceof Error ? e.message : 'Could not load the story');
     } finally {
-      setBusy(false);
+      setWatching(false);
     }
   }
 
@@ -241,23 +249,10 @@ function UnitDetail({ donorId, unit, onConcern }: { donorId: string; unit: Journ
         </div>
       )}
 
-      {unit.recipient && (
+      {hasStory(unit) && (
         <div className="mt-16">
-          {!story && !busy && <button className="btn btn-ai" onClick={() => makeStory()}><Icon name="sparkles" size={16} /> Write my impact story</button>}
-          {busy && <Thinking label="Writing your story in your language…" />}
-          {err && <ErrorNote error={err} />}
-          {story && !busy && (
-            <div className="stack fade-in" style={{ gap: 10 }}>
-              <div className="share-card">
-                <div className="row between"><span className="tiny" style={{ opacity: 0.8 }}>TraceDrop · My donation story</span>{story.generatedBy === 'ai' && <span className="ai-badge" style={{ background: 'rgba(255,255,255,.2)', color: '#fff' }}>AI</span>}</div>
-                <div className="bold mt-12" style={{ fontSize: 20 }}>{story.headline}</div>
-                <p className="mt-8" style={{ opacity: 0.95 }}>{story.story}</p>
-              </div>
-              <ShareBar item={story} />
-              <button className="btn btn-ghost btn-sm" style={{ alignSelf: 'flex-start' }} onClick={() => makeStory(true)}><Icon name="refresh" size={14} /> Write it again</button>
-              <OfflineNote reason={story.aiUnavailable} />
-            </div>
-          )}
+          <button className="btn btn-primary btn-sm" style={{ minHeight: 44 }} disabled={watching} onClick={watch}><Icon name="play" size={14} /> Watch the story</button>
+          {storyError && <ErrorNote error={storyError} />}
         </div>
       )}
 

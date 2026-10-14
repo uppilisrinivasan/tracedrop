@@ -41,8 +41,14 @@ function healthLine(donorId) {
   return `All ${latest} of your results are in the healthy range.`;
 }
 
+const listOf = (names) => (names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : names[0]);
+
 function impactLine(donorId) {
   if (firstTime(donorId)) return 'Your first donation will show here: each part of it, and the patient it helps.';
+  // New Badges are said here, never in a Card
+  const fresh = drop.newBadges(donorId);
+  if (fresh.length === 1) return `You earned ${fresh[0].name} in ${fresh[0].earnedLabel}. It's on your shelf below.`;
+  if (fresh.length > 1) return `You earned ${fresh.length} new Badges: ${listOf(fresh.map((b) => b.name))}.`;
   const journeys = impact.donorJourneys(donorId);
   const last = (j) => j.events[j.events.length - 1];
   const newest = [...journeys].sort((a, b) => (a.donationDate === b.donationDate ? 0 : a.donationDate < b.donationDate ? 1 : -1))[0];

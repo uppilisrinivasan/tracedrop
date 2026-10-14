@@ -75,7 +75,6 @@ function addDays(isoDate, days) {
 const session = {
   appointments: new Map(), // donorId -> [appointment]
   carePlans: new Map(), // donorId -> plan
-  stories: new Map(), // componentId -> story
 };
 
 module.exports = {

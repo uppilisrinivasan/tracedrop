@@ -9,6 +9,7 @@ const store = require('../data/store');
 const health = require('../domain/health');
 const cover = require('../domain/cover');
 const impact = require('../domain/impact');
+const { badges } = require('../domain/badges');
 const community = require('../domain/community');
 const donation = require('../domain/donation');
 const booking = require('../booking/service');
@@ -17,10 +18,10 @@ const llm = require('../ai/llm');
 const copilot = require('../ai/copilot');
 const carePlan = require('../ai/carePlan');
 const labReader = require('../ai/labReader');
-const stories = require('../ai/stories');
 const concerns = require('../domain/concerns');
 const insights = require('../ai/insights');
 const intro = require('../domain/intro');
+const { componentStory } = require('../domain/story');
 
 const router = express.Router();
 
@@ -86,7 +87,7 @@ router.get('/:donorId/donations', (req, res) => ok(res, store.getDonations(req.d
 
 router.get('/:donorId/impact', (req, res) => {
   const journeys = impact.donorJourneys(req.donor.id);
-  ok(res, { summary: impact.summarise(journeys), journeys, components: impact.COMPONENTS, k: impact.K_ANON });
+  ok(res, { summary: impact.summarise(journeys), journeys, components: impact.COMPONENTS, k: impact.K_ANON, badges: badges(req.donor.id), newBadges: require('../domain/drop').newBadges(req.donor.id).map((b) => b.id) });
 });
 
 router.get('/:donorId/stakeholders', (req, res) => ok(res, impact.stakeholders(req.donor.id)));
@@ -224,10 +225,9 @@ router.delete('/:donorId/labs/:observationId', (req, res) => {
   return ok(res, uploadedValues(req.donor.id));
 });
 
-router.post('/:donorId/impact/:componentId/story', (req, res) => {
-  const journey = impact.donorJourneys(req.donor.id).find((j) => j.id === req.params.componentId);
-  if (!journey || !journey.recipient) return fail(res, 404, 'No patient story for this unit yet');
-  return withFallback(res, () => stories.write(req.donor.id, req.params.componentId, { refresh: Boolean(req.query.refresh) }), () => stories.template(journey, req.donor));
+router.get('/:donorId/impact/:componentId/story', (req, res) => {
+  const story = componentStory(req.donor.id, req.params.componentId);
+  return story ? ok(res, story) : fail(res, 404, 'This unit has no Story');
 });
 
 router.get('/:donorId/concerns', (req, res) => ok(res, concerns.list(req.donor.id)));

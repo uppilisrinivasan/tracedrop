@@ -4,6 +4,73 @@ One entry per commit, newest first, so any change can be traced or reverted: the
 To revert one: find it with `git log --oneline --grep "<commit title>"`, then `git revert <hash>`.
 The design behind these changes is in `CONTEXT.md` (vocabulary) and the build plan.
 
+## 2026-10-14 · New Badges in Stories, reports and Drop's line (Story and Badge complete)
+
+- **Feature summary (steps 1–5 on `feature/story-and-badge`):** every unit that reached a patient, or plasma that became medicines, has one Story, built in `story.js`. It plays from Drop's impact Card or "Watch the story" on My Impact, and ends on a shareable 1080×1920 postcard (Download image, Copy image, Share… where the browser can share files). Eight Badges are worked out from the Donor's own data (`badges.js`) and shown on My Impact's Badge shelf. Each earned Badge opens as a shareable medal image. A newly earned Badge is marked "New" and shows up in the Story, report or Drop's line, never as a new Card. The text share, the old "AI" story and "Share my impact" are gone.
+- **What and why (this step):** step 5 of the build plan (spec section 5).
+  - Drop's state gains `badgesSeen` and `badgesShown`. Badges earned on or before the day Drop's state started begin as seen, so a seeded Persona's history is never "New". Undo keeps both lists (it can't unsee or unshow a Badge), and a demo reset starts them over.
+  - When an impact Card's unit completed a Badge no Story or report has shown, that Story's last slide is the Badge (first in shelf order) instead of the postcard, with its share buttons.
+  - Otherwise (a later unit of the donation, plasma made into medicines, Regular donor) the next Weekly or monthly report gets one slide: "New Badge: Regular donor. Share it from your Badges on My Impact." Several Badges at once share one slide: "New Badges: A, B. Share them from …". "them" for several is my wording; the spec only gives the one-Badge line. Reports show no share buttons.
+  - "New" clears when the Donor opens the Badge on the shelf or reaches the Story or report slide that shows it (`POST /api/donors/:id/drop/badges/seen`). Watching part of a Story doesn't clear it.
+  - Drop's line on My Impact names New Badges: "You earned Regular donor in October 2026. It's on your shelf below." / "You earned 2 new Badges: 5 patients and Helped a child." The shelf shows a "New" tag on a warm highlight. Earning a Badge never sends a Card or uses the Message budget.
+  - `badges.js` also gives exact earned dates (`earnedDates`) for these rules. They stay on the server; the app still gets the month only.
+  - Six new tests in `backend/test/drop.test.js`.
+  - Checked live: Rohan (D-033) checks in a third donation. Regular donor is "New" on the shelf at once and Drop's line names it. His 1 Nov monthly report carries the Badge slide, and reaching it clears "New".
+- **Files:** `backend/src/domain/drop.js`, `backend/src/domain/badges.js`, `backend/src/domain/screenLines.js`, `backend/src/routes/drop.js`, `backend/src/routes/donors.js` (`newBadges` on the impact response), `backend/test/drop.test.js`, `frontend/src/api.ts`, `frontend/src/components/drop/StoryViewer.tsx` (`onSlide`, `badgeSeenOnSlide`), `frontend/src/components/drop/DropFeed.tsx`, `frontend/src/components/Copilot.tsx` (one prop and its import), `frontend/src/components/impact/BadgeShelf.tsx`, `frontend/src/components/impact/badges.css`, `frontend/src/pages/Impact.tsx`.
+- **Revert:** safe to revert on its own; Badges stay on the shelf and in sharing, but nothing is "New" and impact Stories always end on the postcard.
+
+## 2026-10-14 · My Impact: Watch the story and the Badge shelf
+
+- **What and why:** step 4 of the Story and Badge build plan (spec section 2, "The shelf").
+  - Every unit with a Story (transfused, or plasma made into medicines, and not withheld) has **Watch the story** in its detail. It loads the slides from `GET …/impact/:componentId/story` and plays them in the Story viewer, ending on the postcard with its share buttons. Expired, stored, in-progress and withheld units have no button. The rule matches `componentStory` for every Persona.
+  - The **Badge shelf** sits where "Share my impact" was, under Drop's line: "Badges · n of 8", then the 8 Badges in shelf order. Earned: small gold medal, name, "Earned {month}". Not earned: greyed medal at 40%, greyed name, goal and progress ("Reach 10 patients · 8 so far"). Clicking an earned Badge opens it alone in the Story viewer with its share buttons (`tracedrop-badge-{name}.png`).
+  - Small fix to step 3's postcard: a long component name ("Fresh frozen plasma") shrinks to fit inside the stamp.
+- **Files:** `frontend/src/pages/Impact.tsx`, `frontend/src/components/impact/BadgeShelf.tsx` (new), `frontend/src/components/impact/badges.css` (new), `frontend/src/api.ts` (`api.impactStory`), `frontend/src/components/share/shareImage.ts`.
+- **Revert:** safe to revert on its own before step 5; My Impact loses the shelf and the Watch buttons.
+
+## 2026-10-14 · Share images and share buttons on a Story's last slide
+
+- **What and why:** step 3 of the Story and Badge build plan (spec sections 3 and 4). A component's Story now ends on its summary postcard as an image you can save or share, and the old text share is gone.
+  - `shareImage.ts` draws the two "Keepsakes" images on a 1080×1920 canvas: the postcard (tilted card on the component's tint, perforated stamp, postmark, Fraunces headline, context or role, month, lifetime patients, the mark) and the Badge (felt, ribbon, gold medal with the ring glyph, name, rule, earned month, 8 pins, "n of 8 Badges"). Numbers are drawn as type; check, five-drop, vial and heart as icons. It waits for Fraunces with `document.fonts.load` and keeps the top 220px and bottom 260px free of key content. A long name or rule lifts the medal so the text never reaches the pins.
+  - `ShareButtons.tsx`: Download image, Copy image, and Share… only when `navigator.canShare({ files })` is true, then the help line and the feedback notes. Copy or Share… falling over saves the image instead. Files are `tracedrop-{component}-{mon}-{year}.png` and `tracedrop-badge-{badge}.png`. The PNG is drawn as the buttons mount. No caption, no WhatsApp link, no Copy text.
+  - `StoryViewer` takes an optional `last` (postcard or Badge). With it, the last slide is the image under dark top and bottom scrims with the share buttons; without it there is no share at all (Weekly report, Intro). The "Share to WhatsApp status" text share and its `wa.me` fallback are removed. It now renders through a portal to `document.body`: inside Home's chat it sat under a `.fade-in` transform, which pushed the fixed overlay (and so the share buttons) off-screen.
+  - Drop's impact Card now carries `last: { postcard }` from `componentStory`, and Home's chat and the Drop feed pass it to the viewer.
+  - `ShareBar.tsx` and My Impact's "Share my impact" button are removed; the Badge shelf replaces them in step 4.
+  - Fraunces is loaded in `index.html` for the images.
+- **Files:** `frontend/src/components/share/shareImage.ts` (new), `frontend/src/components/share/ShareButtons.tsx` (new), `frontend/src/components/drop/StoryViewer.tsx`, `frontend/src/components/drop/drop.css`, `frontend/src/components/drop/DropFeed.tsx`, `frontend/src/components/Copilot.tsx` (one prop), `frontend/src/components/impact/ShareBar.tsx` (deleted), `frontend/src/pages/Impact.tsx`, `frontend/src/api.ts` (`Postcard`, `Badge`, `StoryLast`, `badges` on the impact response), `frontend/index.html`, `backend/src/domain/drop.js` (the impact Card's `last`).
+- **Revert:** safe to revert on its own before step 4 lands; the Story goes back to its text share and My Impact gets "Share my impact" back.
+
+## 2026-10-14 · Keep the share-image prototype off the feature branch
+
+- **What and why:** the step 1 commit brought `docs/wayfinder/story-and-badge/share-images.prototype.html` onto `feature/story-and-badge` along with the wayfinder docs. Prototypes live only on their throwaway branch, so it is removed here. It stays on `prototype/share-images` (commit 747ef00), which the spec, build plan and ticket already point to.
+- **Files:** `docs/wayfinder/story-and-badge/share-images.prototype.html` (removed).
+- **Revert:** safe to revert on its own.
+
+## 2026-10-14 · Merge Badges (step 2) into the Story and Badge branch
+
+- **What and why:** steps 1 and 2 of the Story and Badge build plan were built in parallel on `feature/story-and-badge` and `feature/story-and-badge-badges`. This merges step 2 in so steps 3 to 5 start from both. The only conflict was this change log; both entries are kept.
+- **Files:** none beyond the two merged commits.
+- **Revert:** `git revert -m 1 <merge commit>` takes step 2 back out.
+
+## 2026-10-14 · Work out each Donor's Badges from their own data
+
+- **What and why:** step 2 of the Story and Badge build plan. `badges(donorId)` returns the 8 Badges in shelf order (First patient, 5 patients, 10 patients, Regular donor, Nothing wasted, All five parts, Plasma to medicine, Helped a child), each with its ring, rule ("my"), goal, progress (only where there's a real count), whether it's earned, the month it was earned and the unit or donation that completed it. It is worked out fresh from the Donor's released journeys and completed donations on the demo clock, so the same history always gives the same Badges and nothing is stored. Earned dates leave the server as a month only. "Helped a child" uses released age bands (under 18), so it follows `impact.js`'s release rules. `GET /api/donors/:donorId/impact` now also returns `badges`. Nothing in the app shows them yet.
+- **Files:** `backend/src/domain/badges.js` (new), `backend/src/routes/donors.js` (the impact handler), `backend/test/badges.test.js` (new).
+- **Revert:** safe to revert on its own until the Badge shelf and Drop's Badge slides land (build steps 4 and 5).
+
+## 2026-10-14 · Story and Badge step 1: one Story builder
+
+- **What and why:** step 1 of `docs/wayfinder/story-and-badge/build-plan.md` (spec section 1). A component's Story is now built in one place, `backend/src/domain/story.js` (`componentStory(donorId, componentId)`), so Drop's impact Card and My Impact's coming "Watch the story" say the same thing.
+  - Four slides in "you": Given, Became, Reached, Helped. Plasma that became medicines gets given → pooled → its share of albumin, IVIG and factor VIII. Expired, withheld and in-progress units get no Story (`null`).
+  - Generalised fields are left out of the sentence ("a patient", "a hospital in Karnataka", "helped a patient in hospital") instead of printed, and "Some details stay private so no one can be identified." is added wherever something was held back. A released recovery adds "The hospital recorded a good recovery."
+  - Proper names keep their capitals ("Bengaluru Urban", "Karnataka"); the old slides lowercased them.
+  - It also returns the postcard data for step 3: component, headline, context (or the role when the context is generalised), month and lifetime patients helped.
+  - New route `GET /api/donors/:donorId/impact/:componentId/story` (404 when the unit has no Story).
+  - Removed the old "AI" story, which was a fixed template: `backend/src/ai/stories.js`, `POST …/impact/:componentId/story`, `api.story` and the `Story` type. My Impact's "Write my impact story" button goes with it; "Watch the story" replaces it in step 4.
+  - Also commits the Story and Badge wayfinder docs (`docs/wayfinder/`) and the Story and Badge terms in `CONTEXT.md`.
+- **Files:** `backend/src/domain/story.js` (new), `backend/src/domain/drop.js`, `backend/src/routes/donors.js`, `backend/src/ai/stories.js` (deleted), `backend/src/data/store.js` (drops the unused story cache), `backend/test/impact-correctness.test.js`, `backend/test/ai-correctness.test.js` (drops the old story test), `frontend/src/api.ts`, `frontend/src/pages/Impact.tsx`, `CONTEXT.md`, `docs/wayfinder/`.
+- **Revert:** safe to revert on its own; the impact Card goes back to its own slides and My Impact gets "Write my impact story" back. Revert before steps 3–5 land, or with them.
+
 ## 2026-10-14 · A language switch for every donor, and no leaked tool code in Drop's replies
 
 - **What and why:**
