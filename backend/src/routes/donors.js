@@ -9,6 +9,7 @@ const store = require('../data/store');
 const health = require('../domain/health');
 const cover = require('../domain/cover');
 const impact = require('../domain/impact');
+const { badges } = require('../domain/badges');
 const community = require('../domain/community');
 const donation = require('../domain/donation');
 const booking = require('../booking/service');
@@ -86,7 +87,7 @@ router.get('/:donorId/donations', (req, res) => ok(res, store.getDonations(req.d
 
 router.get('/:donorId/impact', (req, res) => {
   const journeys = impact.donorJourneys(req.donor.id);
-  ok(res, { summary: impact.summarise(journeys), journeys, components: impact.COMPONENTS, k: impact.K_ANON });
+  ok(res, { summary: impact.summarise(journeys), journeys, components: impact.COMPONENTS, k: impact.K_ANON, badges: badges(req.donor.id) });
 });
 
 router.get('/:donorId/stakeholders', (req, res) => ok(res, impact.stakeholders(req.donor.id)));
