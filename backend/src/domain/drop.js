@@ -15,6 +15,7 @@ const health = require('./health');
 const impact = require('./impact');
 const donation = require('./donation');
 const { componentStory } = require('./story');
+const badgeRules = require('./badges');
 
 const PRIORITY = { urgent: 1, results: 2, donate: 3, checkin: 4, plan: 4, goal: 5, impact: 6, fold: 7 };
 const BUDGETS = {
@@ -77,7 +78,12 @@ function create(donorId) {
     reminders: clone(s.reminders || []),
     reminderLog: [], readings: [], bookings: [], hiddenResults: [],
     undo: null, memReceipt: null, created: 0, log: [],
+    // Badges are worked out from data; only what the Donor has seen lives here. Ones earned before Drop started are never "New".
+    badgesSeen: [], badgesShown: [],
   };
+  const earned = badgeRules.earnedDates(donorId);
+  st.badgesSeen = Object.keys(earned).filter((b) => earned[b] <= today);
+  st.badgesShown = [...st.badgesSeen];
   if (st.plan && !st.plan.nextCheckin && st.plan.goals?.[0]) st.plan.nextCheckin = { date: addDays(today, CHECKIN_DAYS), marker: st.plan.goals[0].marker };
   for (const e of s.earlier || []) {
     st.cards.push({ id: id('c'), type: e.type, variant: e.type, status: 'answered', fresh: false, receipt: e.type === 'slots' ? `Demo history: ${e.receipt}. No real centre reservation was made.` : e.receipt, answeredOn: e.date, created: tickOf(e.date), createdOn: e.date, data: {} });
@@ -97,7 +103,7 @@ function openFromSeed(st, o) {
   if (o.type === 'impact') {
     const component = store.getComponents(donorId).find((c) => c.id === o.componentId);
     st.keys[`impact:${component.donationId}`] = true;
-    pushCard(st, 'impact', 'impact', { componentId: o.componentId }, { counted: true });
+    pushCard(st, 'impact', 'impact', { componentId: o.componentId, badgeId: storyBadge(st, o.componentId) }, { counted: true });
   } else if (o.type === 'checkin') {
     pushCard(st, 'checkin', o.marker, { marker: o.marker, mode: o.mode || null }, { counted: true });
   } else if (o.type === 'slots') {
@@ -286,7 +292,8 @@ function send(st, e, { counted }) {
     impact: ['impact', 'impact'], donate: ['slots', 'donate'], checkin: ['checkin', e.data?.marker], postvisit: ['checkin', 'visit'],
   };
   const [type, variant] = map[e.kind];
-  pushCard(st, type, variant, { ...(e.data || {}), purpose: e.kind === 'donate' ? 'donate' : e.data?.purpose }, { counted, urgent: e.kind === 'urgent', eventKey: e.key });
+  const extra = e.kind === 'impact' ? { badgeId: storyBadge(st, e.data.componentId) } : {};
+  pushCard(st, type, variant, { ...(e.data || {}), ...extra, purpose: e.kind === 'donate' ? 'donate' : e.data?.purpose }, { counted, urgent: e.kind === 'urgent', eventKey: e.key });
   if (counted) {
     const today = store.today();
     st.sentByDay[today] = (st.sentByDay[today] || 0) + 1;
@@ -295,6 +302,29 @@ function send(st, e, { counted }) {
   // Results with something to act on lead to a Plan the next day
   if (e.kind === 'results' && !st.plan && planFindings(st.donorId).length) addEvent(st, { key: `plan:${e.data.visitId}`, kind: 'plan', at: addDays(store.today(), 1), data: { visitId: e.data.visitId } });
   log(st, `Sent "${eventName(e)}"${counted ? '' : ' (outside the budget)'}.`);
+}
+
+/* ------------------------------------------------------------------ Badges (spec section 5: earning one never sends a Card) */
+
+/** The first Badge, in shelf order, that this unit completed and no Story or report has shown yet; marks it shown. */
+function storyBadge(st, componentId) {
+  const b = badgeRules.badges(st.donorId).find((x) => x.earned && x.completedBy?.componentId === componentId && !st.badgesShown.includes(x.id));
+  if (!b) return null;
+  st.badgesShown.push(b.id);
+  return b.id;
+}
+
+/** Earned Badges the Donor hasn't opened or reached a slide for yet, in shelf order. */
+function newBadges(donorId) {
+  const st = get(donorId);
+  return badgeRules.badges(donorId).filter((b) => b.earned && !st.badgesSeen.includes(b.id));
+}
+
+/** The Donor opened these Badges on the shelf, or reached the Story or report slide that shows them. */
+function seeBadges(donorId, ids) {
+  const st = get(donorId);
+  for (const b of [].concat(ids || [])) if (!st.badgesSeen.includes(b)) st.badgesSeen.push(b);
+  return { newBadges: newBadges(donorId).map((b) => b.id) };
 }
 
 function buildReport(st) {
@@ -328,11 +358,19 @@ function buildReport(st) {
   for (const c of foldedCards) slides.push(`I put this off: ${words(st, c).text}`);
   const totals = impact.summarise(impact.donorJourneys(st.donorId));
   slides.push(`I have helped ${totals.patientsHelped} patients so far.`);
+  // New Badges no Story has shown: one slide, no share buttons
+  const fresh = badgeRules.badges(st.donorId).filter((b) => b.earned && !st.badgesSeen.includes(b.id) && !st.badgesShown.includes(b.id));
+  let badgeSlide = null;
+  if (fresh.length) {
+    badgeSlide = { at: slides.length, ids: fresh.map((b) => b.id) };
+    slides.push(`New Badge${fresh.length > 1 ? 's' : ''}: ${fresh.map((b) => b.name).join(', ')}. Share ${fresh.length > 1 ? 'them' : 'it'} from your Badges on My Impact.`);
+    st.badgesShown.push(...badgeSlide.ids);
+  }
   const ready = readiness(st);
   if (ready) slides.push(ready <= today ? 'I can donate now.' : `${dayNum(ready) - dayNum(today)} days until I can donate again.`);
 
   const waiting = folded.filter((e) => !e.foldOnly).map((e) => ({ key: e.key, name: eventName(e) }));
-  pushCard(st, 'report', period, { slides, waiting, period });
+  pushCard(st, 'report', period, { slides, waiting, period, badgeSlide });
   log(st, `${period === 'week' ? 'Weekly' : 'Monthly'} report sent: ${slides.length} slides, ${folded.length + foldedCards.length} item(s) folded in.`);
 }
 
@@ -427,12 +465,15 @@ function words(st, c) {
       const j = impact.donorJourneys(donorId).find((x) => x.id === d.componentId);
       const r = j.recipient;
       const s = componentStory(donorId, j.id);
+      // The Story ends on the Badge this unit completed, if any (and still true), else on the summary postcard
+      const all = badgeRules.badges(donorId);
+      const badge = d.badgeId && all.find((b) => b.id === d.badgeId && b.earned);
       return {
         text: `My ${j.name.toLowerCase()} from ${fmt(j.donationDate)} helped a patient: ${r.context.toLowerCase()} (${r.patient.toLowerCase()}, ${r.place}).`,
         main: { label: 'Watch the story', value: 'seen', story: true },
         story: s.slides,
-        // The Story ends on the summary postcard, which can be shared as an image
-        last: { postcard: s.postcard },
+        last: badge ? { badge, held: all.filter((b) => b.earned).length } : { postcard: s.postcard },
+        badgeSlide: badge ? { at: s.slides.length, ids: [badge.id] } : null,
       };
     }
     case 'results:results': {
@@ -506,6 +547,7 @@ function words(st, c) {
         text: `My ${d.period}, in ${d.slides.length} tap${d.slides.length === 1 ? '' : 's'}.`,
         main: { label: `Watch my ${d.period}`, value: 'seen', story: true },
         story: d.slides,
+        badgeSlide: d.badgeSlide || null,
         chips: (d.waiting || []).map((w) => ({ label: `Still waiting: ${w.name}`, value: { pull: w.key } })),
       };
     default:
@@ -684,6 +726,9 @@ function undo(donorId) {
   }
   const restored = st.undo.snapshot;
   restored.undo = null;
+  // Undo can't unsee or unshow a Badge
+  restored.badgesSeen = [...new Set([...restored.badgesSeen, ...st.badgesSeen])];
+  restored.badgesShown = [...new Set([...restored.badgesShown, ...st.badgesShown])];
   states.set(donorId, restored);
   log(restored, 'Undone.');
   return view(donorId);
@@ -826,7 +871,7 @@ function cardView(st, c) {
     text: demoBookingCard ? w.text : ai ? c.aiText : w.text, ruleText: w.text, byAi: ai && !demoBookingCard,
     main: relabel(w.main, l.main), out: relabel(w.out, l.out),
     chips: (w.chips || []).map((chip, i) => relabel(chip, l.chips?.[i])), wheel: w.wheel || null,
-    upload: Boolean(w.upload), story: w.story || null, last: w.last || null, snoozes: c.snoozes,
+    upload: Boolean(w.upload), story: w.story || null, last: w.last || null, badgeSlide: w.badgeSlide || null, snoozes: c.snoozes,
   };
 }
 
@@ -984,6 +1029,7 @@ function nextEvent(donorId) {
 module.exports = {
   get, view, answer, undo, snooze, cancelBooking, recordBooking, forgetBooking, hide, reopen, forget, undoMemory, deleteReading, hideResult, nextEvent,
   openForWriting, setAi, words, label, setLanguage, offerCard, logReading, chatContext, chartPoints, readinessOf: (donorId) => readiness(get(donorId)),
+  newBadges, seeBadges,
   rememberText: (donorId, text, replacesPattern) => { const st = get(donorId); remember(st, text, replacesPattern ? new RegExp(replacesPattern, 'i') : null); return view(donorId); },
   BUDGETS, PRIORITY, BP_GOAL,
   _state: get, _addEvent: (donorId, ev) => addEvent(get(donorId), ev), _deliver: (donorId) => deliver(get(donorId)),

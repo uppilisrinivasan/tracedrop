@@ -12,7 +12,7 @@ import DropCardView from './drop/DropCardView';
 import MemorySheet from './drop/MemorySheet';
 import BookingFlow from './BookingFlow';
 import AppointmentPass from './AppointmentPass';
-import StoryViewer from './drop/StoryViewer';
+import StoryViewer, { badgeSeenOnSlide } from './drop/StoryViewer';
 import Checkup from './drop/Checkup';
 import { chatCards } from './drop/DropFeed';
 import { IntroBar, IntroFold, IntroThread, useIntro } from './intro/Intro';
@@ -377,7 +377,7 @@ export default function Copilot({ donorId, go, clientId, inline = false, top, fi
         ))}
         {busy && <Thinking label="Drop is checking your records…" />}
       </div>
-      {story?.story && <StoryViewer title={story.label} slides={story.story} last={story.last} onClose={storyDone} />}
+      {story?.story && <StoryViewer title={story.label} slides={story.story} last={story.last} onSlide={badgeSeenOnSlide(donorId, story)} onClose={storyDone} />}
       {!introLive && <div className="suggestions suggestions-stay">
         {stories.map((c) => <StoryChip key={c.id} card={c} onClick={() => watch(c)} />)}
         {(firstTime ? FIRST_TIME_SUGGESTIONS : SUGGESTIONS).map((s, i) => <button key={s} className={`suggestion ${i === 0 ? 'suggestion-main' : ''}`} style={{ minHeight: 36 }} disabled={busy} onClick={() => send(s)}>{s}</button>)}

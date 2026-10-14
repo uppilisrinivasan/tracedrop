@@ -41,7 +41,7 @@ export function Medal({ ring, grey }: { ring: string; grey?: boolean }) {
   return <span className={`medal${grey ? ' grey' : ''}`}><span className="medal-disc"><Glyph ring={ring} /></span></span>;
 }
 
-export default function BadgeShelf({ badges, onOpen }: { badges: Badge[]; onOpen: (badge: Badge) => void }) {
+export default function BadgeShelf({ badges, fresh, onOpen }: { badges: Badge[]; fresh: string[]; onOpen: (badge: Badge) => void }) {
   const held = badges.filter((b) => b.earned).length;
   return (
     <div className="card badge-shelf">
@@ -49,9 +49,10 @@ export default function BadgeShelf({ badges, onOpen }: { badges: Badge[]; onOpen
       <div className="badge-slots">
         {badges.map((b) => b.earned
           ? (
-            <button key={b.id} className="badge-slot" onClick={() => onOpen(b)} aria-label={`${b.name}, earned ${b.earnedLabel}. Open to share`}>
+            <button key={b.id} className={`badge-slot${fresh.includes(b.id) ? ' new' : ''}`} onClick={() => onOpen(b)}
+              aria-label={`${fresh.includes(b.id) ? 'New Badge: ' : ''}${b.name}, earned ${b.earnedLabel}. Open to share`}>
               <Medal ring={b.ring} />
-              <span className="badge-slot-text"><b>{b.name}</b><span>Earned {b.earnedLabel}</span></span>
+              <span className="badge-slot-text">{fresh.includes(b.id) && <i className="badge-new">New</i>}<b>{b.name}</b><span>Earned {b.earnedLabel}</span></span>
             </button>
           )
           : (

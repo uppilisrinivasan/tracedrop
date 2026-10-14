@@ -5,16 +5,23 @@
  */
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import type { StoryLast } from '../../api';
+import { api, type DropCard, type StoryLast } from '../../api';
 import ShareButtons from '../share/ShareButtons';
 
-export default function StoryViewer({ title, slides, last, onClose }: { title: string; slides: string[]; last?: StoryLast | null; onClose: () => void }) {
+/** For a Card's Story: reaching the slide that shows new Badges clears their "New" mark (watching part of it doesn't). */
+export const badgeSeenOnSlide = (donorId: string, card: DropCard) => (i: number) => {
+  if (card.badgeSlide && i === card.badgeSlide.at) api.dropBadgesSeen(donorId, card.badgeSlide.ids).catch(() => { /* stays New; harmless */ });
+};
+
+export default function StoryViewer({ title, slides, last, onSlide, onClose }: { title: string; slides: string[]; last?: StoryLast | null; onSlide?: (i: number) => void; onClose: () => void }) {
   const count = slides.length + (last ? 1 : 0);
   const [i, setI] = useState(0);
   const [image, setImage] = useState('');
   const onShare = Boolean(last) && i === count - 1;
   const alt = !last ? '' : 'postcard' in last ? last.postcard.headline : `Badge: ${last.badge.name}`;
   const go = (step: number) => setI((n) => Math.max(0, Math.min(count - 1, n + step)));
+
+  useEffect(() => { onSlide?.(i); }, [i]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

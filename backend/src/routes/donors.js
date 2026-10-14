@@ -87,7 +87,7 @@ router.get('/:donorId/donations', (req, res) => ok(res, store.getDonations(req.d
 
 router.get('/:donorId/impact', (req, res) => {
   const journeys = impact.donorJourneys(req.donor.id);
-  ok(res, { summary: impact.summarise(journeys), journeys, components: impact.COMPONENTS, k: impact.K_ANON, badges: badges(req.donor.id) });
+  ok(res, { summary: impact.summarise(journeys), journeys, components: impact.COMPONENTS, k: impact.K_ANON, badges: badges(req.donor.id), newBadges: require('../domain/drop').newBadges(req.donor.id).map((b) => b.id) });
 });
 
 router.get('/:donorId/stakeholders', (req, res) => ok(res, impact.stakeholders(req.donor.id)));

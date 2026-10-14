@@ -32,6 +32,7 @@ export default function Impact({ donorId, version }: PageProps) {
   const [date, setDate] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [story, setStory] = useState<OpenStory | null>(null);
+  const [opened, setOpened] = useState<string[]>([]); // Badges opened here since the page loaded
   const top = useRef<HTMLDivElement>(null);
 
   const byDonation = useMemo(() => {
@@ -81,11 +82,17 @@ export default function Impact({ donorId, version }: PageProps) {
           </div>
         </div>
       </div>
-      <DropLine donorId={donorId} screen="impact" version={version} />
+      {/* Re-read Drop's line once a New Badge is opened, since it names New Badges */}
+      <DropLine key={opened.length} donorId={donorId} screen="impact" version={version} />
 
       {data.badges && (
-        <BadgeShelf badges={data.badges}
-          onOpen={(badge) => setStory({ title: 'Your Badges', slides: [], last: { badge, held: data.badges.filter((b) => b.earned).length } })} />
+        <BadgeShelf badges={data.badges} fresh={(data.newBadges || []).filter((b) => !opened.includes(b))}
+          onOpen={(badge) => {
+            setStory({ title: 'Your Badges', slides: [], last: { badge, held: data.badges.filter((b) => b.earned).length } });
+            if (data.newBadges?.includes(badge.id) && !opened.includes(badge.id)) {
+              api.dropBadgesSeen(donorId, [badge.id]).then(() => setOpened((o) => [...o, badge.id])).catch(() => { /* stays New */ });
+            }
+          }} />
       )}
 
       <div className="grid grid-4">

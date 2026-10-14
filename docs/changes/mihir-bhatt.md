@@ -4,6 +4,21 @@ One entry per commit, newest first, so any change can be traced or reverted: the
 To revert one: find it with `git log --oneline --grep "<commit title>"`, then `git revert <hash>`.
 The design behind these changes is in `CONTEXT.md` (vocabulary) and the build plan.
 
+## 2026-10-14 · New Badges in Stories, reports and Drop's line (Story and Badge complete)
+
+- **Feature summary (steps 1–5 on `feature/story-and-badge`):** every unit that reached a patient, or plasma that became medicines, has one Story, built in `story.js`. It plays from Drop's impact Card or "Watch the story" on My Impact, and ends on a shareable 1080×1920 postcard (Download image, Copy image, Share… where the browser can share files). Eight Badges are worked out from the Donor's own data (`badges.js`) and shown on My Impact's Badge shelf. Each earned Badge opens as a shareable medal image. A newly earned Badge is marked "New" and shows up in the Story, report or Drop's line, never as a new Card. The text share, the old "AI" story and "Share my impact" are gone.
+- **What and why (this step):** step 5 of the build plan (spec section 5).
+  - Drop's state gains `badgesSeen` and `badgesShown`. Badges earned on or before the day Drop's state started begin as seen, so a seeded Persona's history is never "New". Undo keeps both lists (it can't unsee or unshow a Badge), and a demo reset starts them over.
+  - When an impact Card's unit completed a Badge no Story or report has shown, that Story's last slide is the Badge (first in shelf order) instead of the postcard, with its share buttons.
+  - Otherwise (a later unit of the donation, plasma made into medicines, Regular donor) the next Weekly or monthly report gets one slide: "New Badge: Regular donor. Share it from your Badges on My Impact." Several Badges at once share one slide: "New Badges: A, B. Share them from …". "them" for several is my wording; the spec only gives the one-Badge line. Reports show no share buttons.
+  - "New" clears when the Donor opens the Badge on the shelf or reaches the Story or report slide that shows it (`POST /api/donors/:id/drop/badges/seen`). Watching part of a Story doesn't clear it.
+  - Drop's line on My Impact names New Badges: "You earned Regular donor in October 2026. It's on your shelf below." / "You earned 2 new Badges: 5 patients and Helped a child." The shelf shows a "New" tag on a warm highlight. Earning a Badge never sends a Card or uses the Message budget.
+  - `badges.js` also gives exact earned dates (`earnedDates`) for these rules. They stay on the server; the app still gets the month only.
+  - Six new tests in `backend/test/drop.test.js`.
+  - Checked live: Rohan (D-033) checks in a third donation. Regular donor is "New" on the shelf at once and Drop's line names it. His 1 Nov monthly report carries the Badge slide, and reaching it clears "New".
+- **Files:** `backend/src/domain/drop.js`, `backend/src/domain/badges.js`, `backend/src/domain/screenLines.js`, `backend/src/routes/drop.js`, `backend/src/routes/donors.js` (`newBadges` on the impact response), `backend/test/drop.test.js`, `frontend/src/api.ts`, `frontend/src/components/drop/StoryViewer.tsx` (`onSlide`, `badgeSeenOnSlide`), `frontend/src/components/drop/DropFeed.tsx`, `frontend/src/components/Copilot.tsx` (one prop and its import), `frontend/src/components/impact/BadgeShelf.tsx`, `frontend/src/components/impact/badges.css`, `frontend/src/pages/Impact.tsx`.
+- **Revert:** safe to revert on its own; Badges stay on the shelf and in sharing, but nothing is "New" and impact Stories always end on the postcard.
+
 ## 2026-10-14 · My Impact: Watch the story and the Badge shelf
 
 - **What and why:** step 4 of the Story and Badge build plan (spec section 2, "The shelf").

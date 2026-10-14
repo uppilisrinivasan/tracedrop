@@ -39,13 +39,23 @@ function badge(def, completed, progress) {
     earnedMonth: completed ? monthOf(completed.date) : null,
     earnedLabel: completed ? monthLabel(completed.date) : null,
     completedBy: completed ? completed.by : null,
+    earnedOn: completed ? completed.date : null, // exact date, server-only: badges() strips it
     // Shown after the goal on a greyed slot ("Reach 10 patients · 8 so far"); only where there is a real count
     progress: completed ? null : progress,
   };
 }
 
-/** The 8 Badges in shelf order. */
+/** The 8 Badges in shelf order, as sent to the app (earned month only). */
 function badges(donorId) {
+  return compute(donorId).map(({ earnedOn, ...b }) => b);
+}
+
+/** Exact earned dates by Badge id, for Drop's "New" rules only; never sent to the app. */
+function earnedDates(donorId) {
+  return Object.fromEntries(compute(donorId).filter((b) => b.earned).map((b) => [b.id, b.earnedOn]));
+}
+
+function compute(donorId) {
   const today = store.today();
   const journeys = impact.donorJourneys(donorId);
   const raw = new Map(store.getComponents(donorId).map((c) => [c.id, c]));
@@ -105,4 +115,4 @@ function badges(donorId) {
   ];
 }
 
-module.exports = { badges };
+module.exports = { badges, earnedDates };

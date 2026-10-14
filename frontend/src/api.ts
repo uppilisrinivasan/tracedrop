@@ -195,6 +195,8 @@ export interface DropCard {
   id: string; type: DropCardType; variant: string; label: string; urgent: boolean; counted: boolean; createdOn: string;
   text: string; ruleText: string; byAi: boolean; main: DropAction | null; out: DropAction | null; chips: DropAction[];
   wheel: { kind: 'bp'; s: number; d: number } | null; upload: boolean; story: string[] | null; last: StoryLast | null; snoozes: number;
+  /** The Story slide (index in the viewer) that shows these new Badges; reaching it clears their "New" mark. */
+  badgeSlide: { at: number; ids: string[] } | null;
 }
 /** The summary postcard that ends a component's Story (backend/src/domain/story.js). */
 export interface Postcard { kind: string; component: string; headline: string; context: string; month: string; patientsHelped: number }
@@ -303,7 +305,7 @@ export const api = {
     post<BookingTurn>('/auth/booking/turn', { preferences, answer }),
   personas: () => request<{ id: string; name: string; bloodGroup: string | null; language: string; newUser: boolean }[]>('/donors'),
   overview: (id: string) => request<Overview>(`/donors/${id}/overview`),
-  impact: (id: string) => request<{ summary: ImpactSummary; journeys: Journey[]; badges: Badge[]; k: number }>(`/donors/${id}/impact`),
+  impact: (id: string) => request<{ summary: ImpactSummary; journeys: Journey[]; badges: Badge[]; newBadges: string[]; k: number }>(`/donors/${id}/impact`),
   impactStory: (id: string, componentId: string) => request<{ slides: string[]; postcard: Postcard }>(`/donors/${id}/impact/${componentId}/story`),
   stakeholders: (id: string) => request<Stakeholder[]>(`/donors/${id}/stakeholders`),
   health: (id: string) => request<HealthData>(`/donors/${id}/health`),
@@ -338,6 +340,7 @@ export const api = {
   dropSnooze: (id: string, cardId: string, option: SnoozeOption) => post<DropView>(`/donors/${id}/drop/cards/${cardId}/snooze`, { option }),
   dropHide: (id: string, cardId: string) => post<DropView>(`/donors/${id}/drop/cards/${cardId}/hide`),
   dropUndo: (id: string) => post<DropView>(`/donors/${id}/drop/undo`),
+  dropBadgesSeen: (id: string, ids: string[]) => post<{ newBadges: string[] }>(`/donors/${id}/drop/badges/seen`, { ids }),
   dropOffer: (id: string, kind: 'care_slots' | 'reminder') => post<{ cardId: string; view: DropView }>(`/donors/${id}/drop/offer`, { kind }),
   dropCancelBooking: (id: string, bookingId: string, reschedule: boolean) => post<DropView>(`/donors/${id}/drop/bookings/${bookingId}/cancel`, { reschedule }),
   dropMemoryUndo: (id: string) => post<DropView>(`/donors/${id}/drop/memory/undo`),
