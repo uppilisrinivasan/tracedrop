@@ -4,6 +4,18 @@ One entry per commit, newest first, so any change can be traced or reverted: the
 To revert one: find it with `git log --oneline --grep "<commit title>"`, then `git revert <hash>`.
 The design behind these changes is in `CONTEXT.md` (vocabulary) and the build plan.
 
+## 2026-10-14 · Merge Badges (step 2) into the Story and Badge branch
+
+- **What and why:** steps 1 and 2 of the Story and Badge build plan were built in parallel on `feature/story-and-badge` and `feature/story-and-badge-badges`. This merges step 2 in so steps 3 to 5 start from both. The only conflict was this change log; both entries are kept.
+- **Files:** none beyond the two merged commits.
+- **Revert:** `git revert -m 1 <merge commit>` takes step 2 back out.
+
+## 2026-10-14 · Work out each Donor's Badges from their own data
+
+- **What and why:** step 2 of the Story and Badge build plan. `badges(donorId)` returns the 8 Badges in shelf order (First patient, 5 patients, 10 patients, Regular donor, Nothing wasted, All five parts, Plasma to medicine, Helped a child), each with its ring, rule ("my"), goal, progress (only where there's a real count), whether it's earned, the month it was earned and the unit or donation that completed it. It is worked out fresh from the Donor's released journeys and completed donations on the demo clock, so the same history always gives the same Badges and nothing is stored. Earned dates leave the server as a month only. "Helped a child" uses released age bands (under 18), so it follows `impact.js`'s release rules. `GET /api/donors/:donorId/impact` now also returns `badges`. Nothing in the app shows them yet.
+- **Files:** `backend/src/domain/badges.js` (new), `backend/src/routes/donors.js` (the impact handler), `backend/test/badges.test.js` (new).
+- **Revert:** safe to revert on its own until the Badge shelf and Drop's Badge slides land (build steps 4 and 5).
+
 ## 2026-10-14 · Story and Badge step 1: one Story builder
 
 - **What and why:** step 1 of `docs/wayfinder/story-and-badge/build-plan.md` (spec section 1). A component's Story is now built in one place, `backend/src/domain/story.js` (`componentStory(donorId, componentId)`), so Drop's impact Card and My Impact's coming "Watch the story" say the same thing.
