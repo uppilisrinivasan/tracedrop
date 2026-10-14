@@ -6,8 +6,8 @@ import { AIBadge, ErrorNote, Icon, Loading, Section, useLoad } from '../ui';
 const FEATURES = [
   { name: 'Drop copilot', kind: 'Agent', where: 'Chat button on every screen',
     why: 'Donors ask open questions that span impact, health and cover ("why didn\'t my cover go up?"). An agent decides which records to pull, combines them, answers in the donor\'s language and can navigate the app.' },
-  { name: 'Care-plan agent', kind: 'Agent', where: 'Health → Care plan',
-    why: 'Rules flag each marker in isolation. Real people have several borderline results that interact (rising BP + borderline lipids + family history). The agent investigates trends, protocols and evidence, then writes one prioritised plan citing the evidence for every step.' },
+  { name: 'Goal write-up', kind: 'Rules', where: 'Health → a Goal',
+    why: 'Each Goal gets a two-sentence "why this matters" and 2-3 steps, each tagged with a Habit, a doctor or a reading and citing protocol or guidance evidence. Written from rules for now; an AI version waits on the team\'s call on Google Cloud\'s "no clinical purposes" term, and grouping, targets and order always stay rules.' },
   { name: 'Lab-report reader', kind: 'GenAI', where: 'Health → Add an outside lab report',
     why: 'Indian labs print results in endless formats, names and units, often as photos. Only a model can read any layout, map synonyms to LOINC codes and convert units reliably; schema-constrained output plus range checks keep it safe.' },
   { name: 'Impact stories', kind: 'Rules', where: 'Impact → a component → Write my story',

@@ -19,6 +19,7 @@
 
 const store = require('../data/store');
 const health = require('./health');
+const writeup = require('./goalWriteup');
 
 const GROUP_OF = { hypertension: 'lifestyle', heart_disease: 'lifestyle', prediabetes: 'lifestyle', diabetes: 'lifestyle', weight_management: 'lifestyle', anemia: 'iron' };
 const GROUPS = ['lifestyle', 'iron'];
@@ -110,7 +111,7 @@ function arrange(found, records) {
     || Number(b.stopsDonation) - Number(a.stopsDonation)
     || rec(a).createdOn.localeCompare(rec(b).createdOn));
   const active = live.slice(0, ACTIVE_MAX);
-  const keep = (g) => ({ createdOn: rec(g).createdOn, reopenedOn: rec(g).reopenedOn || null });
+  const keep = (g) => ({ createdOn: rec(g).createdOn, reopenedOn: rec(g).reopenedOn || null, writeup: rec(g).writeup || null });
   return [
     ...active.map((g) => ({ ...g, ...keep(g), state: 'active' })),
     ...live.slice(ACTIVE_MAX).map((g) => ({ ...g, ...keep(g), state: 'upnext', startsWhen: active[active.length - 1].name })),
@@ -122,7 +123,8 @@ function arrange(found, records) {
 /**
  * Bring the kept records in line with the latest results, then list the Goals.
  * A new group gets a record; a group whose findings are back reopens its done Goal;
- * a Goal whose group has nothing worse than watch is done.
+ * a Goal whose group has nothing worse than watch is done. A Goal's write-up is
+ * written when it is made or its findings change, and kept with it.
  */
 function sync(records, donorId) {
   const today = store.today();
@@ -132,6 +134,8 @@ function sync(records, donorId) {
     const r = records[g.id];
     if (r.state === 'done') Object.assign(r, { state: null, reopenedOn: today, doneOn: null });
     r.name = g.name;
+    const sig = writeup.signature(g);
+    if (r.writeupFor !== sig) Object.assign(r, { writeup: writeup.rules(g), writeupFor: sig });
   }
   for (const r of Object.values(records)) {
     if (r.state !== 'done' && !found.some((g) => g.id === r.id)) Object.assign(r, { state: 'done', doneOn: today });

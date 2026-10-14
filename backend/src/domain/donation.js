@@ -105,7 +105,6 @@ function applyCheckIn(donorId, appointmentId, prepared) {
     store.addComponents(donorId, components);
   }
   appointment.status = status;
-  store.session.carePlans.delete(donorId);
   return { status, reasons, visitId, components: components.map((c) => c.kind), vitals, demoSimulation: true, assumedVitals: assumed };
 }
 

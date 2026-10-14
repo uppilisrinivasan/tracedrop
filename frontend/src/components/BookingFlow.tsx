@@ -77,7 +77,7 @@ export default function BookingFlow({ donorId, clientId, onBooked, onClose }: {
   if (eligibility.blockers.length) {
     return (
       <div className="bflow">
-        <div className="callout callout-warn small"><Icon name="info" size={16} /><span>Donation is paused because: {eligibility.blockers.join('; ')}. Your care plan in My health shows how to get back.</span></div>
+        <div className="callout callout-warn small"><Icon name="info" size={16} /><span>Donation is paused because: {eligibility.blockers.join('; ')}. Your Goal in My health shows how to get back.</span></div>
       </div>
     );
   }

@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { CartesianGrid, Line, LineChart, ReferenceArea, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { api, fmtDate, type CarePlan, type Extraction, type HealthData } from '../api';
+import { api, fmtDate, type Extraction, type HealthData } from '../api';
 import type { PageProps, Screen } from '../App';
-import { AgentTrace, AIBadge, ErrorNote, Icon, Loading, OfflineNote, Section, Thinking, severityPill, useLoad } from '../ui';
+import { AIBadge, ErrorNote, Icon, Loading, Section, Thinking, severityPill, useLoad } from '../ui';
 import DropLine from '../components/drop/DropLine';
 import { PlanSection, ReadingsSection } from '../components/drop/HealthDrop';
 import type { DropReading, DropView } from '../api';
@@ -103,11 +103,10 @@ export default function Health({ donorId, go, version, refresh, focus }: PagePro
 
       {checkups}
 
-      <PlanSection view={dropView} />
+      <div ref={planRef}><PlanSection view={dropView} /></div>
       <Trends data={data} added={dropView?.readings || []} />
       <ReadingsSection donorId={donorId} view={dropView} data={data} onChange={(v) => { setDropView(v); refresh(); }} />
 
-      <div ref={planRef}><CarePlanCard key={focus === 'plan' ? 'plan' : 'care'} donorId={donorId} version={version} startOpen={focus === 'plan'} /></div>
       <div ref={labsRef}><LabReader key={focus === 'labs' ? 'labs' : 'reader'} donorId={donorId} onSaved={refresh} focusLabs={focus === 'labs'} /></div>
     </div>
   );
@@ -176,71 +175,6 @@ function Trends({ data, added }: { data: HealthData; added: DropReading[] }) {
         </ResponsiveContainer>
       </div>
       {def.good && <div className="tiny faint">Shaded band: healthy range.</div>}
-    </Section>
-  );
-}
-
-const CATEGORY_ICON: Record<string, string> = { see_doctor: 'hospital', diet: 'heart', activity: 'activity', monitoring: 'trend', lifestyle: 'sparkles', donation: 'drop' };
-
-function CarePlanCard({ donorId, version, startOpen }: { donorId: string; version: number; startOpen: boolean }) {
-  const [plan, setPlan] = useState<CarePlan | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-
-  useEffect(() => { setPlan(null); setErr(null); }, [donorId, version]);
-
-  async function run(refresh = false) {
-    setBusy(true);
-    setErr(null);
-    try {
-      setPlan(await api.carePlan(donorId, refresh));
-    } catch (e) {
-      setErr((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  const urgencyPill = { routine: 'pill-good', soon: 'pill-warn', urgent: 'pill-bad' };
-  return (
-    <Section title={<><Icon name="sparkles" size={18} /> Detailed analysis <AIBadge label="Agent" /></>}
-      sub="An AI agent studies your results, trends and clinical protocols together and explains each step with evidence. Your Plan above is what Drop follows up."
-      collapsible defaultOpen={startOpen}
-      right={plan ? <button className="btn btn-sm" onClick={() => run(true)} disabled={busy}><Icon name="refresh" size={14} /> Regenerate</button> : null}>
-      {!plan && !busy && <button className="btn btn-ai" onClick={() => run()}><Icon name="sparkles" size={16} /> Analyse my results and build a plan</button>}
-      {busy && <Thinking label="Agent is reviewing trends, protocols, guidance and your cover…" />}
-      {err && <ErrorNote error={err} />}
-      {plan && (
-        <div className="stack fade-in">
-          <div className="row wrap"><span className={`pill ${urgencyPill[plan.plan.urgency]}`}>{plan.plan.urgency}</span><span className="tiny muted">{plan.generatedBy === 'agent' ? `Written by ${plan.model}` : 'Built from protocols'}</span></div>
-          <p>{plan.plan.summary}</p>
-          <div className="stack" style={{ gap: 12 }}>
-            {plan.plan.actions.map((a, i) => (
-              <div key={i} style={{ border: '1px solid var(--border)', borderRadius: 14, padding: 14 }}>
-                <div className="row between wrap">
-                  <div className="row"><span className="unit-icon" style={{ width: 34, height: 34, background: 'var(--brand-soft)', color: 'var(--brand-ink)' }}><Icon name={CATEGORY_ICON[a.category] || 'info'} size={16} /></span><b>{a.title}</b></div>
-                  <span className="pill pill-neutral">{a.timeframe}</span>
-                </div>
-                <p className="small muted mt-8">{a.why}</p>
-                <ul className="small" style={{ margin: '8px 0 0', paddingLeft: 18 }}>{a.how.map((h) => <li key={h}>{h}</li>)}</ul>
-                {a.expectedEffect && <div className="tiny mt-8" style={{ color: 'var(--good)' }}>Expected: {a.expectedEffect}</div>}
-                <div className="row wrap mt-8" style={{ gap: 6 }}>{a.evidence.map((e) => <span key={e} className="pill pill-neutral tiny">{e}</span>)}</div>
-              </div>
-            ))}
-          </div>
-          <div className="grid grid-2">
-            <div className="callout callout-info small"><Icon name="shield" size={16} /><span><b>Cover goal:</b> {plan.plan.coverGoal}</span></div>
-            <div className="callout small" style={{ background: 'var(--surface-2)' }}><Icon name="calendar" size={16} /><span><b>Next check:</b> {plan.plan.nextCheck}</span></div>
-          </div>
-          <details>
-            <summary className="small bold" style={{ cursor: 'pointer' }}>Note for your doctor</summary>
-            <p className="small muted mt-8">{plan.plan.doctorNote}</p>
-          </details>
-          <AgentTrace steps={plan.steps} />
-          <OfflineNote reason={plan.aiUnavailable} />
-          <div className="tiny faint">Not a diagnosis. A doctor confirms every finding and decides on any treatment.</div>
-        </div>
-      )}
     </Section>
   );
 }

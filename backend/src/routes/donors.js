@@ -16,7 +16,6 @@ const booking = require('../booking/service');
 const settings = require('../auth/userSettings');
 const llm = require('../ai/llm');
 const copilot = require('../ai/copilot');
-const carePlan = require('../ai/carePlan');
 const labReader = require('../ai/labReader');
 const concerns = require('../domain/concerns');
 const insights = require('../ai/insights');
@@ -187,14 +186,6 @@ router.post('/:donorId/copilot', async (req, res) => {
   return withFallback(res, async () => keep(await copilot.chat({ donorId: id, history, message: message.slice(0, 2000), userName })), () => keep(copilot.fallback(id, message)));
 });
 
-router.post('/:donorId/care-plan', (req, res) => withFallback(res, async () => {
-  const cached = store.session.carePlans.get(req.donor.id);
-  if (cached && !req.query.refresh) return cached;
-  const plan = { ...(await carePlan.generate(req.donor.id)), generatedAt: new Date().toISOString() };
-  store.session.carePlans.set(req.donor.id, plan);
-  return plan;
-}, () => carePlan.fallback(req.donor.id)));
-
 router.post('/:donorId/labs/extract', (req, res) => {
   const { text, image } = req.body;
   if (!text && !image) return fail(res, 400, 'Provide report text or an image');
@@ -203,9 +194,7 @@ router.post('/:donorId/labs/extract', (req, res) => {
 
 router.post('/:donorId/labs/save', (req, res) => {
   try {
-    const result = labReader.save(req.donor.id, req.body);
-    if (result.saved) store.session.carePlans.delete(req.donor.id); // plan must reflect new results
-    ok(res, result);
+    ok(res, labReader.save(req.donor.id, req.body));
   } catch (error) {
     fail(res, 400, error.message);
   }
@@ -221,7 +210,6 @@ router.get('/:donorId/labs/uploaded', (req, res) => ok(res, uploadedValues(req.d
 router.delete('/:donorId/labs/:observationId', (req, res) => {
   if (!uploadedValues(req.donor.id).some((o) => o.id === req.params.observationId)) return fail(res, 404, 'No value read from a lab report with that id');
   store.removeObservation(req.donor.id, req.params.observationId);
-  store.session.carePlans.delete(req.donor.id); // the plan must reflect what is left
   return ok(res, uploadedValues(req.donor.id));
 });
 

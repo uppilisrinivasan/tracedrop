@@ -4,6 +4,20 @@ One entry per commit, newest first, so any change can be traced or reverted: the
 To revert one: find it with `git log --oneline --grep "<commit title>"`, then `git revert <hash>`.
 The design behind these changes is in `CONTEXT.md` (vocabulary) and the build plan.
 
+## 2026-10-15 · The Goal write-up, rules version (From results to habits, step 2)
+
+- **What and why:** step 2 of the build plan, rules fallback only (branch `feature/health-goals`). The AI version waits on team decision D1 (Google Cloud's "no clinical purposes" term), so it isn't wired; the rules version is what runs, and stays the fallback when the AI comes.
+  - New `backend/src/domain/goalWriteup.js` writes, per Goal, a two-sentence "why this matters" and 2–3 steps, each tagged `movement`, `food`, `mind`, `doctor` or `reading`, each with its evidence. Evidence comes only from `data/ontology`: the lead finding's protocol ("Protocol BP-G1: …") and the lifestyle guidance with its own effect sizes ("Aerobic Exercise: 5-7 mmHg systolic (ICMR Guidelines, ACC/AHA 2017)").
+  - By lead: BP (walks, less salt, a doctor within the protocol's follow-up; stage 2 puts the doctor first; urgent is a doctor today, less salt and a reading, with no Movement step), prediabetes (150 minutes a week, whole grains, the next HbA1c), the diabetes range (a doctor within 30 days first), cholesterol (whole grains, beans and vegetables in place of fried food, walks, a lipid result) and iron (iron-rich food with vitamin C, tea and coffee away from meals, a doctor to find the cause; severe anaemia is a doctor today).
+  - Written when a Goal is made or its findings change (lead, finding ids, whether it stops donation), never on a view, and kept on the Goal's record in Drop's state. The Drop view's `goals` carry it as `writeup`.
+  - Code still writes the facts (step 1's `facts`): the trend, the target, the doctor note and the next check. The write-up never sets grouping, a target or the order.
+  - Removed: `backend/src/ai/carePlan.js` (`PLAN_SCHEMA`, `generate` and its fallback), `POST /:donorId/care-plan`, `store.session.carePlans` and its clears on lab save, lab delete and check-in, `api.carePlan` and the `CarePlan`/`PlanAction` types. With its API gone, Health's Detailed analysis card (`CarePlanCard`) goes in this step rather than step 4.
+  - The AI console lists "Goal write-up" (Rules) in place of the care-plan agent; the booking flow's "Your care plan in My health" now says "Your Goal"; the README no longer describes the care-plan agent.
+  - The cover line moves to the Health score in step 4, where Health is rebuilt.
+  - Tests: six more in `backend/test/goals.test.js` (every Persona's Goal has a valid write-up; Arjun's steps and evidence; urgent and diabetes-range doctor steps; written once and rewritten when Meera's findings change; the route is gone). The lab-save 400 test in `domain.test.js` now checks nothing was saved instead of the care-plan cache. 141 backend tests pass.
+- **Files:** `backend/src/domain/goalWriteup.js` (new), `backend/src/domain/goals.js`, `backend/src/domain/drop.js`, `backend/src/ai/carePlan.js` (deleted), `backend/src/routes/donors.js`, `backend/src/data/store.js`, `backend/src/domain/donation.js`, `backend/test/goals.test.js`, `backend/test/domain.test.js`, `frontend/src/api.ts`, `frontend/src/pages/Health.tsx`, `frontend/src/pages/AIConsole.tsx`, `frontend/src/components/BookingFlow.tsx`, `README.md`.
+- **Revert:** revert together with step 4 (which builds on the write-up); on its own it brings back the Detailed analysis card and route.
+
 ## 2026-10-15 · Goals in code (From results to habits, step 1)
 
 - **What and why:** step 1 of the "From results to habits" build plan (`docs/wayfinder/results-to-habits/handoff.md` on `plan/results-to-habits`; ticket 01), on branch `feature/health-goals` from `main`. Mihir lifted the "nothing before the 18 Oct demo" rule for the Health tab; this branch isn't merged before the demo unless he says so.

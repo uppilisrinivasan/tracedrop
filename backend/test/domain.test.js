@@ -62,17 +62,16 @@ test('lab save rechecks marker, value and real demo-date independently of extrac
   store.resetDemo();
 });
 
-test('lab save route reports invalid payloads as 400 without clearing the care plan', () => {
+test('lab save route reports invalid payloads as 400', () => {
   store.resetDemo();
-  const plan = { summary: 'existing' };
-  store.session.carePlans.set('D-003', plan);
+  const before = store.getObservations('D-003').length;
   const res = response();
   postHandler('/:donorId/labs/save')({ donor: store.getDonor('D-003'), body: {
     reportDate: '2026-10-99', results: [{ marker: 'hb', value: 14 }],
   } }, res);
   assert.equal(res.statusCode, 400);
   assert.equal(res.body.success, false);
-  assert.equal(store.session.carePlans.get('D-003'), plan);
+  assert.equal(store.getObservations('D-003').length, before);
   store.resetDemo();
 });
 

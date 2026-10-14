@@ -931,7 +931,7 @@ function goalView(g) {
   if (g.state === 'done') return { id: g.id, name: g.name, state: g.state, createdOn: g.createdOn, doneOn: g.doneOn };
   return {
     id: g.id, name: g.name, state: g.state, severity: g.severity, stopsDonation: g.stopsDonation, target: g.target.text,
-    createdOn: g.createdOn, startsWhen: g.startsWhen || null, findings: g.findings.map((f) => f.id),
+    createdOn: g.createdOn, startsWhen: g.startsWhen || null, findings: g.findings.map((f) => f.id), writeup: g.writeup,
   };
 }
 

@@ -5,7 +5,7 @@
 TraceDrop puts the blood donor at the centre. Every donation becomes three things the donor can see:
 
 1. **Impact they can feel.** Each donation is separated into components (red cells, platelets, plasma, cryo, plasma for medicines). TraceDrop follows every component to the patient it helped. The donor sees an age band, the type of treatment and the type of hospital, never who the patient is. They can turn any unit into a shareable story in their own language.
-2. **A free, recurring health check.** The donation sample runs a full lab panel. TraceDrop tracks it over time, flags trends early (rising BP, falling iron, creeping HbA1c), and an AI agent writes a personal care plan.
+2. **A free, recurring health check.** The donation sample runs a full lab panel. TraceDrop tracks it over time, flags trends early (rising BP, falling iron, creeping HbA1c), and the results become Goals with a target and steps to take.
 3. **Money back for good health.** Like a credit limit that rises with good credit behaviour, the donor's health-insurance cover steps up (₹5L → 6L → 7L → 8L) for the same premium as their health score stays strong. The rules are transparent and the donor gives consent.
 
 Around the donor, TraceDrop shows what their contribution meant for blood centres, hospitals, labs, government programmes and their own circles (family, friends, workplace). Users can drill down into every number, and privacy is preserved throughout.
@@ -37,7 +37,7 @@ Use the **"Signed in as"** switcher to move between demo donors:
 | Donor | Story |
 |---|---|
 | **Arjun Rao** (B+) | Regular donor; BP creeping up 126 → 136, still eligible. Score qualifies for ₹6L but needs one more monitored visit. Donate in the app and watch the cover step up. |
-| **Meera Iyer** (O+) | Haemoglobin and ferritin falling over 4 visits; deferred. The care-plan agent connects the trend and routes her to a free clinic. |
+| **Meera Iyer** (O+) | Haemoglobin and ferritin falling over 4 visits; deferred. Her Goal, Haemoglobin and iron, sets the target that gets her donating again. |
 | **Ananya Sharma** (O−) | Healthy, rare group, eligible today; top cover (₹8L). |
 | **Vikram Gowda** (A+) | 184/118 at last visit: urgent same-day escalation. |
 | **Karthik Menon** (B+) | Prediabetic HbA1c and rising BP, otherwise well. |
@@ -50,7 +50,6 @@ Use the **"Signed in as"** switcher to move between demo donors:
 | Feature | Type | Why rules can't do it |
 |---|---|---|
 | **Drop copilot** (chat button everywhere) | Agent with 13 tools | Donors ask open questions that cut across impact, health and cover ("why didn't my cover go up?"). The agent decides what to look up, combines it, answers in Kannada/Hindi/Tamil/Telugu/English, and can navigate the app. |
-| **Care-plan agent** (Health → Care plan) | Agent | Rules flag markers one at a time; people have several borderline results that interact. The agent pulls trends, protocols, evidence-based guidance, cover headroom and care slots, then writes one prioritised plan that cites evidence for every action. |
 | **Lab-report reader** (Health → Add a lab report) | Multimodal GenAI | Indian labs print in endless layouts, names and units, often as photos. The model reads any format, maps tests to LOINC and converts units (mmol/L → mg/dL, mmol/mol → %). Schema-constrained output plus range checks; the donor confirms before saving. |
 | **Impact stories** (Impact → a unit) | GenAI | Turns anonymised journey data into a moving, shareable story in the donor's language. The model must declare any detail it added; if it does, the template is used instead. |
 | **Insight of the day** (Home) | GenAI | Picks the one thing that matters most for this donor today from rule-computed candidates, so it can only choose real facts. |
@@ -69,7 +68,7 @@ backend/
   src/data/      in-memory store over data/synthetic (FHIR-aligned)
   src/domain/    deterministic engines: health, cover, impact, community, donation
   src/ai/        Vertex AI gateway (rate limit, token budget, traces),
-                 agent loop, tools, copilot, care plan, lab reader, stories, insights
+                 agent loop, tools, copilot, lab reader, stories, insights
   src/routes/    REST API
   test/          tests for the deterministic layer (npm test)
 data/

@@ -106,11 +106,6 @@ export interface Community {
 
 export interface AgentStep { tool: string; input: Record<string, unknown>; ms: number; summary: string }
 
-export interface PlanAction { title: string; why: string; how: string[]; category: string; timeframe: string; evidence: string[]; expectedEffect: string }
-export interface CarePlan {
-  plan: { summary: string; urgency: 'routine' | 'soon' | 'urgent'; actions: PlanAction[]; doctorNote: string; coverGoal: string; nextCheck: string };
-  steps: AgentStep[]; generatedBy: 'agent' | 'rules'; model?: string; aiUnavailable?: string; generatedAt?: string;
-}
 
 export interface ExtractedResult {
   marker: string; printedName: string; printedValue: string; printedUnit: string; value: number; confidence: string;
@@ -213,6 +208,12 @@ export type GoalState = 'active' | 'upnext' | 'done' | 'stopped';
 export interface DropGoal {
   id: string; name: string; state: GoalState; createdOn: string; doneOn?: string;
   severity?: 'urgent' | 'high' | 'moderate'; stopsDonation?: boolean; target?: string; startsWhen?: string | null; findings?: string[];
+  writeup?: GoalWriteup;
+}
+/** Written once per Goal, when it is made or its findings change: "why this matters" and 2-3 tagged steps with evidence. */
+export interface GoalWriteup {
+  why: string; by: 'rules' | 'ai'; writtenOn: string;
+  steps: { tag: 'movement' | 'food' | 'mind' | 'doctor' | 'reading'; text: string; evidence: string[] }[];
 }
 export interface DropPlan {
   activity: { label: string; minutesPerWeek: number } | null; notes?: string[];
@@ -330,7 +331,6 @@ export const api = {
   checkIn: (id: string, appointmentId: string, vitals: Record<string, number>) =>
     post<{ status: string; reasons: string[]; visitId: string; components: string[] }>(`/donors/${id}/appointments/${appointmentId}/checkin`, vitals),
   copilot: (id: string, message: string, history: unknown[] | null) => post<CopilotReply>(`/donors/${id}/copilot`, { message, history }),
-  carePlan: (id: string, refresh = false) => post<CarePlan>(`/donors/${id}/care-plan${refresh ? '?refresh=1' : ''}`),
   extractLabs: (id: string, input: { text?: string; image?: string }) => post<Extraction>(`/donors/${id}/labs/extract`, input),
   saveLabs: (id: string, extraction: Extraction) => post<{ saved: number; date: string }>(`/donors/${id}/labs/save`, extraction),
   concerns: (id: string) => request<Concern[]>(`/donors/${id}/concerns`),

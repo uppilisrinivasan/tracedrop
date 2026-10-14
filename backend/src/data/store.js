@@ -2,7 +2,7 @@
  * In-memory data store backed by the synthetic data in data/synthetic/.
  *
  * Loads once at startup, indexes by donor, and keeps demo-session writes
- * (new donations, uploaded lab reports, care plans) in memory. "Today" is a
+ * (new donations, uploaded lab reports) in memory. "Today" is a
  * demo clock that starts at the simulation date in institutions.json and can be
  * moved forward (morning, afternoon, night) so Drop's behaviour over days and
  * weeks can be shown. Reset puts the clock and every demo-session write back.
@@ -74,7 +74,6 @@ function addDays(isoDate, days) {
 // Demo-session state (resets on restart)
 const session = {
   appointments: new Map(), // donorId -> [appointment]
-  carePlans: new Map(), // donorId -> plan
 };
 
 module.exports = {

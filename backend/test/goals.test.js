@@ -146,3 +146,62 @@ test('the code-written facts: the trend in plain words with real numbers, and th
   assert.match(f.doctorNote, /High blood pressure \(stage 1\): 148\/94 mmHg \(BP-G1\)/);
   assert.equal(f.urgency, 'moderate');
 });
+
+/* ------------------------------------------------------------------ the Goal write-up (build plan step 2) */
+
+const writeup = require('../src/domain/goalWriteup');
+
+test("every Persona's Goal has a rules write-up: two sentences of why, 2-3 tagged steps, each with evidence", () => {
+  for (const id of ['D-001', 'D-002', 'D-017', 'D-050', 'D-013']) {
+    for (const g of drop.goals(id)) {
+      const w = g.writeup;
+      assert.equal(w.by, 'rules', `${id} ${g.name}`);
+      assert.equal(w.why.split(/(?<=[.!?])\s+/).length, 2, `${id}: ${w.why}`);
+      assert.ok(w.steps.length >= 2 && w.steps.length <= 3, `${id} steps`);
+      for (const s of w.steps) {
+        assert.ok(writeup.TAGS.includes(s.tag), s.tag);
+        assert.ok(s.evidence.length, `${id} "${s.text}" has evidence`);
+      }
+      // The write-up never sets grouping, a target or the order
+      assert.deepEqual(Object.keys(w).sort(), ['by', 'steps', 'why', 'writtenOn']);
+    }
+  }
+});
+
+test("Arjun's write-up: walks, less salt and a doctor, with the guidance's own numbers", () => {
+  const w = drop.goals('D-001')[0].writeup;
+  assert.deepEqual(w.steps.map((s) => s.tag), ['movement', 'food', 'doctor']);
+  assert.match(w.why, /^Your BP is above the 130\/80 target, and your donations wait until it comes down\./);
+  assert.ok(w.steps[0].evidence.includes('Aerobic Exercise: 5-7 mmHg systolic (ICMR Guidelines, ACC/AHA 2017)'));
+  assert.equal(w.steps[2].text, 'See a doctor within 3 weeks'); // BP-G1 follow-up, 21 days
+});
+
+test('an urgent Goal starts with a doctor today and offers no Movement step (Vikram)', () => {
+  const w = drop.goals('D-017')[0].writeup;
+  assert.equal(w.steps[0].tag, 'doctor');
+  assert.equal(w.steps[0].text, 'See a doctor today');
+  assert.ok(!w.steps.some((s) => s.tag === 'movement'));
+});
+
+test('the diabetes range starts with a doctor within 30 days (D-053)', () => {
+  assert.equal(drop.goals('D-053')[0].writeup.steps[0].text, 'See a doctor within 30 days');
+});
+
+test('the write-up is written once, and again only when the Goal\'s findings change', () => {
+  const st = drop._state('D-002');
+  const first = drop.goals('D-002')[0].writeup;
+  store.stepClock();
+  drop.view('D-002');
+  assert.equal(drop.goals('D-002')[0].writeup, first, 'a view never rewrites it');
+  store.addObservations('D-002', [{ id: 'OBS-test-hb', donorId: 'D-002', visitId: null, code: 'hb', key: 'hb', name: 'hb', value: 12.6, unit: 'g/dL', date: '2026-10-08', source: 'uploaded_report', labId: null }]);
+  const next = drop.goals('D-002')[0].writeup;
+  assert.notEqual(next, first);
+  assert.match(next.why, /^Your iron stores are low, with ferritin under 15\./);
+  assert.equal(st.goals.iron.writeup, next, 'kept with the Goal');
+});
+
+test('the Detailed analysis route is gone', () => {
+  const routes = require('../src/routes/donors').stack.map((l) => l.route?.path).filter(Boolean);
+  assert.ok(!routes.includes('/:donorId/care-plan'));
+  assert.equal(store.session.carePlans, undefined);
+});
