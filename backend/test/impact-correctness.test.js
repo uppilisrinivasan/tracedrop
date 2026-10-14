@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const store = require('../src/data/store');
 const impact = require('../src/domain/impact');
 const community = require('../src/domain/community');
+const { componentStory, PRIVATE } = require('../src/domain/story');
 const platform = require('../src/routes/platform');
 
 function network() {
@@ -162,4 +163,50 @@ test('community opt-out removes contributions and reset restores original consen
   } finally {
     store.resetDemo();
   }
+});
+
+test("D-001's 3 Oct platelets Story is fully generalised and says details stay private", () => {
+  store.resetDemo();
+  const story = componentStory('D-001', 'D-001-V4-PLT');
+  const text = story.slides.join(' ');
+  assert.equal(story.slides.length, 4);
+  assert.equal(story.slides[0], 'On 3 October 2026 you gave blood at Whitefield Community Blood Bank.');
+  assert.equal(story.slides[2], 'In October 2026 they went to a hospital in Karnataka.');
+  assert.ok(story.slides[3].startsWith('They helped a patient in hospital.'));
+  assert.ok(text.includes(PRIVATE));
+  assert.doesNotMatch(text, /Adult|Teenager|Child|Newborn|aged|female|male|not shared|Bengaluru Urban|Tumakuru/);
+  assert.equal(story.postcard.headline, 'My platelets reached a patient');
+  assert.equal(story.postcard.context, impact.COMPONENTS.PLT.role); // context generalised, so the role
+  assert.equal(story.postcard.month, 'October 2026');
+  assert.equal(story.postcard.patientsHelped, impact.summarise(impact.donorJourneys('D-001')).patientsHelped);
+});
+
+test('plasma made into medicines gets the medicines Story', () => {
+  store.resetDemo();
+  const story = componentStory('D-001', 'D-001-V2-FFP');
+  assert.deepEqual(story.slides, [
+    'On 15 July 2025 you gave blood at Whitefield Community Blood Bank.',
+    'Your plasma was pooled with 2,600 donations.',
+    'In May 2026 your share became about 0.5 vial of albumin, 0.2 dose of IVIG and 45 IU of factor VIII.',
+  ]);
+  assert.equal(story.postcard.headline, 'My plasma became medicines');
+  assert.equal(story.postcard.context, 'Albumin, immunoglobulin and clotting factor');
+});
+
+test('expired, withheld and in-progress units have no Story', () => {
+  store.resetDemo();
+  const expired = store.allDonors().flatMap((d) => impact.donorJourneys(d.id).map((j) => [d.id, j])).find(([, j]) => j.status === 'expired');
+  assert.ok(expired);
+  assert.equal(componentStory(expired[0], expired[1].id), null);
+  assert.equal(componentStory('D-001', 'D-001-V4-PRBC'), null); // stored, not yet used
+  const withheld = store.allDonors().flatMap((d) => impact.donorJourneys(d.id).map((j) => [d.id, j])).find(([, j]) => j.withheld);
+  if (withheld) assert.equal(componentStory(withheld[0], withheld[1].id), null);
+});
+
+test('Story keeps capitals in proper names', () => {
+  store.resetDemo();
+  const text = impact.donorJourneys('D-001').map((j) => componentStory('D-001', j.id)).filter(Boolean).flatMap((s) => s.slides).join(' ');
+  assert.ok(text.includes('in Bengaluru Urban'));
+  assert.ok(text.includes('a hospital in Karnataka'));
+  assert.doesNotMatch(text, /bengaluru urban|karnataka|whitefield/);
 });

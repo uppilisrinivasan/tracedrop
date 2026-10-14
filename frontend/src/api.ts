@@ -118,7 +118,6 @@ export interface ExtractedResult {
 }
 export interface Extraction { labName: string; reportDate: string; results: ExtractedResult[]; unmapped: string[]; notes: string }
 
-export interface Story { headline: string; story: string; shareText: string; generatedBy: string; aiUnavailable?: string }
 export interface Insight { title: string; message: string; cta: string; generatedBy: string; considered: string[]; aiUnavailable?: string }
 
 export interface ChartPoint { date: string; value: number; value2?: number; source: string }
@@ -316,7 +315,6 @@ export const api = {
   carePlan: (id: string, refresh = false) => post<CarePlan>(`/donors/${id}/care-plan${refresh ? '?refresh=1' : ''}`),
   extractLabs: (id: string, input: { text?: string; image?: string }) => post<Extraction>(`/donors/${id}/labs/extract`, input),
   saveLabs: (id: string, extraction: Extraction) => post<{ saved: number; date: string }>(`/donors/${id}/labs/save`, extraction),
-  story: (id: string, componentId: string, refresh = false) => post<Story>(`/donors/${id}/impact/${componentId}/story${refresh ? '?refresh=1' : ''}`),
   concerns: (id: string) => request<Concern[]>(`/donors/${id}/concerns`),
   raiseConcern: (id: string, body: { category: string; details: string; unitId?: string }) => post<Concern>(`/donors/${id}/concerns`, body),
   concernAction: (id: string, concernId: string, action: 'escalate' | 'resolve') => post<Concern>(`/donors/${id}/concerns/${concernId}/${action}`),

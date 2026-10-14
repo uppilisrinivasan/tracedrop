@@ -14,6 +14,7 @@ const store = require('../data/store');
 const health = require('./health');
 const impact = require('./impact');
 const donation = require('./donation');
+const { componentStory } = require('./story');
 
 const PRIORITY = { urgent: 1, results: 2, donate: 3, checkin: 4, plan: 4, goal: 5, impact: 6, fold: 7 };
 const BUDGETS = {
@@ -424,17 +425,11 @@ function words(st, c) {
   switch (`${c.type}:${c.variant}`) {
     case 'impact:impact': {
       const j = impact.donorJourneys(donorId).find((x) => x.id === d.componentId);
-      const total = impact.summarise(impact.donorJourneys(donorId)).patientsHelped;
       const r = j.recipient;
       return {
         text: `My ${j.name.toLowerCase()} from ${fmt(j.donationDate)} helped a patient: ${r.context.toLowerCase()} (${r.patient.toLowerCase()}, ${r.place}).`,
         main: { label: 'Watch the story', value: 'seen', story: true },
-        story: [
-          `${fmt(j.donationDate)}. I gave blood at ${j.centre}.`,
-          `My blood was separated into parts. One of them was my ${j.name.toLowerCase()}. ${j.role}.`,
-          `My ${j.name.toLowerCase()} went to ${r.place.startsWith('A ') ? r.place.toLowerCase() : `a ${r.place.toLowerCase()}`}.`,
-          `I helped a patient (${r.patient.toLowerCase()}): ${r.context.toLowerCase()}. I have now helped ${total} patients.`,
-        ],
+        story: componentStory(donorId, j.id).slides,
       };
     }
     case 'results:results': {

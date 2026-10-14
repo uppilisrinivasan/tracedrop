@@ -4,6 +4,19 @@ One entry per commit, newest first, so any change can be traced or reverted: the
 To revert one: find it with `git log --oneline --grep "<commit title>"`, then `git revert <hash>`.
 The design behind these changes is in `CONTEXT.md` (vocabulary) and the build plan.
 
+## 2026-10-14 · Story and Badge step 1: one Story builder
+
+- **What and why:** step 1 of `docs/wayfinder/story-and-badge/build-plan.md` (spec section 1). A component's Story is now built in one place, `backend/src/domain/story.js` (`componentStory(donorId, componentId)`), so Drop's impact Card and My Impact's coming "Watch the story" say the same thing.
+  - Four slides in "you": Given, Became, Reached, Helped. Plasma that became medicines gets given → pooled → its share of albumin, IVIG and factor VIII. Expired, withheld and in-progress units get no Story (`null`).
+  - Generalised fields are left out of the sentence ("a patient", "a hospital in Karnataka", "helped a patient in hospital") instead of printed, and "Some details stay private so no one can be identified." is added wherever something was held back. A released recovery adds "The hospital recorded a good recovery."
+  - Proper names keep their capitals ("Bengaluru Urban", "Karnataka"); the old slides lowercased them.
+  - It also returns the postcard data for step 3: component, headline, context (or the role when the context is generalised), month and lifetime patients helped.
+  - New route `GET /api/donors/:donorId/impact/:componentId/story` (404 when the unit has no Story).
+  - Removed the old "AI" story, which was a fixed template: `backend/src/ai/stories.js`, `POST …/impact/:componentId/story`, `api.story` and the `Story` type. My Impact's "Write my impact story" button goes with it; "Watch the story" replaces it in step 4.
+  - Also commits the Story and Badge wayfinder docs (`docs/wayfinder/`) and the Story and Badge terms in `CONTEXT.md`.
+- **Files:** `backend/src/domain/story.js` (new), `backend/src/domain/drop.js`, `backend/src/routes/donors.js`, `backend/src/ai/stories.js` (deleted), `backend/src/data/store.js` (drops the unused story cache), `backend/test/impact-correctness.test.js`, `backend/test/ai-correctness.test.js` (drops the old story test), `frontend/src/api.ts`, `frontend/src/pages/Impact.tsx`, `CONTEXT.md`, `docs/wayfinder/`.
+- **Revert:** safe to revert on its own; the impact Card goes back to its own slides and My Impact gets "Write my impact story" back. Revert before steps 3–5 land, or with them.
+
 ## 2026-10-14 · A language switch for every donor, and no leaked tool code in Drop's replies
 
 - **What and why:**

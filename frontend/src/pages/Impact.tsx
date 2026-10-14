@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
-import { api, fmtDate, type Journey, type Stakeholder, type Story } from '../api';
+import { api, fmtDate, type Journey, type Stakeholder } from '../api';
 import type { PageProps } from '../App';
-import { AIBadge, ErrorNote, Icon, Loading, OfflineNote, Section, Thinking, useLoad } from '../ui';
+import { AIBadge, ErrorNote, Icon, Loading, Section, useLoad } from '../ui';
 import DropLine from '../components/drop/DropLine';
 import ShareBar from '../components/impact/ShareBar';
 import { ConcernForm, ConcernList } from '../components/impact/Concerns';
@@ -159,27 +159,12 @@ function UnitRow({ unit, selected, onClick }: { unit: Journey; selected: boolean
 }
 
 function UnitDetail({ donorId, unit, onConcern }: { donorId: string; unit: Journey; onConcern: () => void }) {
-  const [story, setStory] = useState<Story | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
   const [concernOpen, setConcernOpen] = useState(false);
   const [concernSent, setConcernSent] = useState<string | null>(null);
   const stages = (unit.kind === 'PLASMA' || unit.events.some((e) => e.type === 'fractionation') ? PLASMA_STAGES : STAGES)
     .concat(unit.withheld ? ['withheld'] : unit.status === 'expired' ? ['expired'] : []);
   const reached = new Set(unit.events.map((e) => e.type));
   const style = KIND_STYLE[unit.kind];
-
-  async function makeStory(refresh = false) {
-    setBusy(true);
-    setErr(null);
-    try {
-      setStory(await api.story(donorId, unit.id, refresh));
-    } catch (e) {
-      setErr((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
 
   return (
     <div className="unit-detail fade-in">
@@ -238,26 +223,6 @@ function UnitDetail({ donorId, unit, onConcern }: { donorId: string; unit: Journ
       {unit.fractionation && unit.status === 'products_released' && (
         <div className="mt-16 small" style={{ background: 'var(--ai-soft)', borderRadius: 14, padding: 16 }}>
           Your plasma joined a pool of {unit.fractionation.poolSize.toLocaleString()} donations to make life-saving medicines — your share is about {unit.fractionation.albuminVials} vial of albumin, {unit.fractionation.ivigVials} dose of immunoglobulin (IVIG) and {unit.fractionation.factorViiiIu} IU of clotting factor VIII.
-        </div>
-      )}
-
-      {unit.recipient && (
-        <div className="mt-16">
-          {!story && !busy && <button className="btn btn-ai" onClick={() => makeStory()}><Icon name="sparkles" size={16} /> Write my impact story</button>}
-          {busy && <Thinking label="Writing your story in your language…" />}
-          {err && <ErrorNote error={err} />}
-          {story && !busy && (
-            <div className="stack fade-in" style={{ gap: 10 }}>
-              <div className="share-card">
-                <div className="row between"><span className="tiny" style={{ opacity: 0.8 }}>TraceDrop · My donation story</span>{story.generatedBy === 'ai' && <span className="ai-badge" style={{ background: 'rgba(255,255,255,.2)', color: '#fff' }}>AI</span>}</div>
-                <div className="bold mt-12" style={{ fontSize: 20 }}>{story.headline}</div>
-                <p className="mt-8" style={{ opacity: 0.95 }}>{story.story}</p>
-              </div>
-              <ShareBar item={story} />
-              <button className="btn btn-ghost btn-sm" style={{ alignSelf: 'flex-start' }} onClick={() => makeStory(true)}><Icon name="refresh" size={14} /> Write it again</button>
-              <OfflineNote reason={story.aiUnavailable} />
-            </div>
-          )}
         </div>
       )}
 

@@ -3,12 +3,10 @@ const assert = require('node:assert/strict');
 const llm = require('../src/ai/llm');
 const tools = require('../src/ai/tools');
 const copilot = require('../src/ai/copilot');
-const stories = require('../src/ai/stories');
 const insights = require('../src/ai/insights');
 const dropWriter = require('../src/ai/dropWriter');
 const drop = require('../src/domain/drop');
 const store = require('../src/data/store');
-const impact = require('../src/domain/impact');
 const { runAgent } = require('../src/ai/agent');
 
 const originalCall = llm.call;
@@ -54,17 +52,6 @@ test('trend tool includes donor-entered BP readings like the chart', () => {
   drop.logReading('D-001', { s: 129, d: 81 });
   const trend = tools.run('get_trend', { marker: 'bp' }, 'D-001');
   assert.deepEqual(trend.at(-1), { date: store.today(), value: '129/81', source: 'yours' });
-});
-
-test('story always uses a template even when a legacy AI story was cached', async () => {
-  const journey = impact.donorJourneys('D-001').find((j) => j.recipient);
-  assert.ok(journey);
-  const donor = store.getDonor('D-001');
-  store.session.stories.set(`${journey.id}:${donor.language}`, { story: 'I know the recipient name', addedDetails: [], generatedBy: 'ai' });
-  llm.json = async () => { throw new Error('model should not be called'); };
-  const result = await stories.write('D-001', journey.id);
-  assert.equal(result.generatedBy, 'template');
-  assert.ok(!result.story.includes('recipient name'));
 });
 
 test('card safety messages are not eligible for model rewrite even with matching numbers', () => {
