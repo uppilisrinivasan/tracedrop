@@ -4,6 +4,14 @@ One entry per commit, newest first, so any change can be traced or reverted: the
 To revert one: find it with `git log --oneline --grep "<commit title>"`, then `git revert <hash>`.
 The design behind these changes is in `CONTEXT.md` (vocabulary) and the build plan.
 
+## 2026-10-14 · A language switch for every donor, and no leaked tool code in Drop's replies
+
+- **What and why:**
+  - Home's language switch only appeared for donors whose own language isn't English, so Ananya, Karthik and the New donor had no visible way to change it. Now every donor gets it: English and their own language as buttons (plus whichever language is in use), and a **More** menu with the other languages. It switches straight away (it no longer waits for Drop's cards to reload), and the Intro and Drop's chat follow it. Cards and page text stay English (see the merge entry).
+  - Gemini sometimes wrote its tool call as text ("tool_codeprint(default_api.get_profile())") instead of calling it. Such replies are now treated like a leaked planning note: Drop answers from the rules instead (those answers are in English).
+- **Files:** `frontend/src/components/drop/DropFeed.tsx`, `frontend/src/components/drop/drop.css`, `backend/src/ai/copilot.js`.
+- **Revert:** safe to revert on its own.
+
 ## 2026-10-14 · "Viewing as" at the top, with "You (new donor)" first
 
 - **What and why:** choosing who to view is part of the demo, but the picker was hidden in the account menu. It now sits at the top of every screen as **Viewing as**, beside the yellow demo bar on Home when there's room (1440 px and up; at 1280 px the demo bar takes its own row so its buttons stay on one line). The New donor is listed first as **You (new donor)**, since it stands for the signed-in person. It is still one shared demo record (option A): two people trying the demo at once share its Intro, Choices and memories. A private per-account "you" is for after the demo, with Drop's state in Firestore. The account menu keeps Your data, Replay intro, the links and Sign out. The team guide's steps point to Viewing as.

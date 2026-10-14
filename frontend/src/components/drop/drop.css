@@ -30,6 +30,7 @@
 .drop-lang { display: inline-flex; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-left: auto; }
 .drop-lang button { min-height: 36px; padding: 0 10px; font-size: 13px; font-weight: 600; color: var(--muted); }
 .drop-lang button[aria-pressed='true'] { background: var(--ai-soft); color: var(--ai); }
+.drop-lang select { min-height: 36px; border: 0; border-left: 1px solid var(--border); background: transparent; color: var(--muted); font-size: 13px; font-weight: 600; padding: 0 6px; cursor: pointer; }
 .drop-lang + .drop-link { margin-left: 0; }
 .drop-line { display: flex; align-items: center; gap: 10px; background: var(--ai-soft); color: var(--text); border: 1px solid color-mix(in srgb, var(--ai) 25%, transparent); border-radius: 12px; padding: 4px 4px 4px 12px; margin-bottom: 18px; }
 .drop-line .icon { color: var(--ai); flex: none; }

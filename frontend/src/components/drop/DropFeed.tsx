@@ -79,6 +79,9 @@ export default function DropFeed({ donorId, version, refresh, calmLine, storiesI
 
   if (!view) return <div className="drop-feed">{error ? <ErrorNote error={error} /> : <div className="skeleton" style={{ height: 180 }} />}</div>;
 
+  const shortcuts = [...new Set(['en', view.preferredLanguage, view.language].filter((code) => LANGUAGE_NAMES[code]))];
+  // The Intro and Drop's chat follow the new language straight away
+  const switchLanguage = (code: string) => run(api.dropLanguage(donorId, code).then((v) => { window.dispatchEvent(new CustomEvent('drop:language')); return v; }));
   const open = storiesInChat ? view.open.filter((c) => !c.main?.story && !chatCards.has(c.id)) : view.open;
   const shown = showAll ? open : open.slice(0, 3);
   const answer = (card: DropCard, value: unknown) => run(api.dropAnswer(donorId, card.id, value), true);
@@ -90,14 +93,16 @@ export default function DropFeed({ donorId, version, refresh, calmLine, storiesI
           <span className="drop-avatar"><Icon name="drop" size={18} stroke={2.2} /></span>
           <span><b>Drop</b><br /><span className="tiny muted">Your TraceDrop assistant</span></span>
         </button>
-        {view.preferredLanguage !== 'en' && LANGUAGE_NAMES[view.preferredLanguage] && (
-          <div className="drop-lang" role="group" aria-label="Drop's language">
-            {['en', view.preferredLanguage].map((code) => (
-              <button key={code} aria-pressed={view.language === code} disabled={busy}
-                onClick={() => run(api.dropLanguage(donorId, code).then(() => { window.dispatchEvent(new CustomEvent('drop:language')); return api.drop(donorId); }))}>{LANGUAGE_NAMES[code]}</button>
-            ))}
-          </div>
-        )}
+        {/* Every donor can change Drop's language: English and their own as buttons (plus the one in use), the rest under More */}
+        <div className="drop-lang" role="group" aria-label="Drop's language">
+          {shortcuts.map((code) => (
+            <button key={code} aria-pressed={view.language === code} disabled={busy} onClick={() => switchLanguage(code)}>{LANGUAGE_NAMES[code]}</button>
+          ))}
+          <select aria-label="More languages" value="" disabled={busy} onChange={(e) => e.target.value && switchLanguage(e.target.value)}>
+            <option value="">More</option>
+            {Object.keys(LANGUAGE_NAMES).filter((code) => !shortcuts.includes(code)).map((code) => <option key={code} value={code}>{LANGUAGE_NAMES[code]}</option>)}
+          </select>
+        </div>
         <button className="drop-link" onClick={() => setMemoryOpen(true)}>What do you remember about me?</button>
       </div>
 

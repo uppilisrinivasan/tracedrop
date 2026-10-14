@@ -62,8 +62,8 @@ function introLine(donorId) {
   return `\nThey are in the Intro, Drop's scripted first conversation, on step ${i.step} of ${i.total}: "${i.title}". If they ask about it, answer in one or two sentences about that step; the Intro's buttons let them carry on.`;
 }
 
-// A reply that opens with the model's own planning ("The user wants…") is not for the donor
-const NOTE_TO_SELF = /^(the user\b|okay, the user\b|i should\b|plan:)/i;
+// A reply that opens with the model's own planning ("The user wants…") or leaked tool code ("tool_code", "default_api.…") is not for the donor
+const NOTE_TO_SELF = /^(the user\b|okay, the user\b|i should\b|plan:|tool_code|```|print\(|default_api\.)|\bdefault_api\./i;
 
 async function chat({ donorId, history, message, userName }) {
   const prior = Array.isArray(history) ? history.filter((turn) => turn && ['user', 'assistant'].includes(turn.role) &&
