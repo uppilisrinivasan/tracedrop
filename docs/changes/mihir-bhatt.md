@@ -4,6 +4,12 @@ One entry per commit, newest first, so any change can be traced or reverted: the
 To revert one: find it with `git log --oneline --grep "<commit title>"`, then `git revert <hash>`.
 The design behind these changes is in `CONTEXT.md` (vocabulary) and the build plan.
 
+## 2026-10-14 · Keep the share-image prototype off the feature branch
+
+- **What and why:** the step 1 commit brought `docs/wayfinder/story-and-badge/share-images.prototype.html` onto `feature/story-and-badge` along with the wayfinder docs. Prototypes live only on their throwaway branch, so it is removed here. It stays on `prototype/share-images` (commit 747ef00), which the spec, build plan and ticket already point to.
+- **Files:** `docs/wayfinder/story-and-badge/share-images.prototype.html` (removed).
+- **Revert:** safe to revert on its own.
+
 ## 2026-10-14 · Merge Badges (step 2) into the Story and Badge branch
 
 - **What and why:** steps 1 and 2 of the Story and Badge build plan were built in parallel on `feature/story-and-badge` and `feature/story-and-badge-badges`. This merges step 2 in so steps 3 to 5 start from both. The only conflict was this change log; both entries are kept.
