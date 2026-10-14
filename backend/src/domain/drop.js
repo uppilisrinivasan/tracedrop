@@ -103,6 +103,7 @@ function openFromSeed(st, o) {
   if (o.type === 'impact') {
     const component = store.getComponents(donorId).find((c) => c.id === o.componentId);
     st.keys[`impact:${component.donationId}`] = true;
+    st.keys[`impact_more:${o.componentId}`] = true; // its Card tells this unit's story, so the report doesn't repeat it
     pushCard(st, 'impact', 'impact', { componentId: o.componentId, badgeId: storyBadge(st, o.componentId) }, { counted: true });
   } else if (o.type === 'checkin') {
     pushCard(st, 'checkin', o.marker, { marker: o.marker, mode: o.mode || null }, { counted: true });
@@ -169,8 +170,12 @@ function detect(st) {
   for (const [donationId, list] of Object.entries(byDonation)) {
     list.sort((a, b) => a.date.localeCompare(b.date));
     list.forEach(({ c, date }, i) => {
-      if (i === 0 && !st.keys[`impact:${donationId}`]) addEvent(st, { key: `impact:${donationId}`, kind: 'impact', at: date, data: { componentId: c.id } });
-      else if (st.keys[`impact:${donationId}`]) {
+      if (i === 0 && !st.keys[`impact:${donationId}`]) {
+        addEvent(st, { key: `impact:${donationId}`, kind: 'impact', at: date, data: { componentId: c.id } });
+        // Its Card tells this unit's story, so the report doesn't repeat it. Marked by unit, not by place in the list:
+        // a seeded Card's unit can be transfused before Drop started, and then the first unit listed here is a later one.
+        st.keys[`impact_more:${c.id}`] = true;
+      } else if (st.keys[`impact:${donationId}`]) {
         addEvent(st, { key: `impact_more:${c.id}`, kind: 'fold', foldOnly: true, at: date, data: { componentId: c.id } });
       }
     });
