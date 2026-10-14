@@ -14,12 +14,13 @@ const time12 = (hhmm: string) => {
 
 export function PlanSection({ view }: { view: DropView | null }) {
   const plan = view?.plan;
+  const goals = (view?.goals || []).filter((g) => g.state !== 'done');
   return (
     <Section title={<><Icon name="drop" size={18} /> Your Plan</>} sub="What Drop follows up with you between donations. It changes as you answer Drop's cards.">
-      {!plan && <p className="muted small">Your Plan appears after Drop explains your results. Nothing to do yet.</p>}
+      {!plan && !goals.length && <p className="muted small">Your Plan appears after Drop explains your results. Nothing to do yet.</p>}
+      {goals.map((g) => <div key={g.id} className="row small"><span className="pill pill-ai">Goal</span><span>{g.name}: {g.target}</span></div>)}
       {plan && (
-        <div className="stack" style={{ gap: 10 }}>
-          {plan.goals.map((g) => <div key={g.label} className="row small"><span className="pill pill-ai">Goal</span><span>{g.label}</span></div>)}
+        <div className="stack mt-8" style={{ gap: 10 }}>
           {plan.activity && <div className="row small"><span className="pill pill-good">Weekly</span><span>{plan.activity.label}</span></div>}
           {plan.reminders.map((r) => <div key={r.id} className="row small"><span className="pill pill-info">Reminder</span><span>{r.label}, {time12(r.time)} daily</span></div>)}
           {(plan.notes || []).map((n) => <div key={n} className="row small"><span className="pill pill-neutral">Note</span><span>{n}</span></div>)}

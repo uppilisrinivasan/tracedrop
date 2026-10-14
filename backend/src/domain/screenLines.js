@@ -13,7 +13,8 @@ const drop = require('./drop');
 
 const fmt = (iso) => new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' });
 const lakh = (n) => `₹${(n / 1e5).toFixed(n % 1e5 ? 1 : 0)} lakh`;
-const lcFirst = (t) => t.charAt(0).toLowerCase() + t.slice(1);
+// Lower-cases a sentence start, never an acronym ("BP under 130/80")
+const lcFirst = (t) => (/^[A-Z]{2}/.test(t) ? t : t.charAt(0).toLowerCase() + t.slice(1));
 const has = (name) => (/s$/i.test(name) ? 'have' : 'has');
 const is = (name) => (/s$/i.test(name) ? 'are' : 'is');
 
@@ -24,17 +25,18 @@ function healthLine(donorId) {
   if (urgent) return `${urgent.title}: ${urgent.detail}. Please see a doctor today.`;
   if (firstTime(donorId)) return 'Every donation includes a free health check. Your results will show here after your first one.';
   const view = drop.view(donorId);
+  const live = drop.goals(donorId).filter((g) => g.state === 'active' || g.state === 'upnext');
   const bp = view.readings.filter((r) => r.marker === 'bp');
-  const goal = (view.plan?.goals || []).find((g) => g.marker === 'bp');
+  const goal = live.find((g) => g.target.marker === 'bp');
   if (goal && bp.length) {
     const last = bp[bp.length - 1];
     const visits = health.vitalsSeries(donorId);
     const prev = bp.length > 1 ? bp[bp.length - 2].s : visits[visits.length - 1].systolic;
-    return `BP ${last.s}/${last.d} on ${fmt(last.date)}, ${last.s <= prev ? 'down' : 'up'} from ${prev}. Goal: under ${drop.BP_GOAL.s}/${drop.BP_GOAL.d}.`;
+    return `BP ${last.s}/${last.d} on ${fmt(last.date)}, ${last.s <= prev ? 'down' : 'up'} from ${prev}. Target: ${lcFirst(goal.target.text)}.`;
   }
-  const hbGoal = (view.plan?.goals || []).find((g) => g.marker === 'hb');
+  const hbGoal = live.find((g) => g.target.hb);
   const hb = view.readings.filter((r) => r.marker === 'hb').pop();
-  if (hbGoal && hb) return `Hb ${hb.value} on ${fmt(hb.date)}. Goal: 12.5 or more, so you can donate again.`;
+  if (hbGoal && hb) return `Hb ${hb.value} on ${fmt(hb.date)}. Target: ${hbGoal.target.hb.toFixed(1)} or more, so you can donate again.`;
   const f = health.findings(donorId).find((x) => x.severity !== 'watch') || health.findings(donorId)[0];
   if (f) return `${f.title}: ${f.detail}.${goal || hbGoal ? ' Your Plan has the next steps.' : ''}`;
   const latest = new Set(store.getObservations(donorId).map((o) => o.key)).size;

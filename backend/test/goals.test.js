@@ -1,0 +1,148 @@
+/**
+ * Goals in code (build plan step 1; ticket 01, "Which findings make which Goal"):
+ * groups, names, the targets table, order, two active Goals plus Up next, and states.
+ * The demo Personas plus synthetic donors from data/synthetic for the cases no Persona has.
+ */
+
+const test = require('node:test');
+const assert = require('node:assert');
+const store = require('../src/data/store');
+const goals = require('../src/domain/goals');
+const drop = require('../src/domain/drop');
+
+test.beforeEach(() => store.resetDemo());
+
+const summary = (donorId) => drop.goals(donorId).map((g) => ({ id: g.id, name: g.name, state: g.state, target: g.target && g.target.text }));
+
+test('Arjun: one lifestyle Goal, "BP and cholesterol", BP under 130/80, and it holds up his donation', () => {
+  const [g, ...rest] = drop.goals('D-001');
+  assert.equal(rest.length, 0);
+  assert.equal(g.id, 'lifestyle');
+  assert.equal(g.name, 'BP and cholesterol');
+  assert.equal(g.target.text, 'BP under 130/80');
+  assert.equal(g.state, 'active');
+  assert.equal(g.lead.id, 'BP_GRADE1');
+  assert.ok(g.stopsDonation);
+  // His rising BP and borderline cholesterol are watch findings that join the Goal his stage 1 BP made
+  assert.deepEqual(g.findings.map((f) => f.id), ['BP_GRADE1', 'BP_RISING', 'LIPIDS_BORDERLINE']);
+  assert.deepEqual(goals.keepAnEye('D-001'), []);
+});
+
+test('Karthik: "Blood sugar, BP and cholesterol", led by prediabetes, target HbA1c under 5.7%', () => {
+  assert.deepEqual(summary('D-050'), [{ id: 'lifestyle', name: 'Blood sugar, BP and cholesterol', state: 'active', target: 'HbA1c under 5.7%' }]);
+  assert.equal(drop.goals('D-050')[0].stopsDonation, false);
+});
+
+test('Meera: "Haemoglobin and iron", with the donation minimum for women', () => {
+  assert.deepEqual(summary('D-002'), [{ id: 'iron', name: 'Haemoglobin and iron', state: 'active', target: 'Haemoglobin 12.5 or more, ferritin 15 or more' }]);
+});
+
+test('Imran (D-013, prediabetes only) now gets a Goal, and a Plan follows his results', () => {
+  assert.deepEqual(summary('D-013'), [{ id: 'lifestyle', name: 'Blood sugar', state: 'active', target: 'HbA1c under 5.7%' }]);
+});
+
+test('Rohan: BP above ideal is watch only, so no Goal; it is a "keep an eye on" line', () => {
+  assert.deepEqual(drop.goals('D-033'), []);
+  assert.deepEqual(goals.keepAnEye('D-033').map((f) => f.id), ['BP_ELEVATED']);
+  assert.equal(drop._state('D-033').budgetKind, 'healthy');
+});
+
+test('Ananya, all in range: no Goal and nothing to keep an eye on', () => {
+  assert.deepEqual(drop.goals('D-003'), []);
+  assert.deepEqual(goals.keepAnEye('D-003'), []);
+});
+
+test('Hb target by sex: 13.0 for men (D-087), and his watch findings stay outside the iron Goal', () => {
+  assert.deepEqual(summary('D-087'), [{ id: 'iron', name: 'Haemoglobin', state: 'active', target: 'Haemoglobin 13.0 or more, ferritin 15 or more' }]);
+  assert.deepEqual(goals.keepAnEye('D-087').map((f) => f.id), ['BP_ELEVATED', 'LIPIDS_BORDERLINE']);
+});
+
+test("the diabetes range (D-053) makes a Goal whose target is a doctor's check, with no number", () => {
+  const [g] = drop.goals('D-053');
+  assert.equal(g.name, 'Blood sugar, cholesterol and weight');
+  assert.equal(g.target.text, "A doctor's check within 30 days");
+  assert.equal(g.target.doctor, true);
+  assert.equal(g.target.line, null);
+});
+
+test('a raised ALT makes no Goal (D-185): it is rechecked at the next donation', () => {
+  assert.deepEqual(drop.goals('D-185').map((g) => g.name), ['Blood sugar, cholesterol and weight']);
+  assert.deepEqual(goals.keepAnEye('D-185').map((f) => f.id), ['ALT_HIGH']);
+});
+
+test('cholesterol as the lead (D-015): its target names both LDL and triglycerides', () => {
+  assert.deepEqual(summary('D-015'), [{ id: 'lifestyle', name: 'Cholesterol and BP', state: 'active', target: 'LDL under 130, triglycerides under 150' }]);
+});
+
+test('Vikram: an urgent Goal names up to three kinds, and it cannot be stopped', () => {
+  const [g] = drop.goals('D-017');
+  assert.equal(g.name, 'BP, blood sugar and cholesterol');
+  assert.equal(g.severity, 'urgent');
+  assert.throws(() => goals.stop(drop._state('D-017').goals, 'D-017', 'lifestyle'), /urgent Goal can't be stopped/);
+});
+
+test('two Goals on a tie: the one that stops donation comes first (D-038)', () => {
+  assert.deepEqual(drop.goals('D-038').map((g) => [g.name, g.state]), [['Haemoglobin', 'active'], ['Blood sugar', 'active']]);
+});
+
+test('order: urgent before high before moderate, then stopping donation, then older; a third Goal waits in Up next', () => {
+  const g = (id, severity, stopsDonation) => ({ id, name: id, severity, stopsDonation });
+  const records = {
+    a: { createdOn: '2026-09-01' }, b: { createdOn: '2026-08-01' }, c: { createdOn: '2026-10-01' }, d: { createdOn: '2026-07-01', state: 'stopped' },
+  };
+  const out = goals.arrange([g('a', 'moderate', false), g('b', 'moderate', false), g('c', 'urgent', false), g('d', 'high', true)], records);
+  assert.deepEqual(out.map((x) => [x.id, x.state]), [['c', 'active'], ['b', 'active'], ['a', 'upnext'], ['d', 'stopped']]);
+  assert.equal(out[2].startsWhen, 'b');
+  // On a severity tie, the Goal that stops donation goes first even if newer
+  const tie = goals.arrange([g('a', 'moderate', false), g('c', 'moderate', true)], records);
+  assert.deepEqual(tie.map((x) => x.id), ['c', 'a']);
+});
+
+test('stop and Start again keep the same Goal', () => {
+  const records = drop._state('D-001').goals;
+  assert.deepEqual(goals.stop(records, 'D-001', 'lifestyle').map((g) => [g.id, g.state]), [['lifestyle', 'stopped']]);
+  assert.deepEqual(summary('D-001').map((g) => g.state), ['stopped']);
+  assert.deepEqual(goals.startAgain(records, 'D-001', 'lifestyle').map((g) => [g.id, g.state]), [['lifestyle', 'active']]);
+  assert.throws(() => goals.startAgain(records, 'D-001', 'lifestyle'), /not stopped/);
+});
+
+test("Meera's Goal carries on as the lead clears, is done when nothing worse than watch is left, and reopens", () => {
+  const add = (key, value, id) => store.addObservations('D-002', [{ id, donorId: 'D-002', visitId: null, code: key, key, name: key, value, unit: '', date: '2026-10-08', source: 'uploaded_report', labId: null }]);
+  const createdOn = drop.goals('D-002')[0].createdOn;
+  add('hb', 12.6, 'OBS-test-hb');
+  // Hb clears; low ferritin is still moderate, so the same Goal goes on with a new name
+  assert.deepEqual(summary('D-002'), [{ id: 'iron', name: 'Iron', state: 'active', target: 'Haemoglobin 12.5 or more, ferritin 15 or more' }]);
+  add('ferritin', 30, 'OBS-test-ferritin');
+  const [done] = drop.goals('D-002');
+  assert.deepEqual([done.id, done.name, done.state, done.doneOn], ['iron', 'Iron', 'done', store.today()]);
+  store.removeObservation('D-002', 'OBS-test-ferritin');
+  const [back] = drop.goals('D-002');
+  assert.deepEqual([back.id, back.state, back.createdOn, back.reopenedOn], ['iron', 'active', createdOn, store.today()]);
+});
+
+test('BP_GOAL 135/85 is gone: a home reading counts as reaching the target only under 130/80', () => {
+  assert.equal(drop.BP_GOAL, undefined);
+  assert.equal(goals.bpReached(132, 78), false);
+  assert.equal(goals.bpReached(128, 82), false);
+  assert.equal(goals.bpReached(128, 78), true);
+  drop.logReading('D-001', { s: 133, d: 84 }); // under the old 135/85, over 130/80
+  assert.ok(!drop._state('D-001').events.some((e) => e.kind === 'goal'));
+  drop.logReading('D-001', { s: 126, d: 78 });
+  assert.ok(drop._state('D-001').events.some((e) => e.kind === 'goal'));
+});
+
+test("Meera's Hb Check-in asks for 12.5, the minimum for women, from her Goal", () => {
+  const c = drop.view('D-002').open.find((x) => x.type === 'checkin' && x.variant === 'hb');
+  assert.match(c.text, /Hb 12\.5 or more/);
+});
+
+test('the code-written facts: the trend in plain words with real numbers, and the Goal\'s other findings', () => {
+  const [g] = drop.goals('D-001');
+  const f = goals.facts(g, 'D-001', (m) => drop.chartPoints('D-001', m));
+  assert.equal(f.trend.words, 'Up at each of your last 4 donations');
+  assert.equal(f.trend.range, '126/78 → 148/94');
+  assert.equal(f.trend.line, 130);
+  assert.deepEqual(f.also, ['Triglycerides 138 → 152 → 168']);
+  assert.match(f.doctorNote, /High blood pressure \(stage 1\): 148\/94 mmHg \(BP-G1\)/);
+  assert.equal(f.urgency, 'moderate');
+});

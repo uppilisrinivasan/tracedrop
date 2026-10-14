@@ -208,8 +208,14 @@ export interface Badge {
 /** A Story's shareable last slide: the postcard, or a Badge with how many of the 8 the Donor holds. */
 export type StoryLast = { postcard: Postcard } | { badge: Badge; held: number };
 export interface DropReading { id: string; marker: 'bp' | 'hb'; date: string; s?: number; d?: number; value?: number; observationId?: string }
+/** A Goal (CONTEXT.md): made from results by fixed rules (backend/src/domain/goals.js). */
+export type GoalState = 'active' | 'upnext' | 'done' | 'stopped';
+export interface DropGoal {
+  id: string; name: string; state: GoalState; createdOn: string; doneOn?: string;
+  severity?: 'urgent' | 'high' | 'moderate'; stopsDonation?: boolean; target?: string; startsWhen?: string | null; findings?: string[];
+}
 export interface DropPlan {
-  goals: { marker: string; label: string }[]; activity: { label: string; minutesPerWeek: number } | null; notes?: string[];
+  activity: { label: string; minutesPerWeek: number } | null; notes?: string[];
   nextCheckin?: { date: string; marker: string }; reminders: { id: string; label: string; time: string }[];
 }
 /** A visit Drop booked. Check-ups ('care') carry the doctor and clinic. */
@@ -252,7 +258,7 @@ export const isStaleCard = (e: unknown) => /card not found|no longer open|not op
 export interface DropView {
   clock: DemoClock; intro: IntroStatus; language: string; preferredLanguage: string;
   open: DropCard[]; receipts: { id: string; receipt: string; undo: boolean }[]; earlier: { id: string; label: string; receipt: string; on: string }[];
-  memory: { id: string; text: string }[]; memReceipt: string | null; plan: DropPlan | null; readings: DropReading[]; hiddenResults: string[];
+  memory: { id: string; text: string }[]; memReceipt: string | null; plan: DropPlan | null; goals: DropGoal[]; readings: DropReading[]; hiddenResults: string[];
   bookings: DropBooking[];
   donate: { from: string | null; daysTo: number | null };
   budget: { kind: 'goal' | 'healthy'; today: number; perDay: number; week: number; perWeek: number; weekOf: string; report: 'week' | 'month'; quiet: boolean };

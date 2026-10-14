@@ -4,6 +4,23 @@ One entry per commit, newest first, so any change can be traced or reverted: the
 To revert one: find it with `git log --oneline --grep "<commit title>"`, then `git revert <hash>`.
 The design behind these changes is in `CONTEXT.md` (vocabulary) and the build plan.
 
+## 2026-10-15 · Goals in code (From results to habits, step 1)
+
+- **What and why:** step 1 of the "From results to habits" build plan (`docs/wayfinder/results-to-habits/handoff.md` on `plan/results-to-habits`; ticket 01), on branch `feature/health-goals` from `main`. Mihir lifted the "nothing before the 18 Oct demo" rule for the Health tab; this branch isn't merged before the demo unless he says so.
+  - New `backend/src/domain/goals.js` turns findings into Goals by fixed rules. Two groups: lifestyle (BP, cholesterol, sugar, weight) and iron (Hb, ferritin). A group makes a Goal only with a moderate-or-worse finding; its watch findings then join it. A raised ALT, and watch findings in a group with no Goal, are "keep an eye on" lines.
+  - Name: what the Goal covers, lead finding first, up to three ("BP and cholesterol", "Blood sugar, BP and cholesterol", "Haemoglobin and iron").
+  - One target from the lead finding: BP under 130/80; HbA1c under 5.7%; LDL under 130 with triglycerides under 150; haemoglobin 12.5 (women) or 13.0 (men) with ferritin 15 or more; for the diabetes range, a doctor's check within 30 days with no number.
+  - Order: urgent, high, moderate; on a tie the Goal that stops donation, then the older one. Two are active; the rest are Up next with "starts when *X* is done". States: active, Up next, done (the group is back to watch or better) and stopped (`stop` refuses an urgent Goal; `startAgain`). A done Goal reopens with the same id when its findings come back. No route or button calls stop or Start again yet; that's step 5.
+  - Code-written facts per Goal (`facts`): the trend in plain words with real numbers ("Up at each of your last 4 donations", "126/78 → 148/94"), the Goal's other findings ("Triglycerides 138 → 152 → 168"), urgency, the doctor note and the next check from the lead's protocol.
+  - Drop's state keeps one record per Goal (`st.goals`: started, done, reopened, stopped). `drop.goals(donorId)` lists them and the Drop view carries `goals`.
+  - Removed: `BP_GOAL` 135/85 (readiness, "reached your target", the report's BP slide and the chat reading now use 130/80) and the single Hb 12.5 (the Hb Check-in and its "reached" check use the Goal's target by sex). `planFindings` and the Goal part of `draftPlan` are gone; Imran (D-013, prediabetes only) now gets a Goal and the Plan Card after his results. Meera's seeded Plan loses its `goals` line.
+  - `health.js` exports `hbMin` and `blocksDonation`, used by Goals, eligibility and Drop's readiness. `lcFirst` keeps acronyms ("target BP under 130/80", not "bP").
+  - `CONTEXT.md` takes the glossary agreed on `plan/results-to-habits` (Plan, Goal, Habit, Week plan, From your doctor, Chat, Cycle, Check-in, Simplify my plan, Your day, Weekly report).
+  - Tests: new `backend/test/goals.test.js` (18) covers Arjun, Karthik, Meera, Imran (D-013) and Rohan, plus Ananya, Vikram, Hb by sex (D-087), the diabetes range (D-053), ALT (D-185), two Goals (D-038), cholesterol as lead (D-015), order and Up next, stop and Start again, done and reopen, and 130/80. One `drop.test.js` test no longer hand-writes a 135/85 Plan. 135 backend tests pass.
+  - Imran is not in the Persona switcher; the tests use synthetic donor D-013 (Imran Menon), the only Imran with prediabetes alone.
+- **Files:** `backend/src/domain/goals.js` (new), `backend/src/domain/drop.js`, `backend/src/domain/health.js`, `backend/src/domain/screenLines.js`, `backend/test/goals.test.js` (new), `backend/test/drop.test.js`, `data/demo/drop-seed.json`, `frontend/src/api.ts` (`DropGoal`, `goals` on the Drop view, `goals` off `DropPlan`), `frontend/src/components/drop/DropKnows.tsx`, `frontend/src/components/drop/HealthDrop.tsx` (Your Plan lists the Goals until step 4 removes it), `CONTEXT.md`.
+- **Revert:** safe to revert on its own before step 2; the Plan goes back to BP 135/85 and Hb 12.5 Goals made on Save my Plan.
+
 ## 2026-10-14 · An impact Card's own unit is no longer repeated in the report
 
 - **What and why:** a bug fix in `detect()`, branch `fix/impact-fold-first-unit` (from `feature/story-and-badge`). The first transfused unit of a donation raises the impact Card. On every later check the "fold the rest into the report" branch also caught that same unit, so it came back in the next Weekly or monthly report as "My red blood cells … helped a patient". Seen with Vikram's (D-017) test donation: red cells transfused 12 Oct, repeated in the 18 Oct Weekly report.

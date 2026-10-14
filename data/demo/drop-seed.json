@@ -28,7 +28,6 @@
     "budget": "goal",
     "memory": ["Vegetarian", "Prefers Tamil at home"],
     "plan": {
-      "goals": [{ "marker": "hb", "label": "Haemoglobin 12.5 or more, so you can donate again", "target": 12.5, "direction": "up" }],
       "activity": { "label": "Brisk walk, 3 times a week", "minutesPerWeek": 90 },
       "createdOn": "2026-07-10"
     },

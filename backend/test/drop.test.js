@@ -145,9 +145,9 @@ test('chat memory: preferences are kept, health facts are refused', () => {
 
 test('a reading told in chat lands in Health and moves the BP goal line', () => {
   drop.answer('D-001', (advance(DAY), card('D-001', 'results', 'results')).id, 'ok');
-  drop._state('D-001').plan = { goals: [{ marker: 'bp', label: 'BP under 135/85' }], activity: null, notes: [] };
+  // His BP Goal comes from his results, so there's no Plan to save first
   tools.run('log_reading', { systolic: 141, diastolic: 90 }, 'D-001');
-  assert.match(screenLines.line('D-001', 'health').text, /^BP 141\/90 on .*, down from 148/);
+  assert.match(screenLines.line('D-001', 'health').text, /^BP 141\/90 on .*, down from 148\. Target: BP under 130\/80\.$/);
   assert.throws(() => tools.run('log_reading', { systolic: 60, diastolic: 90 }, 'D-001'), /out of range/);
 });
 

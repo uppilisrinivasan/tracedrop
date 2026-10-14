@@ -16,6 +16,7 @@ const impact = require('./impact');
 const donation = require('./donation');
 const { componentStory } = require('./story');
 const badgeRules = require('./badges');
+const goalRules = require('./goals');
 
 const PRIORITY = { urgent: 1, results: 2, donate: 3, checkin: 4, plan: 4, goal: 5, impact: 6, fold: 7 };
 const BUDGETS = {
@@ -27,7 +28,7 @@ const NIGHT = 3;
 const EXPIRY_DAYS = 7;
 const MAX_SNOOZES = 3;
 const CHECKIN_DAYS = 14;
-const BP_GOAL = { s: 135, d: 85 };
+const CHECKIN_MARKERS = ['bp', 'hb']; // the markers a Check-in Card can ask about
 
 const states = new Map();
 let seed = null;
@@ -48,7 +49,8 @@ const fmt = (iso) => new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-GB', { 
 const clone = (x) => JSON.parse(JSON.stringify(x));
 const id = (prefix) => `${prefix}${BOOT}-${seq++}`;
 const partOfTime = (hhmm) => { const h = Number(String(hhmm).slice(0, 2)); return h < 12 ? 0 : h < 17 ? 1 : h < 21 ? 2 : 3; };
-const lcFirst = (t) => t.charAt(0).toLowerCase() + t.slice(1);
+// Lower-cases a sentence start, never an acronym ("BP under 130/80")
+const lcFirst = (t) => (/^[A-Z]{2}/.test(t) ? t : t.charAt(0).toLowerCase() + t.slice(1));
 const time12 = (hhmm) => { const [h, m] = String(hhmm).split(':').map(Number); const hr = ((h + 11) % 12) + 1; return `${hr}${m ? `:${String(m).padStart(2, '0')}` : ''} ${h < 12 ? 'am' : 'pm'}`; };
 
 /* ------------------------------------------------------------------ state */
@@ -80,11 +82,14 @@ function create(donorId) {
     undo: null, memReceipt: null, created: 0, log: [],
     // Badges are worked out from data; only what the Donor has seen lives here. Ones earned before Drop started are never "New".
     badgesSeen: [], badgesShown: [],
+    // Goals are worked out from results (goals.js); only what is kept per Goal lives here
+    goals: {},
   };
   const earned = badgeRules.earnedDates(donorId);
   st.badgesSeen = Object.keys(earned).filter((b) => earned[b] <= today);
   st.badgesShown = [...st.badgesSeen];
-  if (st.plan && !st.plan.nextCheckin && st.plan.goals?.[0]) st.plan.nextCheckin = { date: addDays(today, CHECKIN_DAYS), marker: st.plan.goals[0].marker };
+  const checkinMarker = firstCheckinMarker(st);
+  if (st.plan && !st.plan.nextCheckin && checkinMarker) st.plan.nextCheckin = { date: addDays(today, CHECKIN_DAYS), marker: checkinMarker };
   for (const e of s.earlier || []) {
     st.cards.push({ id: id('c'), type: e.type, variant: e.type, status: 'answered', fresh: false, receipt: e.type === 'slots' ? `Demo history: ${e.receipt}. No real centre reservation was made.` : e.receipt, answeredOn: e.date, created: tickOf(e.date), createdOn: e.date, data: {} });
   }
@@ -121,6 +126,25 @@ function openFromSeed(st, o) {
 function get(donorId) {
   if (!states.has(donorId)) states.set(donorId, create(donorId));
   return states.get(donorId);
+}
+
+/** The Donor's Goals now, in order, with the kept records brought up to date. */
+function goalsOf(st) {
+  return goalRules.sync(st.goals, st.donorId);
+}
+
+const activeGoals = (st) => goalsOf(st).filter((g) => g.state === 'active');
+
+/** The first active Goal's marker when a Check-in Card can ask about it (BP or Hb). */
+function firstCheckinMarker(st) {
+  const g = activeGoals(st)[0];
+  return g && CHECKIN_MARKERS.includes(g.target.marker) ? g.target.marker : null;
+}
+
+/** The haemoglobin a Donor needs, from their iron Goal's target, else the donation minimum. */
+function hbTarget(st) {
+  const g = goalsOf(st).find((x) => x.target && x.target.hb);
+  return g ? g.target.hb : health.hbMin(store.getDonor(st.donorId));
 }
 
 function pushCard(st, type, variant, data, opts = {}) {
@@ -197,10 +221,10 @@ function detect(st) {
 function readiness(st) {
   const el = health.eligibility(st.donorId);
   if (el.nextEligibleDate) return el.nextEligibleDate;
-  const blockers = health.findings(st.donorId).filter((f) => ['urgent', 'high'].includes(f.severity) || ['HB_LOW', 'HB_SEVERE', 'BP_GRADE1'].includes(f.id));
+  const blockers = health.findings(st.donorId).filter(health.blocksDonation);
   const onlyBp = blockers.length && blockers.every((f) => f.id === 'BP_GRADE1');
   const bp = latestReading(st, 'bp');
-  if (onlyBp && bp && bp.s < BP_GOAL.s && bp.d < BP_GOAL.d && el.lastDonationDate) {
+  if (onlyBp && bp && goalRules.bpReached(bp.s, bp.d) && el.lastDonationDate) {
     const date = addDays(el.lastDonationDate, el.gapDays);
     return date > store.today() ? date : store.today();
   }
@@ -229,6 +253,7 @@ function isReportDay(st, iso) {
 function deliver(st) {
   const { date: today, part } = store.clock();
   const now = nowTick();
+  goalsOf(st); // a Goal is made, done or reopened as results arrive
 
   if (st.lastDate !== today) {
     // Yesterday's unanswered Reminders become "no answer"; hidden Cards come back on a new day
@@ -304,8 +329,8 @@ function send(st, e, { counted }) {
     st.sentByDay[today] = (st.sentByDay[today] || 0) + 1;
     st.sentByWeek[weekStart(today)] = (st.sentByWeek[weekStart(today)] || 0) + 1;
   }
-  // Results with something to act on lead to a Plan the next day
-  if (e.kind === 'results' && !st.plan && planFindings(st.donorId).length) addEvent(st, { key: `plan:${e.data.visitId}`, kind: 'plan', at: addDays(store.today(), 1), data: { visitId: e.data.visitId } });
+  // Results that make a Goal lead to a Plan the next day
+  if (e.kind === 'results' && !st.plan && activeGoals(st).length) addEvent(st, { key: `plan:${e.data.visitId}`, kind: 'plan', at: addDays(store.today(), 1), data: { visitId: e.data.visitId } });
   log(st, `Sent "${eventName(e)}"${counted ? '' : ' (outside the budget)'}.`);
 }
 
@@ -358,7 +383,7 @@ function buildReport(st) {
     slides.push(`Active minutes: ${minutes} of my ${target} goal (from my phone's step data, simulated).`);
   }
   const bp = st.readings.filter((r) => r.marker === 'bp' && inPeriod(r.date)).pop();
-  if (bp) slides.push(`My latest BP: ${bp.s}/${bp.d}. Goal: under ${BP_GOAL.s}/${BP_GOAL.d}.`);
+  if (bp) slides.push(`My latest BP: ${bp.s}/${bp.d}. Target: under ${goalRules.BP_TARGET.s}/${goalRules.BP_TARGET.d}.`);
   for (const e of folded.filter((x) => x.foldOnly)) slides.push(impactLine(st.donorId, e.data.componentId));
   for (const c of foldedCards) slides.push(`I put this off: ${words(st, c).text}`);
   const totals = impact.summarise(impact.donorJourneys(st.donorId));
@@ -399,10 +424,6 @@ function eventName(e) {
 }
 
 /* ------------------------------------------------------------------ wording (rule-based; the AI may rewrite the text) */
-
-function planFindings(donorId) {
-  return health.findings(donorId).filter((f) => ['hypertension', 'anemia'].includes(f.concept) && f.severity !== 'watch');
-}
 
 // Free government primary-care clinic used for check-ups (synthetic). Day and evening doctors.
 const CLINIC = {
@@ -496,11 +517,11 @@ function words(st, c) {
     }
     case 'results:plan': {
       const p = draftPlan(st);
-      return { text: `Your Plan is ready: ${p.goals.map((g) => g.label).join('; ')}, plus ${p.activity.label.toLowerCase()}.`, main: { label: 'Save my Plan', value: 'save' } };
+      return { text: `Your Plan is ready: ${activeGoals(st).map((g) => `${g.name} (${lcFirst(g.target.text)})`).join('; ')}, plus ${p.activity.label.toLowerCase()}.`, main: { label: 'Save my Plan', value: 'save' } };
     }
     case 'results:goal': {
       if (d.marker === 'hb') return { text: `Hb ${d.value}. You did it: that's above ${d.target}, so you can donate again.`, main: { label: 'Try demo slots', value: 'book' }, out: { label: 'Later', value: 'ok' } };
-      return { text: `BP ${d.s}/${d.d}. You hit your goal of under ${BP_GOAL.s}/${BP_GOAL.d}. Your next donation will confirm it.`, main: { label: 'Nice', value: 'ok' } };
+      return { text: `BP ${d.s}/${d.d}. You reached your target of under ${goalRules.BP_TARGET.s}/${goalRules.BP_TARGET.d}. Your next donation will confirm it.`, main: { label: 'Nice', value: 'ok' } };
     }
     case 'urgent:urgent': {
       const f = health.findings(donorId).find((x) => x.id === d.findingId) || { detail: '' };
@@ -537,10 +558,9 @@ function words(st, c) {
       return { text: `Got a BP reading this week? A pharmacy machine is fine. Last: ${last.s}/${last.d}.`, wheel: { kind: 'bp', s: last.s, d: last.d }, main: { label: 'Save reading', value: 'wheel' }, out: { label: 'No reading this week', value: 'none' } };
     }
     case 'checkin:hb': {
-      const goal = (st.plan?.goals || []).find((g) => g.marker === 'hb');
       const visits = health.vitalsSeries(donorId);
       const lastHb = latestReading(st, 'hb')?.value || visits[visits.length - 1]?.haemoglobin;
-      return { text: `Had a blood test lately? Add the report and I'll update your goal (Hb ${goal?.target || 12.5} or more). Last: ${lastHb}.`, upload: true, main: { label: 'Add a report', value: 'upload' }, out: { label: 'Not yet', value: 'none' } };
+      return { text: `Had a blood test lately? Add the report and I'll update your Goal (Hb ${hbTarget(st).toFixed(1)} or more). Last: ${lastHb}.`, upload: true, main: { label: 'Add a report', value: 'upload' }, out: { label: 'Not yet', value: 'none' } };
     }
     case 'reminder:setup':
       return { text: `Want a daily reminder${d.label ? ` for "${d.label}"` : ' for your tablet'}?`, chips: [{ label: '9 pm', value: { time: '21:00' } }, { label: '10 pm', value: { time: '22:00' } }], out: { label: 'No thanks', value: 'none' } };
@@ -565,13 +585,9 @@ function lastVisitBp(donorId) {
   return { s: v.systolic, d: v.diastolic };
 }
 
-function draftPlan(st) {
-  const fs = planFindings(st.donorId);
-  const goals = [];
-  if (fs.some((f) => f.concept === 'hypertension')) goals.push({ marker: 'bp', label: `BP under ${BP_GOAL.s}/${BP_GOAL.d} by your next donation`, target: BP_GOAL });
-  if (fs.some((f) => f.concept === 'anemia')) goals.push({ marker: 'hb', label: 'Haemoglobin 12.5 or more, so you can donate again', target: 12.5, direction: 'up' });
-  const watch = health.findings(st.donorId).filter((f) => f.severity === 'watch' && !['hypertension', 'anemia'].includes(f.concept)).map((f) => `${f.title}: recheck at your next donation`);
-  return { goals, activity: { label: '150 minutes of brisk walking a week', minutesPerWeek: 150 }, notes: watch, createdOn: store.today() };
+/** The Plan's other parts; its Goals come from the results (goals.js). */
+function draftPlan() {
+  return { activity: { label: '150 minutes of brisk walking a week', minutesPerWeek: 150 }, notes: [], createdOn: store.today() };
 }
 
 /* ------------------------------------------------------------------ answers */
@@ -609,9 +625,9 @@ function answer(donorId, cardId, value) {
       if (value === 'book') { handOff('Results seen · chose demo check-up options'); pushCard(st, 'slots', 'care', { purpose: 'care' }); } else done('Results seen · in Health');
       break;
     case 'results:plan': {
-      st.plan = draftPlan(st);
-      const first = st.plan.goals[0];
-      if (first) st.plan.nextCheckin = { date: addDays(today, CHECKIN_DAYS), marker: first.marker };
+      st.plan = draftPlan();
+      const first = firstCheckinMarker(st);
+      if (first) st.plan.nextCheckin = { date: addDays(today, CHECKIN_DAYS), marker: first };
       done('Plan saved · in Health');
       break;
     }
@@ -652,7 +668,7 @@ function answer(donorId, cardId, value) {
       break;
     case 'checkin:visit':
       if (value === 'tablet') {
-        st.plan = st.plan || draftPlan(st);
+        st.plan = st.plan || draftPlan();
         st.plan.notes = [...(st.plan.notes || []), 'Started a BP tablet from your doctor'];
         pushCard(st, 'reminder', 'setup', {});
         done('Saved to your Plan: started a BP tablet');
@@ -685,7 +701,7 @@ function answer(donorId, cardId, value) {
         const d = Math.round(Number(value.d));
         if (!(s >= 70 && s <= 250 && d >= 40 && d <= 150)) throw new Error('That reading looks out of range');
         st.readings.push({ id: id('rd'), marker: 'bp', s, d, date: today });
-        if (s < BP_GOAL.s && d < BP_GOAL.d) addEvent(st, { key: `goal:bp:${today}`, kind: 'goal', at: addDays(today, 1), prompted: true, data: { marker: 'bp', s, d } });
+        if (goalRules.bpReached(s, d)) addEvent(st, { key: `goal:bp:${today}`, kind: 'goal', at: addDays(today, 1), prompted: true, data: { marker: 'bp', s, d } });
         else if (st.plan) st.plan.nextCheckin = { date: addDays(today, CHECKIN_DAYS), marker: 'bp' };
         done(`${s}/${d} saved to Health`);
       }
@@ -701,7 +717,7 @@ function answer(donorId, cardId, value) {
         store.addObservations(donorId, [{ id: obsId, donorId, visitId: null, code: '718-7', key: 'hb', name: 'Haemoglobin', value: v, unit: 'g/dL', low: 12, high: 15.5, date: value.date || today, source: 'uploaded_report', labId: null }]);
         effects.push({ observation: obsId });
         st.readings.push({ id: id('rd'), marker: 'hb', value: v, date: value.date || today, observationId: obsId });
-        const target = (st.plan?.goals || []).find((g) => g.marker === 'hb')?.target || 12.5;
+        const target = hbTarget(st);
         if (v >= target) addEvent(st, { key: `goal:hb:${today}`, kind: 'goal', at: today, prompted: true, data: { marker: 'hb', value: v, target } });
         done(`Hb ${v} saved to Health${value.source ? ` (from ${value.source})` : ''}`);
       }
@@ -896,7 +912,8 @@ function view(donorId) {
     earlier: st.cards.filter((c) => c.status === 'answered' && !c.fresh).sort((a, z) => z.created - a.created).slice(0, 30).map((c) => ({ id: c.id, label: label(c), receipt: c.receipt, on: c.answeredOn })),
     memory: st.memory.map(({ id: mid, text }) => ({ id: mid, text })),
     memReceipt: st.memReceipt ? st.memReceipt.text : null,
-    plan: st.plan ? { ...st.plan, reminders: st.reminders } : (st.reminders.length ? { goals: [], activity: null, notes: [], reminders: st.reminders } : null),
+    plan: st.plan ? { ...st.plan, reminders: st.reminders } : (st.reminders.length ? { activity: null, notes: [], reminders: st.reminders } : null),
+    goals: goalsOf(st).map(goalView),
     readings: st.readings,
     hiddenResults: st.hiddenResults,
     bookings: st.bookings.filter((x) => x.date >= today).sort((a, z) => `${a.date}${a.time}`.localeCompare(`${z.date}${z.time}`)),
@@ -906,6 +923,15 @@ function view(donorId) {
     later: st.cards.filter((c) => ['snoozed', 'hidden', 'folded'].includes(c.status)).map((c) => ({ label: label(c), status: c.status, snoozes: c.snoozes, reason: c.foldReason || null })),
     upcoming: st.events.filter((e) => e.status === 'pending' && e.at > today).sort((a, z) => a.at.localeCompare(z.at)).slice(0, 4).map((e) => ({ name: eventName(e), on: e.at })),
     log: st.log.slice(0, 10),
+  };
+}
+
+/** A Goal as the app shows it: name, state, target and why it's first. */
+function goalView(g) {
+  if (g.state === 'done') return { id: g.id, name: g.name, state: g.state, createdOn: g.createdOn, doneOn: g.doneOn };
+  return {
+    id: g.id, name: g.name, state: g.state, severity: g.severity, stopsDonation: g.stopsDonation, target: g.target.text,
+    createdOn: g.createdOn, startsWhen: g.startsWhen || null, findings: g.findings.map((f) => f.id),
   };
 }
 
@@ -969,7 +995,7 @@ function logReading(donorId, { s, d }) {
   if (!(sys >= 70 && sys <= 250 && dia >= 40 && dia <= 150 && sys > dia)) throw new Error('That reading looks out of range');
   const today = store.today();
   st.readings.push({ id: id('rd'), marker: 'bp', s: sys, d: dia, date: today });
-  if (sys < BP_GOAL.s && dia < BP_GOAL.d) addEvent(st, { key: `goal:bp:${today}`, kind: 'goal', at: addDays(today, 1), prompted: true, data: { marker: 'bp', s: sys, d: dia } });
+  if (goalRules.bpReached(sys, dia)) addEvent(st, { key: `goal:bp:${today}`, kind: 'goal', at: addDays(today, 1), prompted: true, data: { marker: 'bp', s: sys, d: dia } });
   log(st, `BP ${sys}/${dia} saved from the chat.`);
   return `${sys}/${dia} saved to Health`;
 }
@@ -977,7 +1003,8 @@ function logReading(donorId, { s, d }) {
 /** Facts Drop reads on every chat turn: what it remembers and the Plan. */
 function chatContext(donorId) {
   const st = get(donorId);
-  const plan = st.plan ? [...(st.plan.goals || []).map((g) => g.label), st.plan.activity?.label, ...(st.plan.notes || [])].filter(Boolean) : [];
+  const goalLines = goalsOf(st).filter((g) => g.state !== 'done').map((g) => `Goal${g.state === 'active' ? '' : ` (${g.state === 'upnext' ? 'Up next' : g.state})`}: ${g.name}, target ${lcFirst(g.target.text)}`);
+  const plan = [...goalLines, ...(st.plan ? [st.plan.activity?.label, ...(st.plan.notes || [])] : [])].filter(Boolean);
   const last = latestReading(st, 'bp');
   return {
     language: st.language,
@@ -998,6 +1025,7 @@ function chartPoints(donorId, marker) {
       ...st.readings.filter((r) => r.marker === 'bp').map((r) => ({ date: r.date, value: r.s, value2: r.d, source: 'yours' })),
     ].sort((a, z) => a.date.localeCompare(z.date));
   }
+  if (marker === 'weight') return health.vitalsSeries(donorId).map((v) => ({ date: v.date, value: v.weightKg, source: 'donation' }));
   if (marker === 'hb') {
     const fromVisits = health.vitalsSeries(donorId).map((v) => ({ date: v.date, value: v.haemoglobin, source: 'donation' }));
     const fromReports = store.getObservations(donorId).filter((o) => o.key === 'hb' && o.source === 'uploaded_report').map((o) => ({ date: o.date, value: o.value, source: 'report' }));
@@ -1034,8 +1062,8 @@ function nextEvent(donorId) {
 module.exports = {
   get, view, answer, undo, snooze, cancelBooking, recordBooking, forgetBooking, hide, reopen, forget, undoMemory, deleteReading, hideResult, nextEvent,
   openForWriting, setAi, words, label, setLanguage, offerCard, logReading, chatContext, chartPoints, readinessOf: (donorId) => readiness(get(donorId)),
-  newBadges, seeBadges,
+  newBadges, seeBadges, goals: (donorId) => goalsOf(get(donorId)),
   rememberText: (donorId, text, replacesPattern) => { const st = get(donorId); remember(st, text, replacesPattern ? new RegExp(replacesPattern, 'i') : null); return view(donorId); },
-  BUDGETS, PRIORITY, BP_GOAL,
+  BUDGETS, PRIORITY,
   _state: get, _addEvent: (donorId, ev) => addEvent(get(donorId), ev), _deliver: (donorId) => deliver(get(donorId)),
 };

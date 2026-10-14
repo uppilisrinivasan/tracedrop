@@ -106,7 +106,7 @@ export default function DropKnows({ donorId, onClose }: { donorId: string; onClo
 
           <section>
             <h4>Plan and memory</h4>
-            <p className="small">{view.plan ? [...view.plan.goals.map((g) => g.label), view.plan.activity?.label].filter(Boolean).join(' · ') || 'Reminders only' : 'No Plan yet'}</p>
+            <p className="small">{view.plan || view.goals.length ? [...view.goals.filter((g) => g.state !== 'done').map((g) => g.name), view.plan?.activity?.label].filter(Boolean).join(' · ') || 'Reminders only' : 'No Plan yet'}</p>
             {view.plan?.reminders.map((r) => <p key={r.id} className="tiny muted">Reminder: {r.label} at {r.time}</p>)}
             <p className="tiny muted">Remembers: {view.memory.map((m) => m.text).join('; ') || 'nothing'}</p>
             <p className="tiny muted">Readings added: {view.readings.length} · Donation: {view.donate.daysTo == null ? 'on hold' : view.donate.daysTo === 0 ? 'can donate now' : `in ${view.donate.daysTo} days`}</p>

@@ -45,6 +45,16 @@ function bmi(donor, weightKg) {
   return weightKg / (donor.heightCm / 100) ** 2;
 }
 
+/** The donation minimum for haemoglobin (NBTC): 12.5 g/dL for women, 13.0 for men. */
+function hbMin(donor) {
+  return donor.sex === 'F' ? 12.5 : 13.0;
+}
+
+/** Findings that stop the Donor donating until they clear. */
+function blocksDonation(f) {
+  return ['urgent', 'high'].includes(f.severity) || ['HB_LOW', 'HB_SEVERE', 'BP_GRADE1'].includes(f.id);
+}
+
 /** Findings from the latest visit and lab results, ordered most severe first. */
 function findings(donorId) {
   const donor = store.getDonor(donorId);
@@ -83,7 +93,7 @@ function findings(donorId) {
   }
 
   // Haemoglobin and iron
-  const hbMin = donor.sex === 'F' ? 12.5 : 13.0;
+  const hbMinimum = hbMin(donor);
   const ferritin = latest(labs, 'ferritin');
   // An external report on or after the last visit gives the current Hb;
   // same-day donation samples still defer to the measured screening vital.
@@ -93,11 +103,11 @@ function findings(donorId) {
   if (hb.value < 7) {
     add({ id: 'HB_SEVERE', title: 'Severe anaemia', severity: 'urgent', protocolId: 'HB-SEV', concept: 'anemia',
           detail: `Haemoglobin ${hb.value} g/dL`, evidence: [`Hb ${hb.value} on ${hb.date}`] });
-  } else if (hb.value < hbMin) {
-    const ev = [`Hb ${hb.value} g/dL on ${hb.date} (donor minimum ${hbMin})`];
+  } else if (hb.value < hbMinimum) {
+    const ev = [`Hb ${hb.value} g/dL on ${hb.date} (donor minimum ${hbMinimum})`];
     if (ferritin) ev.push(`Ferritin ${ferritin.value} ng/mL`);
     add({ id: 'HB_LOW', title: 'Haemoglobin below donation level', severity: 'moderate', protocolId: 'HB-DEF', concept: 'anemia',
-          detail: `${hb.value} g/dL (needs ${hbMin}+)`, evidence: ev });
+          detail: `${hb.value} g/dL (needs ${hbMinimum}+)`, evidence: ev });
   }
   if (ferritin && ferritin.value < 15) {
     add({ id: 'IRON_LOW', title: 'Iron stores depleted', severity: 'moderate', protocolId: 'HB-DEF', concept: 'anemia',
@@ -153,8 +163,8 @@ function scoreAt(donor, visit, labsByKey) {
   const s = visit.systolic;
   const d = visit.diastolic;
   push('Blood pressure', 25, s < 120 && d < 80 ? 100 : s < 130 && d < 85 ? 85 : s < 140 && d < 90 ? 65 : s < 160 && d < 100 ? 35 : 10, `${s}/${d}`);
-  const hbMin = donor.sex === 'F' ? 12.5 : 13.0;
-  push('Haemoglobin', 15, visit.haemoglobin >= hbMin ? 100 : visit.haemoglobin >= hbMin - 1 ? 60 : 25, `${visit.haemoglobin} g/dL`);
+  const hbMinimum = hbMin(donor);
+  push('Haemoglobin', 15, visit.haemoglobin >= hbMinimum ? 100 : visit.haemoglobin >= hbMinimum - 1 ? 60 : 25, `${visit.haemoglobin} g/dL`);
   const a1c = labsByKey.hba1c;
   if (a1c != null) push('Blood sugar (HbA1c)', 20, a1c < 5.7 ? 100 : a1c < 6.0 ? 70 : a1c < 6.5 ? 50 : 20, `${a1c}%`);
   const ldl = labsByKey.ldl;
@@ -207,7 +217,7 @@ function eligibility(donorId) {
   const visits = store.getDonations(donorId);
   const lastDonation = [...visits].reverse().find((v) => v.status === 'completed');
   const gapDays = donor.sex === 'F' ? 120 : 90;
-  const blockers = findings(donorId).filter((f) => ['urgent', 'high'].includes(f.severity) || ['HB_LOW', 'HB_SEVERE', 'BP_GRADE1'].includes(f.id));
+  const blockers = findings(donorId).filter(blocksDonation);
   let nextDate = lastDonation ? addDays(lastDonation.date, gapDays) : store.today();
   if (nextDate < store.today()) nextDate = store.today();
   const eligibleNow = !blockers.length && nextDate <= store.today();
@@ -220,4 +230,4 @@ function eligibility(donorId) {
   };
 }
 
-module.exports = { RESULT_KEYS, findings, scoreHistory, currentScore, eligibility, labSeries, vitalsSeries, bmi, daysBetween, addDays };
+module.exports = { RESULT_KEYS, findings, scoreHistory, currentScore, eligibility, labSeries, vitalsSeries, bmi, hbMin, blocksDonation, daysBetween, addDays };
