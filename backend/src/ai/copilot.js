@@ -46,13 +46,30 @@ function who(donor, userName) {
   return `a new user (${donor.id}) who has just joined: no donations, results, Circles or insurer yet. ${first ? `Their first name is ${first}.` : "You don't know their name, so don't use one."}`;
 }
 
-function context(donorId, userName) {
+const HABITS = ['movement', 'food', 'mind'];
+
+function context(donorId, userName, chat = 'general') {
   const donor = store.getDonor(donorId);
   const c = drop.chatContext(donorId);
   return `Today: ${store.today()}. Donor: ${who(donor, userName)}. Write in ${LANGUAGE_NAMES[c.language] || 'English'}.
 What you remember about them: ${c.memory.join('; ') || 'nothing yet'}.
 Their Plan: ${c.plan.join('; ') || 'none yet'}. Reminders: ${c.reminders.join('; ') || 'none'}. Latest reading they gave you: ${c.latestReading || 'none'}.
-Cards waiting for them on Home: ${c.openCards.join(', ') || 'none'}.${introLine(donorId)}`;
+Cards waiting for them on Home: ${c.openCards.join(', ') || 'none'}.${goalLines(c.goals)}${chatLine(chat, c.goals)}${introLine(donorId)}`;
+}
+
+/** Each Goal's write-up: what Drop suggests stays within its steps. */
+function goalLines(goals) {
+  if (!goals.length) return '';
+  return `\nTheir Goals, with the steps their results call for (suggest only these, in your own words). These steps come from TraceDrop's rules, not from their doctor: never say a doctor advised them. ${goals.map((g) =>
+    `${g.name}${g.state === 'active' ? '' : ` (${g.state === 'upnext' ? 'Up next' : g.state})`}: target ${g.target}; why: ${g.why} Steps: ${g.steps.join('; ')}.${g.urgent ? ' This Goal is urgent: suggest no exercise, Movement plan or walks (not even gentle ones) until they say a doctor has seen them; say so kindly, and still help with the other steps.' : ''}`).join(' | ')}`;
+}
+
+/** Which Chat this is (CONTEXT.md: Chat). Week plans aren't built yet, so nothing can be saved or put in a calendar from here. */
+function chatLine(chat, goals) {
+  const goal = String(chat).startsWith('goal:') ? goals.find((g) => `goal:${g.id}` === chat) : null;
+  const habit = String(chat).startsWith('habit:') && HABITS.includes(chat.slice(6)) ? chat.slice(6) : null;
+  const where = goal ? `the Chat about their Goal "${goal.name}"` : habit ? `the Chat about their ${habit.charAt(0).toUpperCase()}${habit.slice(1)} Habit` : 'their General Chat';
+  return `\nThis conversation is ${where}. If they ask for a plan for the week, suggest one or two concrete things from their Goals' steps${habit ? ` that fit ${habit}` : ''} (or, with no Goal, a simple everyday ${habit || 'habit'} idea with no health reason), then say that saving a Week plan and adding it to their calendar is coming soon in TraceDrop. Never claim you saved or scheduled anything.`;
 }
 
 /** While the Intro runs, Drop knows which step the person is on, so "what's this?" gets a sensible answer. */
@@ -64,13 +81,24 @@ function introLine(donorId) {
 
 // A reply that opens with the model's own planning ("The user wants…") or leaked tool code ("tool_code", "default_api.…") is not for the donor
 const NOTE_TO_SELF = /^(the user\b|okay, the user\b|i should\b|plan:|tool_code|```|print\(|default_api\.)|\bdefault_api\./i;
+// Drop never calls the Donor "the user", and never narrates what it will do ("Given this, I should advise…")
+const isNote = (text) => NOTE_TO_SELF.test(text) || /\bthe user('s)?\b/i.test(text) || /^(given|therefore|so|based on)\b[^.]*\bI (should|will|need to)\b/i.test(text) || /^I will (inform|tell|advise|explain)\b/i.test(text);
 
-async function chat({ donorId, history, message, userName }) {
+async function chat({ donorId, history, message, userName, chat: chatId }) {
   const prior = Array.isArray(history) ? history.filter((turn) => turn && ['user', 'assistant'].includes(turn.role) &&
     (typeof turn.content === 'string' || Array.isArray(turn.content))).slice(-20) : [];
   const messages = [...prior, { role: 'user', content: message }];
-  const result = await runAgent({ feature: 'copilot', system: `${SYSTEM}\n\n${context(donorId, userName)}`, messages, donorId, toolNames: CHAT_TOOLS, maxTokens: 2500, effort: 'low' });
-  if (NOTE_TO_SELF.test(result.text || '')) {
+  const system = `${SYSTEM}\n\n${context(donorId, userName, chatId)}`;
+  const run = (sys, toolNames) => runAgent({ feature: 'copilot', system: sys, messages, donorId, toolNames, maxTokens: 2500, effort: 'low' });
+  let result = await run(system, CHAT_TOOLS);
+  // A reply that is the model's own notes ("The user wants…", "Plan: …") or tool code written as text gets one more try:
+  // no tools this time, told to answer the donor directly
+  if ((!result.text && !result.actions.length) || isNote(result.text || '')) {
+    const first = result;
+    result = await run(`${system}\n\nAnswer the donor directly in your own words, in plain sentences. Don't start with a heading or a note about what they want, and don't write code.`, []);
+    result = { ...result, steps: [...first.steps, ...result.steps], actions: [...first.actions, ...result.actions] };
+  }
+  if (result.text && isNote(result.text)) {
     const rules = fallback(donorId, message);
     const reply = rules.generic ? 'Sorry, I lost my words there. Could you ask me that again?' : rules.reply;
     return { reply, steps: result.steps, actions: [...result.actions, ...rules.actions.filter((a) => !result.actions.some((b) => b.type === a.type && b.text === a.text))], history: null, answeredByRules: true };

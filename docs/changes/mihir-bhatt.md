@@ -4,6 +4,18 @@ One entry per commit, newest first, so any change can be traced or reverted: the
 To revert one: find it with `git log --oneline --grep "<commit title>"`, then `git revert <hash>`.
 The design behind these changes is in `CONTEXT.md` (vocabulary) and the build plan.
 
+## 2026-10-15 · Drop's chat knows which Chat it's in and follows the Goals' steps
+
+- **What and why:** a fix found while trying the side sheet (branch `feature/health-goals`). In Vikram's Movement Chat, "Help me plan this week's movement" and then "I want to have a plan" got "Sorry, I lost my words there" twice. The model had written its own notes ("The user wants…", "Given this, I should advise the user…") or Python-style tool code as its answer, and the filter threw the whole reply away. Separately, Drop's chat didn't know the Goals' write-ups: in testing it suggested 150 minutes of exercise a week to Vikram, whose urgent Goal says no exercise until a doctor has seen him.
+  - The app now sends which Chat a question is asked in (`chat`: `general`, `goal:<id>` or `habit:<name>`) with each copilot turn.
+  - Drop's context adds each live Goal's target, "why" and steps from the write-up, says the steps come from TraceDrop's rules and not a doctor, and says to suggest only those steps. An urgent Goal adds: no exercise, Movement plan or walks until the Donor says a doctor has seen them.
+  - It also adds which Chat this is. Asked for a week's plan, Drop suggests one or two things from the Goals' steps (with no Goal, a simple everyday idea and no health reason), says saving a Week plan and adding it to the calendar is coming, and never claims it saved or scheduled anything. Week plans are step 6.
+  - A reply that reads as the model's own notes (it mentions "the user", or narrates "I should / I will advise…") or tool code, or an empty reply with no action, gets one more try with no tools, told to answer the Donor directly. Actions from the first try are kept. Only if that also fails does the old fallback run.
+  - Checked against live Vertex AI (`gemini-2.5-flash-lite`, still this branch's model): Vikram's two turns, three runs, plus Arjun's. No leaked notes; Vikram is pointed to a doctor and less salt with no exercise; Arjun gets brisk walks from his steps. The model still varies run to run.
+  - Local setup, not committed: the `health-goals-api` preview server now sets `GOOGLE_CLOUD_PROJECT` (from the repo docs and the machine's application-default credentials), so the AI is live in the preview.
+- **Files:** `backend/src/ai/copilot.js`, `backend/src/domain/drop.js` (`chatContext` carries the Goals' write-ups), `backend/src/routes/donors.js` (`chat` on the copilot route), `frontend/src/api.ts`, `frontend/src/components/Copilot.tsx`.
+- **Revert:** safe to revert on its own; Drop's chat goes back to not knowing the Chat or the write-ups.
+
 ## 2026-10-15 · The Chat over the app: the side sheet (From results to habits, step 5)
 
 - **What and why:** step 5 of the build plan, on branch `feature/health-goals`. Until now a Goal's Open fired `drop:open` into the old Drop panel; it now opens in its own side sheet, variant B of `frontend/prototype/goal-chat.prototype.html` (branch `prototype/results-to-habits`, commit 3da2c46).

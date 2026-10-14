@@ -203,7 +203,7 @@ export default function Copilot({ donorId, go, clientId, inline = false, top, fi
     setTurns((t) => [...t, { role: 'user', text: message }]);
     setBusy(true);
     try {
-      const r = await api.copilot(donorId, message, historyRef.current);
+      const r = await api.copilot(donorId, message, historyRef.current, chat);
       if (r.history) { historyRef.current = r.history; setHistory(r.history); }
       else recordLocal(message, r.reply);
       r.actions.forEach((a) => a.type === 'card' && a.cardId && chatCards.add(a.cardId));

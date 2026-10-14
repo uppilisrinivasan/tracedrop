@@ -177,13 +177,13 @@ router.post('/:donorId/appointments/:appointmentId/checkin', async (req, res) =>
 
 // ---- GenAI / agentic features
 router.post('/:donorId/copilot', async (req, res) => {
-  const { message, history } = req.body;
+  const { message, history, chat } = req.body;
   if (!message || typeof message !== 'string') return fail(res, 400, 'message is required');
   const userName = req.user && !req.user.local ? req.user.name : null;
   const id = req.donor.id;
   // A question asked during the Intro is kept with it ("Intro · finished … · the questions you asked")
   const keep = (reply) => { intro.noteQuestion(id, message, reply && reply.reply); return reply; };
-  return withFallback(res, async () => keep(await copilot.chat({ donorId: id, history, message: message.slice(0, 2000), userName })), () => keep(copilot.fallback(id, message)));
+  return withFallback(res, async () => keep(await copilot.chat({ donorId: id, history, message: message.slice(0, 2000), userName, chat: typeof chat === 'string' ? chat.slice(0, 40) : 'general' })), () => keep(copilot.fallback(id, message)));
 });
 
 router.post('/:donorId/labs/extract', (req, res) => {

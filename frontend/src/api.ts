@@ -337,7 +337,8 @@ export const api = {
     post<Appointment>(`/donors/${id}/appointments/${appointmentId}/cancel`, { accessToken }),
   checkIn: (id: string, appointmentId: string, vitals: Record<string, number>) =>
     post<{ status: string; reasons: string[]; visitId: string; components: string[] }>(`/donors/${id}/appointments/${appointmentId}/checkin`, vitals),
-  copilot: (id: string, message: string, history: unknown[] | null) => post<CopilotReply>(`/donors/${id}/copilot`, { message, history }),
+  /** `chat` says which Chat the question was asked in (General, a Goal's or a Habit's) */
+  copilot: (id: string, message: string, history: unknown[] | null, chat = 'general') => post<CopilotReply>(`/donors/${id}/copilot`, { message, history, chat }),
   extractLabs: (id: string, input: { text?: string; image?: string }) => post<Extraction>(`/donors/${id}/labs/extract`, input),
   saveLabs: (id: string, extraction: Extraction) => post<{ saved: number; date: string }>(`/donors/${id}/labs/save`, extraction),
   concerns: (id: string) => request<Concern[]>(`/donors/${id}/concerns`),

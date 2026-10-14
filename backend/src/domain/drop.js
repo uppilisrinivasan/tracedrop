@@ -1063,6 +1063,11 @@ function chatContext(donorId) {
     reminders: st.reminders.map((r) => `${r.label} at ${time12(r.time)}`),
     latestReading: last ? `BP ${last.s}/${last.d} on ${last.date}` : null,
     openCards: st.cards.filter((c) => c.status === 'open').map((c) => label(c)),
+    // Each live Goal's write-up, so Drop's advice follows its steps (an urgent Goal has no Movement step)
+    goals: goalsOf(st).filter((g) => g.state !== 'done' && g.writeup).map((g) => ({
+      id: g.id, name: g.name, state: g.state, urgent: g.severity === 'urgent', target: g.target.text,
+      why: g.writeup.why, steps: g.writeup.steps.map((x) => `${x.tag}: ${x.text}`),
+    })),
   };
 }
 
