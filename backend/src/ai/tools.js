@@ -11,10 +11,15 @@ const cover = require('../domain/cover');
 const impact = require('../domain/impact');
 const community = require('../domain/community');
 const drop = require('../domain/drop');
+const llm = require('./llm');
 
-// Never kept as memory: health facts belong in the Plan; some topics are never stored at all
-const NOT_MEMORY = /\b(bp|blood pressure|hb|haemoglobin|hemoglobin|tablets?|medicines?|medication|pills?|mg|dose|insulin|metformin|amlodipine|telmisartan|losartan|atorvastatin|statins?|supplements?|diabet\w*|sugar|cholesterol|thyroid|religion|religious|caste|income|salary|hindu|muslim|christian|sikh|jain)\b/i;
-const escapeRe = (t) => String(t).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+// Only canonical, non-clinical preferences may become long-lived memory.
+const PREFERENCES = {
+  schedule_day: { saturday: 'Saturdays suit you', sunday: 'Sundays suit you', weekday: 'Weekdays suit you', weekend: 'Weekends suit you' },
+  schedule_time: { morning: 'Mornings suit you', afternoon: 'Afternoons suit you', evening: 'Evenings suit you' },
+  language: { english: 'English suits you', hindi: 'Hindi suits you', kannada: 'Kannada suits you', tamil: 'Tamil suits you', telugu: 'Telugu suits you', malayalam: 'Malayalam suits you' },
+};
+const REPLACES = { schedule_day: 'Saturdays|Sundays|Weekdays|Weekends', schedule_time: 'Mornings|Afternoons|evenings', language: 'English|Hindi|Kannada|Tamil|Telugu|Malayalam' };
 
 const obj = (properties, required = []) => ({ type: 'object', properties, required, additionalProperties: false });
 
@@ -51,7 +56,7 @@ const DEFINITIONS = [
   },
   {
     name: 'get_insurance_cover',
-    description: 'Health-linked insurance cover: base and current sum insured, the cover the score qualifies for, next step, toReachNextStep (ALL requirements to reach it — state every one), conditions, and the method. recentHistory shows the cover each past score qualified for, not cover the donor actually held.',
+    description: 'Illustrative, synthetic health-linked insurance cover model, not an issued policy or insurer-approved benefit: base/current modeled sum, next step, conditions and method. recentHistory shows hypothetical cover at each past score; no insurer data transfer occurs.',
     input_schema: obj({}),
   },
   {
@@ -76,7 +81,7 @@ const DEFINITIONS = [
   },
   {
     name: 'find_care_slots',
-    description: 'Available free primary-care visits (Ayushman Arogya Mandir) and partner clinic slots near the donor in the next N days.',
+    description: 'Illustrative demo primary-care and partner clinic times near the donor; these are not real availability or reservations.',
     input_schema: obj({ within_days: { type: 'integer', minimum: 0, maximum: 60 } }, ['within_days']),
   },
   {
@@ -86,7 +91,7 @@ const DEFINITIONS = [
   },
   {
     name: 'offer_care_slots',
-    description: 'Show a card with free check-up slots (Ayushman Arogya Mandir) the donor can book with one tap. Use when they want a check-up or a finding needs a doctor.',
+    description: 'Show a card with simulated check-up times, not confirmed clinic availability. For urgent findings tell the donor to seek real medical care today.',
     input_schema: obj({}),
   },
   {
@@ -96,8 +101,8 @@ const DEFINITIONS = [
   },
   {
     name: 'remember',
-    description: 'Remember a lasting preference or life detail the donor told you: days or times that suit, work pattern, area, language, food habits. Never health facts (readings, medicines, conditions, results), never religion, caste, income, family members\' health or anything about recipients. If it contradicts an older memory, set replaces to a word from that memory (e.g. "Saturday").',
-    input_schema: obj({ fact: { type: 'string', description: 'Short, second person, e.g. "Weekday evenings suit you"' }, replaces: { type: 'string' } }, ['fact']),
+    description: 'Store only a preference the donor explicitly stated, never a health fact, reading, medicine, condition, result, or sensitive detail. Choose a category and canonical value; other facts cannot be stored.',
+    input_schema: obj({ category: { type: 'string', enum: ['schedule_day', 'schedule_time', 'language'] }, value: { type: 'string', enum: ['saturday', 'sunday', 'weekday', 'weekend', 'morning', 'afternoon', 'evening', 'english', 'hindi', 'kannada', 'tamil', 'telugu', 'malayalam'] } }, ['category', 'value']),
   },
   {
     name: 'log_reading',
@@ -135,6 +140,9 @@ function careSlots(donor, withinDays) {
 }
 
 function run(name, input, donorId) {
+  const definition = DEFINITIONS.find((d) => d.name === name);
+  if (!definition) return { error: `Unknown tool ${name}` };
+  if (!llm.validate(input, definition.input_schema)) return { error: 'Invalid tool arguments' };
   const donor = store.getDonor(donorId);
   switch (name) {
     case 'get_profile': {
@@ -151,12 +159,9 @@ function run(name, input, donorId) {
     case 'get_health_findings':
       return health.findings(donorId).map(({ id, title, severity, detail, evidence, protocolId, date }) => ({ id, title, severity, detail, evidence, protocolId, date }));
     case 'get_trend': {
-      if (['bp', 'haemoglobin', 'weight'].includes(input.marker)) {
-        return health.vitalsSeries(donorId).map((v) => ({
-          date: v.date,
-          value: input.marker === 'bp' ? `${v.systolic}/${v.diastolic}` : input.marker === 'weight' ? v.weightKg : v.haemoglobin,
-        }));
-      }
+      if (input.marker === 'bp') return drop.chartPoints(donorId, 'bp').map((p) => ({ date: p.date, value: `${p.value}/${p.value2}`, source: p.source }));
+      if (input.marker === 'haemoglobin') return drop.chartPoints(donorId, 'hb').map((p) => ({ date: p.date, value: p.value, source: p.source }));
+      if (input.marker === 'weight') return health.vitalsSeries(donorId).map((v) => ({ date: v.date, value: v.weightKg }));
       const key = MARKER_KEYS[input.marker] || input.marker;
       return (health.labSeries(donorId)[key] || []).map((o) => ({ date: o.date, value: o.value, unit: o.unit, low: o.low, high: o.high }));
     }
@@ -210,9 +215,10 @@ function run(name, input, donorId) {
       return { shown: card.text, _ui: { type: 'card', cardId: card.id } };
     }
     case 'remember': {
-      if (NOT_MEMORY.test(input.fact)) return { error: 'Not stored. Health facts go in the Plan, and some topics are never kept.' };
-      const v = drop.rememberText(donorId, input.fact, input.replaces ? escapeRe(input.replaces) : null);
-      return { remembered: input.fact, _ui: { type: 'memory', text: v.memReceipt } };
+      const fact = PREFERENCES[input.category]?.[input.value];
+      if (!fact) return { error: 'Not stored. Only supported schedule and language preferences can be remembered.' };
+      const v = drop.rememberText(donorId, fact, REPLACES[input.category]);
+      return { remembered: fact, _ui: { type: 'memory', text: v.memReceipt } };
     }
     case 'log_reading': {
       const receipt = drop.logReading(donorId, { s: input.systolic, d: input.diastolic });

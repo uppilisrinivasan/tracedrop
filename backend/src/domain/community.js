@@ -12,7 +12,7 @@ function memberStats(donorId) {
   const donations = store.getDonations(donorId).filter((d) => d.status === 'completed');
   return {
     donations: donations.length,
-    patientsHelped: journeys.filter((j) => j.recipient).length,
+    patientsHelped: impact.summarise(journeys).patientsHelped,
     lastDonation: donations.length ? donations[donations.length - 1].date : null,
   };
 }
@@ -21,39 +21,40 @@ function summary(communityId, viewerId) {
   const c = store.getCommunity(communityId);
   if (!c) return null;
   const members = c.memberIds.map((id) => ({ donor: store.getDonor(id), stats: memberStats(id) }));
+  const contributors = members.filter((m) => m.donor.consent.includeInCommunityStats);
   const yearAgo = new Date(new Date(store.today()).getTime() - 365 * 864e5).toISOString().slice(0, 10);
-  const totals = members.reduce((t, m) => ({
+  const totals = contributors.reduce((t, m) => ({
     donations: t.donations + m.stats.donations,
     patientsHelped: t.patientsHelped + m.stats.patientsHelped,
     activeThisYear: t.activeThisYear + (m.stats.lastDonation && m.stats.lastDonation >= yearAgo ? 1 : 0),
   }), { donations: 0, patientsHelped: 0, activeThisYear: 0 });
 
   const contexts = {};
-  for (const id of c.memberIds) {
-    for (const j of impact.donorJourneys(id)) {
+  for (const m of contributors) {
+    for (const j of impact.donorJourneys(m.donor.id)) {
       if (j.recipient) contexts[j.recipient.context] = (contexts[j.recipient.context] || 0) + 1;
     }
   }
 
   const leaderboard = members
-    .filter((m) => m.donor.consent.showOnLeaderboard || m.donor.id === viewerId)
+    .filter((m) => m.donor.consent.includeInCommunityStats && (m.donor.consent.showOnLeaderboard || m.donor.id === viewerId))
     .sort((a, b) => b.stats.patientsHelped - a.stats.patientsHelped)
     .slice(0, 10)
     .map((m) => ({ name: m.donor.id === viewerId ? `${m.donor.name} (you)` : m.donor.name.split(' ')[0], isYou: m.donor.id === viewerId, ...m.stats }));
 
   const groups = {};
-  for (const m of members) groups[m.donor.bloodGroup] = (groups[m.donor.bloodGroup] || 0) + 1;
+  for (const m of contributors) groups[m.donor.bloodGroup] = (groups[m.donor.bloodGroup] || 0) + 1;
 
   return {
     id: c.id, name: c.name, kind: c.kind, description: c.description,
     memberCount: members.length,
     totals,
-    participation: Math.round((totals.activeThisYear / members.length) * 100),
+    participation: contributors.length ? Math.round((totals.activeThisYear / contributors.length) * 100) : 0,
     contexts: Object.entries(contexts).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([context, count]) => ({ context, count })),
     bloodGroups: Object.entries(groups).map(([group, count]) => ({ group, count })),
     leaderboard,
-    hiddenMembers: members.length - members.filter((m) => m.donor.consent.showOnLeaderboard).length,
-    privacyNote: 'Only totals are shared with the group. Health results are never shared; names appear only for members who opted in.',
+    hiddenMembers: members.length - members.filter((m) => m.donor.consent.includeInCommunityStats && m.donor.consent.showOnLeaderboard).length,
+    privacyNote: 'Only consenting members contribute to shared totals, treatment categories, blood groups and participation. Health results are never shared; names appear only for members who also opted in to the leaderboard.',
   };
 }
 

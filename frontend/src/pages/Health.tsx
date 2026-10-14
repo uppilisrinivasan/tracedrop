@@ -39,7 +39,7 @@ export default function Health({ donorId, go, version, refresh, focus }: PagePro
 
   if (loading && !data) return <Loading />;
   if (error || !data) return <ErrorNote error={error || 'Could not load'} />;
-  const latest = data.scores[data.scores.length - 1];
+  const latest = data.currentScore;
 
   return (
     <div className="stack fade-in">
@@ -64,7 +64,7 @@ export default function Health({ donorId, go, version, refresh, focus }: PagePro
               </div>
             ))}
           </div>
-          <div className="tiny faint mt-12">Computed by fixed clinical rules (not AI) from your latest results. Drives your insurance cover.</div>
+          <div className="tiny faint mt-12">Demo score from fixed rules (not AI), including uploaded results. Feeds the illustrative cover model; earlier donation scores stay unchanged.</div>
         </div>
 
         <Section title="What your results say" sub={`${data.findings.length} finding${data.findings.length === 1 ? '' : 's'} · BMI ${data.bmi}`}>
@@ -116,10 +116,10 @@ function CheckupsSection({ donorId, view, onChange }: { donorId: string; view: D
   }
 
   return (
-    <Section title={<><Icon name="doctor" size={18} /> My doctor check-ups</>}
-      sub={checkups.length ? `${checkups.length} coming up` : 'Free at a government clinic near me'}
-      right={<button className="btn btn-sm" onClick={() => bookCheckup()}><Icon name="calendar" size={14} /> Book a check-up</button>}>
-      {checkups.length === 0 && <div className="small muted">No check-up booked. Book one and the doctor, clinic, address and time will show here and on Home.</div>}
+    <Section title={<><Icon name="doctor" size={18} /> Demo check-up planning</>}
+      sub={checkups.length ? `${checkups.length} simulated visit${checkups.length === 1 ? '' : 's'} coming up` : 'Example clinic times, not confirmed availability'}
+      right={<button className="btn btn-sm" onClick={() => bookCheckup()}><Icon name="calendar" size={14} /> Explore demo times</button>}>
+      {checkups.length === 0 && <div className="small muted">Explore illustrative clinic times here and on Home. These do not reserve a visit; contact a real care provider to arrange one.</div>}
       <div className="stack" style={{ gap: 10 }}>
         {checkups.map((b) => <Checkup key={b.id} booking={b} busy={busy} onChange={() => cancel(b.id, true)} onCancel={() => cancel(b.id, false)} />)}
       </div>
@@ -276,17 +276,25 @@ function LabReader({ donorId, onSaved, focusLabs }: { donorId: string; onSaved: 
 
   async function save() {
     if (!result) return;
-    const r = await api.saveLabs(donorId, result);
-    setSaved(`${r.saved} results added to your record (${fmtDate(r.date)}). Your score, cover and care plan now include them.`);
-    setResult(null);
-    setText('');
-    setImage(null);
-    onSaved();
+    setBusy(true);
+    setErr(null);
+    try {
+      const r = await api.saveLabs(donorId, result);
+      setSaved(`${r.saved} results added to this demo persona (${fmtDate(r.date)}). The current score and illustrative cover model now use them; earlier donation scores remain unchanged.`);
+      setResult(null);
+      setText('');
+      setImage(null);
+      onSaved();
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
     <Section title={<><Icon name="doc" size={18} /> Add an outside lab report <AIBadge label="GenAI" /></>}
-      sub="Every lab prints differently — names, units, layouts. AI reads any format (text or photo), maps each test to a standard code and converts units, so it joins your timeline."
+      sub="AI can read text or photos and map recognised tests to the demo timeline. Review every extracted value before saving; do not upload a real person's medical records to a shared demo persona."
       collapsible defaultOpen={focusLabs}>
       <div className="grid grid-2">
         <div className="stack" style={{ gap: 10 }}>
@@ -323,7 +331,7 @@ function LabReader({ donorId, onSaved, focusLabs }: { donorId: string; onSaved: 
               </div>
               {result.notes && <div className="tiny muted"><b>Conversions:</b> {result.notes}</div>}
               {result.unmapped.length > 0 && <div className="tiny faint">Not tracked: {result.unmapped.join(', ')}</div>}
-              <div className="row"><button className="btn btn-primary" onClick={save}>Confirm and add to my record</button><button className="btn" onClick={() => setResult(null)}>Discard</button></div>
+              <div className="row"><button className="btn btn-primary" disabled={busy} onClick={save}>Add to demo persona</button><button className="btn" onClick={() => setResult(null)}>Discard</button></div>
             </div>
           )}
         </div>

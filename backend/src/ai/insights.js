@@ -41,8 +41,8 @@ function candidates(donorId) {
   const trend = findings.find((f) => f.id === 'BP_RISING' || f.id === 'IRON_LOW' || f.id === 'PREDIABETES');
   if (trend) list.push({ id: 'trend', cta: 'health', fact: `${trend.title}: ${trend.detail}` });
   const c = cover.evaluate(donorId);
-  if (c.pointsToNextStep != null && c.pointsToNextStep <= 10) list.push({ id: 'cover', cta: 'cover', fact: `Health score ${c.healthScore}; ${c.pointsToNextStep} points from insurance cover rising ₹${c.currentCover / 1e5} lakh -> ₹${c.nextStep / 1e5} lakh at the same premium.` });
-  if (c.blockedBy === 'monitoring') list.push({ id: 'cover_unlock', cta: 'donate', fact: `Score already qualifies for ₹${c.eligibleCover / 1e5} lakh cover but needs 2 monitored visits in 12 months; one more check-up unlocks it.` });
+  if (c.pointsToNextStep != null && c.pointsToNextStep <= 10) list.push({ id: 'cover', cta: 'cover', fact: `Demo health score ${c.healthScore}; ${c.pointsToNextStep} points from the illustrative cover model rising ₹${c.currentCover / 1e5} lakh -> ₹${c.nextStep / 1e5} lakh at the same modeled premium; no insurer has issued this increase.` });
+  if (c.blockedBy === 'monitoring') list.push({ id: 'cover_unlock', cta: 'donate', fact: `The illustrative score model reaches ₹${c.eligibleCover / 1e5} lakh but needs 2 monitored visits in 12 months; another demo visit can change the simulated amount, not an issued policy.` });
   const e = health.eligibility(donorId);
   if (e.eligibleNow) list.push({ id: 'eligible', cta: 'donate', fact: `Eligible to donate today (last donation ${e.lastDonationDate}). Blood group ${store.getDonor(donorId).bloodGroup}.` });
   const journeys = impact.donorJourneys(donorId).filter((j) => j.recipient);
@@ -57,11 +57,17 @@ function candidates(donorId) {
 async function forDonor(donorId) {
   const donor = store.getDonor(donorId);
   const list = candidates(donorId);
+  if (!list.length || list[0].id === 'urgent') return fallback(donorId);
   const pick = await llm.json({
     feature: 'home_insight', system: SYSTEM, maxTokens: 800, effort: 'low', outputSchema: SCHEMA,
     messages: [{ role: 'user', content: `Donor: ${donor.name.split(' ')[0]}. Language: ${LANGUAGE_NAMES[donor.language] || 'English'}.\nCandidates:\n${list.map((c) => `- [${c.id}] ${c.fact}`).join('\n')}` }],
   });
-  return { ...pick, generatedBy: 'ai', considered: list.map((c) => c.id) };
+  const chosen = list.find((c) => c.id === pick.candidateId);
+  if (!chosen || chosen.cta !== pick.cta) return fallback(donorId);
+  // The model selects, but cannot introduce claims not present in candidate facts.
+  const titles = { urgent: 'Please see a doctor today', trend: 'A trend worth watching', cover: 'Close to more cover', cover_unlock: 'One check-up unlocks more cover', eligible: 'You can donate today', impact: 'Your blood reached a patient', community: 'Your circle is making a difference' };
+  return { candidateId: chosen.id, title: titles[chosen.id], message: chosen.fact, cta: chosen.cta,
+    generatedBy: 'ai', considered: list.map((c) => c.id) };
 }
 
 function fallback(donorId) {

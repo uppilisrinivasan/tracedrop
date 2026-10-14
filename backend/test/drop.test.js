@@ -137,8 +137,10 @@ const { keepsFacts } = require('../src/ai/dropWriter');
 test('chat memory: preferences are kept, health facts are refused', () => {
   assert.ok(tools.run('remember', { fact: 'I take my BP tablet at night' }, 'D-001').error);
   assert.ok(tools.run('remember', { fact: 'You take metformin 500 mg' }, 'D-001').error);
-  const out = tools.run('remember', { fact: 'Weekday evenings suit you', replaces: 'Saturday' }, 'D-001');
-  assert.match(out._ui.text, /replaces "Saturdays suit you"/);
+  const day = tools.run('remember', { category: 'schedule_day', value: 'weekday' }, 'D-001');
+  assert.match(day._ui.text, /replaces "Saturdays suit you"/);
+  const time = tools.run('remember', { category: 'schedule_time', value: 'evening' }, 'D-001');
+  assert.equal(time.remembered, 'Evenings suit you');
 });
 
 test('a reading told in chat lands in Health and moves the BP goal line', () => {
@@ -165,17 +167,21 @@ test('switching language clears AI wording so open Cards are rewritten', () => {
   assert.throws(() => drop.setLanguage('D-001', 'xx'), /Unsupported/);
 });
 
-test('AI wording must keep every number from the rule wording', () => {
-  assert.ok(keepsFacts('BP 148/94, up (132, 136, 148).', 'Your BP was 148/94: 132, 136 then 148.'));
+test('AI wording allows cosmetic changes but rejects unverified paraphrases and missing numbers', () => {
+  assert.ok(keepsFacts('BP 148/94, up (132, 136, 148).', 'BP 148/94: up (132, 136, 148)!'));
+  assert.ok(!keepsFacts('BP 148/94, up (132, 136, 148).', 'Your BP was 148/94: 132, 136 then 148.'));
   assert.ok(!keepsFacts('BP 148/94, up (132, 136, 148).', 'Your BP went up to 148.'));
 });
 
-test("AI wording stops applying when the Card's content changes (no stale slot labels)", () => {
+test('demo booking cards keep rule wording and slot labels even when AI offers replacements', () => {
   advance(DAY);
   drop.answer('D-001', card('D-001', 'results', 'results').id, 'book');
   const slots = drop.openForWriting('D-001').find((p) => p.card.variant === 'care');
   drop.setAi('D-001', slots.card.id, { text: 'Saturdays: pick one', labels: { chips: ['Sat A', 'Sat B', 'Sat C', 'Evenings'] }, sig: slots.sig });
-  assert.equal(card('D-001', 'slots', 'care').chips[0].label, 'Sat A');
+  const before = card('D-001', 'slots', 'care');
+  assert.equal(before.byAi, false);
+  assert.equal(before.text, before.ruleText);
+  assert.match(before.chips[0].label, /17 Oct/);
   drop.answer('D-001', slots.card.id, 'evenings');
   const after = card('D-001', 'slots', 'care');
   assert.equal(after.byAi, false);

@@ -16,7 +16,7 @@ const KIND_STYLE: Record<string, { bg: string; fg: string; short: string }> = {
 };
 
 const STAGES = ['collected', 'separated', 'tested', 'stored', 'issued', 'transfused', 'outcome'];
-const PLASMA_STAGES = ['collected', 'separated', 'tested', 'stored', 'fractionation', 'products_released'];
+const PLASMA_STAGES = ['collected', 'separated', 'tested', 'fractionation', 'products_released'];
 
 export default function Impact({ donorId, version }: PageProps) {
   const { data, error, loading } = useLoad(() => api.impact(donorId), [donorId, version]);
@@ -69,7 +69,7 @@ export default function Impact({ donorId, version }: PageProps) {
         <div className="card fade-in">
           <ShareBar item={{
             headline: `My blood has helped ${s.patientsHelped} patient${s.patientsHelped === 1 ? '' : 's'}`,
-            story: `${s.components} components from my donations went to hospitals${s.children ? `, including ${s.children} for children` : ''}. ${s.medicineDosesShare ? `My plasma also helped make about ${s.medicineDosesShare} medicine doses.` : ''} TraceDrop let me follow each one, privately.`,
+            story: `${s.components} components came from my donations; ${s.patientsHelped} reached patients${s.children ? `, including ${s.children} for children` : ''}. ${s.medicineDosesShare ? `My plasma also helped make about ${s.medicineDosesShare} medicine doses.` : ''} TraceDrop let me follow them privately.`,
             shareText: `My blood donations have helped ${s.patientsHelped} patients so far. One donation can help up to three people. #DonateBlood`,
           }} />
         </div>
@@ -120,7 +120,7 @@ export default function Impact({ donorId, version }: PageProps) {
 
       <div className="callout callout-info small">
         <Icon name="lock" size={16} />
-        <span>Recipients are never identified. You see only an age band, the type of treatment and the type of hospital; dates of use are rounded to the month, and any combination shared by fewer than {data.k} patients is generalised further.</span>
+        <span>Recipients are never named. Age band and sex, treatment, hospital type and district, and recorded outcome are shown only when the complete combination covers at least {data.k} transfused units; sparse details are generalised or suppressed. Dates of use are rounded to the month.</span>
       </div>
     </div>
   );
@@ -132,7 +132,7 @@ function Stat({ value, label }: { value: number | string; label: string }) {
 
 function UnitRow({ unit, selected, onClick }: { unit: Journey; selected: boolean; onClick: () => void }) {
   const style = KIND_STYLE[unit.kind];
-  const statusPill = unit.withheld ? 'pill-neutral' : unit.helped ? 'pill-good' : unit.status === 'expired' ? 'pill-neutral' : 'pill-info';
+  const statusPill = unit.withheld || unit.status === 'expired' ? 'pill-neutral' : unit.helped ? 'pill-good' : 'pill-info';
   return (
     <button className={`unit-card ${selected ? 'selected' : ''}`} onClick={onClick}>
       <span className="unit-icon" style={{ background: style.bg, color: style.fg }}>{style.short}</span>
@@ -140,7 +140,7 @@ function UnitRow({ unit, selected, onClick }: { unit: Journey; selected: boolean
         <span className="bold small">{unit.name}</span><br />
         <span className="tiny muted">{unit.recipient ? unit.recipient.context : unit.statusLabel}</span>
       </span>
-      <span className={`pill ${statusPill}`}>{unit.withheld ? 'Withheld' : unit.helped ? 'Helped' : unit.status === 'expired' ? 'Expired' : 'In progress'}</span>
+      <span className={`pill ${statusPill}`}>{unit.withheld ? 'Withheld' : unit.status === 'expired' ? 'Expired' : unit.helped ? 'Helped' : 'In progress'}</span>
     </button>
   );
 }
@@ -151,7 +151,8 @@ function UnitDetail({ donorId, unit, onConcern }: { donorId: string; unit: Journ
   const [err, setErr] = useState<string | null>(null);
   const [concernOpen, setConcernOpen] = useState(false);
   const [concernSent, setConcernSent] = useState<string | null>(null);
-  const stages = unit.kind === 'PLASMA' || unit.events.some((e) => e.type === 'fractionation') ? PLASMA_STAGES : STAGES;
+  const stages = (unit.kind === 'PLASMA' || unit.events.some((e) => e.type === 'fractionation') ? PLASMA_STAGES : STAGES)
+    .concat(unit.withheld ? ['withheld'] : unit.status === 'expired' ? ['expired'] : []);
   const reached = new Set(unit.events.map((e) => e.type));
   const style = KIND_STYLE[unit.kind];
 
@@ -216,7 +217,7 @@ function UnitDetail({ donorId, unit, onConcern }: { donorId: string; unit: Journ
           <div className="tiny bold" style={{ color: 'var(--brand-ink)', textTransform: 'uppercase', letterSpacing: '.05em' }}>Who it helped</div>
           <div className="bold mt-8" style={{ fontSize: 17 }}>{unit.recipient.context}</div>
           <div className="small mt-8">{unit.recipient.patient} · {unit.recipient.place}</div>
-          <div className="small mt-8">{unit.recipient.outcome === 'recovered' ? '✓ The hospital recorded a good recovery' : unit.recipient.outcome === 'ongoing' ? 'Treatment ongoing' : 'Outcome not reported by the hospital'}</div>
+          <div className="small mt-8">{unit.recipient.outcome === 'recovered' ? 'The hospital recorded a good recovery' : unit.recipient.outcome === 'ongoing' ? 'Treatment ongoing' : unit.recipient.outcome === 'not_reported' ? 'Outcome not reported by the hospital' : 'Outcome not shared'}</div>
           {unit.recipient.generalised && <div className="tiny muted mt-8">Details generalised to protect privacy.</div>}
         </div>
       )}
@@ -254,7 +255,7 @@ function UnitDetail({ donorId, unit, onConcern }: { donorId: string; unit: Journ
         )}
         {concernOpen && (
           <ConcernForm donorId={donorId} unit={unit} onCancel={() => setConcernOpen(false)}
-            onDone={(c) => { setConcernOpen(false); setConcernSent(`Sent as ${c.id} to ${c.owner}. Answer due by ${fmtDate(c.dueOn)}. Follow it under "Your concerns" below.`); onConcern(); }} />
+            onDone={(c) => { setConcernOpen(false); setConcernSent(`Demo concern ${c.id} saved in this session; no officer contacted. Example response date: ${fmtDate(c.dueOn)}. Follow it under "Your concerns" below.`); onConcern(); }} />
         )}
       </div>
     </div>
@@ -263,7 +264,8 @@ function UnitDetail({ donorId, unit, onConcern }: { donorId: string; unit: Journ
 
 function labelFor(stage: string) {
   return ({ collected: 'Collected', separated: 'Separated', tested: 'Safety tested', stored: 'Stored', issued: 'Issued to hospital', transfused: 'Transfused',
-    outcome: 'Outcome recorded', fractionation: 'Fractionation', products_released: 'Medicines made' } as Record<string, string>)[stage] || stage;
+    outcome: 'Outcome recorded', fractionation: 'Fractionation', products_released: 'Medicines made',
+    expired: 'Reached shelf-life limit', withheld: 'Withheld from use for safety' } as Record<string, string>)[stage] || stage;
 }
 
 function Institutions({ stake, loading }: { stake: Stakeholder[] | null; loading: boolean }) {

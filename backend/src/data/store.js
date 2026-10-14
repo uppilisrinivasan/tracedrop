@@ -31,7 +31,8 @@ function groupBy(items, key) {
 }
 
 const institutions = read('institutions.json');
-const donors = new Map(read('donors.json').map((d) => [d.id, d]));
+const initialDonors = read('donors.json');
+const donors = new Map(initialDonors.map((d) => [d.id, { ...d, consent: { ...d.consent } }]));
 let donationsByDonor;
 let observationsByDonor;
 let componentsByDonor;
@@ -91,6 +92,9 @@ module.exports = {
   resetDemo() {
     clock = { ...START };
     loadRecords();
+    for (const original of initialDonors) {
+      donors.get(original.id).consent = { ...original.consent };
+    }
     Object.values(session).forEach((map) => map.clear());
     listeners.reset.forEach((fn) => fn());
   },

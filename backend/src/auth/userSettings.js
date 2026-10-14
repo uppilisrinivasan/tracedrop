@@ -41,10 +41,10 @@ async function listAppointments(user, donorId) {
 
 async function saveAppointment(user, appointment) {
   const store = require('../data/store');
+  if (!local(user)) await firestore().collection('appointments').doc(appointment.id).set(appointment);
   const list = (store.session.appointments.get(appointment.donorId) || []).filter((item) => item.id !== appointment.id);
   list.push(appointment);
   store.session.appointments.set(appointment.donorId, list);
-  if (!local(user)) await firestore().collection('appointments').doc(appointment.id).set(appointment);
   return appointment;
 }
 

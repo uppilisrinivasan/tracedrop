@@ -39,21 +39,36 @@ function book(donorId, { slotId }) {
 }
 
 /**
- * Check in and donate. Vitals default to the donor's recent pattern so the
- * demo can be run with one click; a real centre would enter measured values.
+ * Demo check-in and donation simulation. Omitted vitals use the donor's
+ * synthetic recent pattern; this is not a staff-verified screening.
  */
-function checkIn(donorId, appointmentId, vitalsInput = {}) {
-  const appointment = (store.session.appointments.get(donorId) || []).find((a) => a.id === appointmentId);
-  if (!appointment || appointment.status !== 'booked') throw new Error('Appointment not found');
+function prepareCheckIn(donorId, appointmentId, vitalsInput = {}, appointments = store.session.appointments.get(donorId) || []) {
+  const appointment = appointments.find((a) => a.id === appointmentId);
+  if (!appointment || appointment.status !== 'booked' || (appointment.donorId && appointment.donorId !== donorId)
+    || store.getDonations(donorId).some((visit) => visit.appointmentId === appointmentId)) throw new Error('Appointment not found or already checked in');
+  if (appointment.date !== store.today()) throw new Error('Check-in is only available on the appointment day');
+  if (!health.eligibility(donorId).eligibleNow) throw new Error('Donation eligibility is currently blocked');
   const donor = store.getDonor(donorId);
+  // This donor-triggered check-in is a demo simulation, not a verified staff
+  // screening. Omitted readings use the synthetic previous pattern; explicit
+  // entries must be complete and physiological, never silently substituted.
   const previous = store.getDonations(donorId).slice(-1)[0]?.vitals || { systolic: 120, diastolic: 78, haemoglobin: 14, weightKg: 65, pulse: 76 };
-  const vitals = {
-    systolic: Number(vitalsInput.systolic || previous.systolic),
-    diastolic: Number(vitalsInput.diastolic || previous.diastolic),
-    pulse: Number(vitalsInput.pulse || previous.pulse || 76),
-    haemoglobin: Number(vitalsInput.haemoglobin || previous.haemoglobin),
-    weightKg: Number(vitalsInput.weightKg || previous.weightKg),
-  };
+  const limits = { systolic: [70, 250], diastolic: [40, 150], pulse: [30, 220], haemoglobin: [3, 25], weightKg: [25, 300] };
+  if (!vitalsInput || typeof vitalsInput !== 'object' || Array.isArray(vitalsInput)) throw new Error('Vitals must be an object');
+  const assumed = [];
+  const vitals = {};
+  for (const [key, [low, high]] of Object.entries(limits)) {
+    const supplied = Object.hasOwn(vitalsInput, key);
+    if (!supplied) assumed.push(key);
+    const raw = supplied ? vitalsInput[key] : previous[key];
+    if ((supplied && (raw === null || raw === '' || typeof raw === 'boolean'))
+      || (typeof raw !== 'number' && (typeof raw !== 'string' || !raw.trim()))
+      || !Number.isFinite(Number(raw)) || Number(raw) < low || Number(raw) > high) {
+      throw new Error(`Invalid ${key}: expected ${low}–${high}`);
+    }
+    vitals[key] = Number(raw);
+  }
+  if (vitals.systolic <= vitals.diastolic) throw new Error('Systolic pressure must exceed diastolic pressure');
   const hbMin = donor.sex === 'F' ? 12.5 : 13.0;
   const reasons = [];
   if (vitals.haemoglobin < hbMin) reasons.push(`Haemoglobin ${vitals.haemoglobin} below ${hbMin}`);
@@ -61,18 +76,26 @@ function checkIn(donorId, appointmentId, vitalsInput = {}) {
   if (vitals.weightKg < 45) reasons.push('Weight below 45 kg');
   const status = reasons.length ? 'deferred' : 'completed';
 
+  return { status, reasons, vitals, assumed, donor, appointment, hbMin };
+}
+
+function applyCheckIn(donorId, appointmentId, prepared) {
+  if (store.getDonations(donorId).some((visit) => visit.appointmentId === appointmentId)) throw new Error('Appointment already checked in');
+  const { status, reasons, vitals, assumed, donor, appointment, hbMin } = prepared;
   const visitNo = store.getDonations(donorId).length + 1;
   const visitId = `${donorId}-V${visitNo}`;
   const date = store.today();
-  store.addDonation({ id: visitId, donorId, date, status, deferralReason: reasons.join('; ') || null, centreId: appointment.centreId,
-    volumeMl: vitals.weightKg >= 55 ? 450 : 350, bagId: `BAG-${date.replace(/-/g, '').slice(2)}-${Math.floor(1000 + Math.random() * 9000)}`, vitals, confidentialFollowUp: false });
+  store.addDonation({ id: visitId, donorId, appointmentId, date, status, deferralReason: reasons.join('; ') || null, centreId: appointment.centreId,
+    volumeMl: vitals.weightKg >= 55 ? 450 : 350, bagId: `BAG-${date.replace(/-/g, '').slice(2)}-${Math.floor(1000 + Math.random() * 9000)}`, vitals,
+    demoSimulation: true, assumedVitals: assumed, confidentialFollowUp: false });
 
   // The free lab panel from the sample: carry forward the latest value per marker
   const labs = health.labSeries(donorId);
-  const panel = Object.values(labs).map((list) => list[list.length - 1]).filter((o) => o.key !== 'hb' && o.source !== 'uploaded_report');
+  const panel = Object.values(labs).map((list) => [...list].reverse().find((o) => o.source !== 'uploaded_report'))
+    .filter((o) => o && o.key !== 'hb');
   store.addObservations(donorId, [
-    { id: `OBS-${visitId}-hb`, donorId, visitId, code: '718-7', key: 'hb', name: 'Haemoglobin', value: vitals.haemoglobin, unit: 'g/dL', low: hbMin, high: null, date, source: 'donation_sample', labId: 'LAB-01' },
-    ...panel.map((o) => ({ ...o, id: `OBS-${visitId}-${o.key}`, visitId, date })),
+    { id: `OBS-${visitId}-hb`, donorId, visitId, code: '718-7', key: 'hb', name: 'Haemoglobin', value: vitals.haemoglobin, unit: 'g/dL', low: hbMin, high: null, date, source: 'donation_sample', labId: 'LAB-01', demoSimulation: true, assumed: assumed.includes('haemoglobin') },
+    ...panel.map((o) => ({ ...o, id: `OBS-${visitId}-${o.key}`, visitId, date, demoSimulation: true, carriedForward: true })),
   ]);
 
   let components = [];
@@ -83,7 +106,11 @@ function checkIn(donorId, appointmentId, vitalsInput = {}) {
   }
   appointment.status = status;
   store.session.carePlans.delete(donorId);
-  return { status, reasons, visitId, components: components.map((c) => c.kind), vitals };
+  return { status, reasons, visitId, components: components.map((c) => c.kind), vitals, demoSimulation: true, assumedVitals: assumed };
 }
 
-module.exports = { slots, book, checkIn };
+function checkIn(donorId, appointmentId, vitalsInput = {}, appointments = store.session.appointments.get(donorId) || []) {
+  return applyCheckIn(donorId, appointmentId, prepareCheckIn(donorId, appointmentId, vitalsInput, appointments));
+}
+
+module.exports = { slots, book, checkIn, prepareCheckIn, applyCheckIn };

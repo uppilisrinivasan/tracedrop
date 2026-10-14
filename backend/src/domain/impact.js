@@ -3,11 +3,10 @@
  * meant for the blood bank, hospitals, labs, government programmes and society.
  *
  * Privacy rules (enforced here, before anything leaves the server):
- *   - Recipients are shown only as an age band, sex and clinical context.
- *   - Hospitals are shown only as type + district, never by name.
+ *   - Recipient age band, sex, clinical context, hospital type/district and
+ *     outcome are released only in combinations shared by at least K=5
+ *     currently transfused, non-withheld units; sparse fields are generalised.
  *   - Exact use dates are rounded to the month.
- *   - A context/hospital combination is shown only if at least K=5 units in
- *     the whole dataset share it (k-anonymity); otherwise it is generalised.
  *   - Units from a donation with a confidential follow-up show "withheld for
  *     safety" with no reason.
  */
@@ -42,27 +41,70 @@ function month(isoDate) {
   return new Date(isoDate).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
 }
 
-// k-anonymity counts over the whole dataset
-const comboCounts = new Map();
-for (const c of store.allComponents()) {
-  if (!c.recipient) continue;
-  const key = `${c.recipient.contextKey}|${store.hospital(c.recipient.hospitalId).kind}|${store.hospital(c.recipient.hospitalId).district}`;
-  comboCounts.set(key, (comboCounts.get(key) || 0) + 1);
-}
+const GENERAL_PATIENT = 'Patient (age and sex not shared)';
+const GENERAL_CONTEXT = 'Treatment (details not shared)';
+const GENERAL_PLACE = 'A hospital in Karnataka';
+const GENERAL_OUTCOME = 'not_shared';
 
-function publicRecipient(c) {
-  if (!c.recipient) return null;
+function recipientFields(c) {
   const h = store.hospital(c.recipient.hospitalId);
-  const key = `${c.recipient.contextKey}|${h.kind}|${h.district}`;
-  const safe = (comboCounts.get(key) || 0) >= K_ANON;
   return {
     patient: `${ageBand(c.recipient.age)}, ${c.recipient.sex === 'F' ? 'female' : 'male'}`,
     context: c.recipient.context,
     contextKey: c.recipient.contextKey,
-    place: safe ? `${h.kind}, ${h.district}` : `A hospital in Karnataka`,
-    outcome: c.recipient.outcome,
-    generalised: !safe,
+    place: `${h.kind}, ${h.district}`,
+    outcome: c.events.some((e) => e.type === 'outcome' && e.date <= store.today()) ? c.recipient.outcome : GENERAL_OUTCOME,
   };
+}
+
+// Each candidate contains every recipient field the API releases. Removing a
+// dimension generalises both its displayed value and any machine-readable key.
+const RECIPIENT_LEVELS = [
+  ['patient', 'context', 'place', 'outcome'],
+  ['patient', 'context', 'place'],
+  ['patient', 'context'],
+  ['context'],
+  [],
+];
+
+function recipientKey(fields, level) {
+  return JSON.stringify(level.map((field) => fields[field]));
+}
+
+function visibleRecipients() {
+  const today = store.today();
+  const donations = new Map(store.allDonations().map((d) => [d.id, d]));
+  return store.allComponents().filter((c) => c.recipient && !donations.get(c.donationId)?.confidentialFollowUp
+    && c.events.some((e) => e.type === 'transfused' && e.date <= today));
+}
+
+function recipientGroups() {
+  let remaining = visibleRecipients().map((c) => ({ id: c.id, fields: recipientFields(c) }));
+  const released = new Map();
+  for (const level of RECIPIENT_LEVELS) {
+    const groups = new Map();
+    for (const entry of remaining) {
+      const key = recipientKey(entry.fields, level);
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(entry);
+    }
+    remaining = [];
+    for (const group of groups.values()) {
+      if (group.length < K_ANON) {
+        remaining.push(...group);
+      } else {
+        for (const entry of group) released.set(entry.id, {
+          patient: level.includes('patient') ? entry.fields.patient : GENERAL_PATIENT,
+          context: level.includes('context') ? entry.fields.context : GENERAL_CONTEXT,
+          contextKey: level.includes('context') ? entry.fields.contextKey : 'general',
+          place: level.includes('place') ? entry.fields.place : GENERAL_PLACE,
+          outcome: level.includes('outcome') ? entry.fields.outcome : GENERAL_OUTCOME,
+          generalised: level.length !== RECIPIENT_LEVELS[0].length,
+        });
+      }
+    }
+  }
+  return released; // Fewer than K even at the broadest level: suppress recipient.
 }
 
 const SHELF_DAYS = { PRBC: 42, PLT: 5, FFP: 365, CRYO: 365 };
@@ -99,7 +141,7 @@ function expiryReason(c) {
 }
 
 /** A component's journey as of the demo clock: later steps haven't happened yet. */
-function publicJourney(c, donation) {
+function publicJourney(c, donation, releasedRecipients = recipientGroups()) {
   const withheld = donation.confidentialFollowUp;
   const today = store.today();
   const happened = c.events.filter((e) => e.date <= today);
@@ -107,7 +149,10 @@ function publicJourney(c, donation) {
     ? happened.filter((e) => ['collected', 'separated', 'tested'].includes(e.type)).concat([{ type: 'withheld', date: happened[happened.length - 1].date }])
     : happened;
   const transfused = happened.some((e) => e.type === 'transfused');
-  const lastType = events[events.length - 1].type;
+  const recipient = withheld || !transfused ? null : releasedRecipients.get(c.id) || null;
+  // A generalised outcome must not be reconstructible from the event list.
+  const publicEvents = recipient?.outcome === GENERAL_OUTCOME ? events.filter((e) => e.type !== 'outcome') : events;
+  const lastType = publicEvents[publicEvents.length - 1].type;
   return {
     id: c.id,
     kind: c.kind,
@@ -117,8 +162,8 @@ function publicJourney(c, donation) {
     status: lastType,
     statusLabel: STAGE_LABELS[lastType],
     helped: ['transfused', 'outcome'].includes(lastType) || lastType === 'products_released',
-    events: events.map((e) => ({ type: e.type, label: STAGE_LABELS[e.type], when: ['transfused', 'outcome', 'issued'].includes(e.type) ? month(e.date) : e.date })),
-    recipient: withheld || !transfused ? null : publicRecipient(c),
+    events: publicEvents.map((e) => ({ type: e.type, label: STAGE_LABELS[e.type], when: ['transfused', 'outcome', 'issued'].includes(e.type) ? month(e.date) : e.date })),
+    recipient,
     fractionation: withheld ? null : c.fractionation,
     expiry: !withheld && lastType === 'expired' ? expiryReason(c) : null,
     withheld,
@@ -127,23 +172,25 @@ function publicJourney(c, donation) {
 
 function donorJourneys(donorId) {
   const donations = new Map(store.getDonations(donorId).map((d) => [d.id, d]));
+  const releasedRecipients = recipientGroups();
   return store.getComponents(donorId)
     .filter((c) => c.events.length && c.events[0].date <= store.today())
-    .map((c) => publicJourney(c, donations.get(c.donationId)));
+    .map((c) => publicJourney(c, donations.get(c.donationId), releasedRecipients));
 }
 
 /** Patients helped: one per transfused unit; plasma pools count as a share. */
 function summarise(journeys) {
-  const transfused = journeys.filter((j) => j.recipient);
+  const transfused = journeys.filter((j) => !j.withheld && j.events.some((e) => e.type === 'transfused'));
+  const disclosed = transfused.filter((j) => j.recipient);
   const fractions = journeys.filter((j) => j.fractionation && j.status === 'products_released');
   const plasmaShare = fractions.reduce((sum, j) => sum + (j.fractionation.albuminVials + j.fractionation.ivigVials), 0);
   const contexts = {};
-  for (const j of transfused) contexts[j.recipient.context] = (contexts[j.recipient.context] || 0) + 1;
+  for (const j of disclosed) contexts[j.recipient.context] = (contexts[j.recipient.context] || 0) + 1;
   return {
     components: journeys.length,
     patientsHelped: transfused.length,
     medicineDosesShare: Number(plasmaShare.toFixed(1)),
-    children: transfused.filter((j) => ['Newborn', 'Child', 'Teenager'].some((b) => j.recipient.patient.startsWith(b))).length,
+    children: disclosed.filter((j) => ['Newborn', 'Child', 'Teenager'].some((b) => j.recipient.patient.startsWith(b))).length,
     inProgress: journeys.filter((j) => ['stored', 'tested', 'separated', 'fractionation'].includes(j.status)).length,
     contexts: Object.entries(contexts).sort((a, b) => b[1] - a[1]).map(([context, count]) => ({ context, count })),
   };
@@ -156,20 +203,24 @@ function summarise(journeys) {
 function stakeholders(donorId) {
   const donor = store.getDonor(donorId);
   const visits = store.getDonations(donorId);
-  const completed = visits.filter((v) => v.status === 'completed');
+  const completed = visits.filter((v) => v.status === 'completed' && v.date <= store.today());
   const journeys = donorJourneys(donorId);
-  const transfused = journeys.filter((j) => j.recipient);
+  const transfused = journeys.filter((j) => !j.withheld && j.events.some((e) => e.type === 'transfused'));
+  const disclosed = transfused.filter((j) => j.recipient);
   const byKind = (k) => journeys.filter((j) => j.kind === k);
   const rareGroup = donor.bloodGroup.endsWith('-');
   const labTests = store.getObservations(donorId).length;
   const hospitalKinds = {};
-  for (const j of transfused) hospitalKinds[j.recipient.place] = (hospitalKinds[j.recipient.place] || 0) + 1;
+  for (const j of disclosed) {
+    const category = j.recipient.place === GENERAL_PLACE ? GENERAL_PLACE : j.recipient.place.split(', ')[0];
+    hospitalKinds[category] = (hospitalKinds[category] || 0) + 1;
+  }
   const ttiTests = completed.length * 5; // HIV, HBV, HCV, syphilis, malaria per unit
 
   return [
     {
       id: 'blood_bank', name: 'Blood centre', icon: 'droplet',
-      headline: `${completed.length} donations → ${journeys.length} components in stock`,
+      headline: `${completed.length} donations → ${journeys.length} components produced`,
       metrics: [
         { label: 'Units collected', value: completed.length },
         { label: 'Components produced', value: journeys.length },
@@ -181,13 +232,13 @@ function stakeholders(donorId) {
     },
     {
       id: 'hospitals', name: 'Hospitals', icon: 'hospital',
-      headline: `${transfused.length} patients treated across ${Object.keys(hospitalKinds).length} hospital types`,
+      headline: `${transfused.length} patients treated; ${Object.keys(hospitalKinds).length} disclosed hospital categories`,
       metrics: [
         { label: 'Units transfused', value: transfused.length },
-        { label: 'Surgeries supported', value: transfused.filter((j) => /surgery|accident/i.test(j.recipient.context)).length },
-        { label: 'Emergency / critical care', value: transfused.filter((j) => /accident|childbirth|dengue|burns/i.test(j.recipient.context)).length },
+        { label: 'Surgeries supported', value: disclosed.filter((j) => /surgery|accident/i.test(j.recipient.context)).length },
+        { label: 'Emergency / critical care', value: disclosed.filter((j) => /accident|childbirth|dengue|burns/i.test(j.recipient.context)).length },
       ],
-      story: 'Hospitals are shown only by type and district — never by name — so no patient can be identified.',
+      story: 'Hospital type and district are disclosed only when the full recipient combination meets the privacy threshold; otherwise the location is generalised.',
       drilldown: Object.entries(hospitalKinds).map(([label, value]) => ({ label, value })),
     },
     {
@@ -205,14 +256,14 @@ function stakeholders(donorId) {
       id: 'government', name: 'Government & public health', icon: 'landmark',
       headline: `Supports thalassaemia, maternal-health and dengue programmes`,
       metrics: [
-        { label: 'Thalassaemia transfusions', value: transfused.filter((j) => j.recipient.contextKey === 'thalassaemia').length },
-        { label: 'Mothers supported (childbirth)', value: transfused.filter((j) => j.recipient.contextKey === 'obstetric').length },
-        { label: 'Dengue patients (platelets)', value: transfused.filter((j) => j.recipient.contextKey === 'dengue').length },
+        { label: 'Thalassaemia transfusions', value: disclosed.filter((j) => j.recipient.contextKey === 'thalassaemia').length },
+        { label: 'Mothers supported (childbirth)', value: disclosed.filter((j) => j.recipient.contextKey === 'obstetric').length },
+        { label: 'Dengue patients (platelets)', value: disclosed.filter((j) => j.recipient.contextKey === 'dengue').length },
         { label: 'Anonymised health data points', value: labTests },
       ],
       story: 'Your anonymised screening data adds to district non-communicable-disease surveillance (blood pressure, diabetes, anaemia) without any personal identifiers.',
-      drilldown: [{ label: 'Free-blood programmes (thalassaemia)', value: transfused.filter((j) => j.recipient.contextKey === 'thalassaemia').length },
-        { label: 'Maternal health', value: transfused.filter((j) => j.recipient.contextKey === 'obstetric').length }],
+      drilldown: [{ label: 'Free-blood programmes (thalassaemia)', value: disclosed.filter((j) => j.recipient.contextKey === 'thalassaemia').length },
+        { label: 'Maternal health', value: disclosed.filter((j) => j.recipient.contextKey === 'obstetric').length }],
     },
     {
       id: 'society', name: 'Society', icon: 'users',

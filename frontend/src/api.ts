@@ -53,6 +53,7 @@ export interface LabPoint { id: string; date: string; value: number; unit: strin
 export interface HealthData {
   findings: Finding[];
   scores: { date: string; score: number; parts: ScorePart[] }[];
+  currentScore: { score: number; parts: ScorePart[] } | null;
   vitals: { date: string; status: string; systolic: number; diastolic: number; haemoglobin: number; weightKg: number; pulse: number }[];
   labs: Record<string, LabPoint[]>;
   eligibility: Eligibility;
@@ -117,7 +118,7 @@ export interface CopilotReply {
 }
 
 export interface Slot { id: string; centreId: string; centre: string; district: string; date: string; time: string }
-export interface Appointment extends Slot { status: string; eventId?: string | null; emailSent?: boolean; emailError?: string; checkInCode?: string; donorId?: string }
+export interface Appointment extends Slot { status: string; eventId?: string | null; emailSent?: boolean; emailError?: string; calendarError?: string | null; checkInCode?: string; donorId?: string }
 export interface BookingLocation { label: string; lat: number; lng: number; source: 'gps' | 'manual' }
 export interface BookingPreferences {
   days: string[];
@@ -182,7 +183,7 @@ export interface DropPlan {
 /** A visit Drop booked. Check-ups ('care') carry the doctor and clinic. */
 export interface DropBooking {
   id: string; kind: string; date: string; time: string; place: string;
-  slotId?: string; urgent?: boolean; clinic?: string; address?: string; phone?: string;
+  slotId?: string; urgent?: boolean; guided?: boolean; clinic?: string; address?: string; phone?: string;
   doctor?: string; speciality?: string; cost?: string; reason?: string; bring?: string[]; durationMinutes?: number;
 }
 /** Answering a Card that no longer exists (the server restarted, or it was already answered). */

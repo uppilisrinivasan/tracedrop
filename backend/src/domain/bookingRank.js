@@ -51,6 +51,7 @@ function candidates(donorId, preferences) {
     const iso = date.toISOString().slice(0, 10);
     if (preferences.dateTo && iso > preferences.dateTo) break;
     const weekday = date.getUTCDay();
+    if (preferences.days?.length && !preferences.days.includes(DAY_NAMES[weekday])) continue;
     for (const centre of store.institutions.bloodCentres) {
       const meta = schedule.centres[centre.id];
       if (!meta || meta.closedDays.includes(weekday)) continue;

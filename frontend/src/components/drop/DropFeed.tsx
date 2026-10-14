@@ -23,7 +23,7 @@ export function askDrop(question: string) {
   window.dispatchEvent(new CustomEvent('drop:ask', { detail: question }));
 }
 
-export default function DropFeed({ donorId, version, refresh, calmLine, storiesInChat = false, onDetails }: { donorId: string; version: number; refresh: () => void; calmLine: string; storiesInChat?: boolean; onDetails?: () => void }) {
+export default function DropFeed({ donorId, version, refresh, calmLine, storiesInChat = false, onDetails, onDonate }: { donorId: string; version: number; refresh: () => void; calmLine: string; storiesInChat?: boolean; onDetails?: () => void; onDonate?: () => void }) {
   const [view, setView] = useState<DropView | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -128,12 +128,16 @@ export default function DropFeed({ donorId, version, refresh, calmLine, storiesI
             <div key={b.id} className="drop-booking">
               <Icon name="calendar" size={16} />
               <span>
-                <b>{b.kind === 'donate' ? 'Donation' : `Check-up${b.doctor ? ` with ${b.doctor}` : ''}`}</b> · {fmtDay(b.date)} · {b.time}<br />
-                <span className="tiny muted">{b.kind === 'care' && b.clinic ? `${b.clinic}, ${b.address}` : b.place}</span>
-                {b.kind === 'care' && onDetails && <><br /><button className="drop-link" onClick={onDetails}>See details</button></>}
+                <b>{b.kind === 'donate' ? 'Demo donation booking' : `Demo check-up${b.doctor ? ` with fictional ${b.doctor}` : ''}`}</b> · {fmtDay(b.date)} · {b.time}<br />
+                <span className="tiny muted">{b.kind === 'care' && b.clinic ? `Fictional ${b.clinic}, ${b.address}` : b.place} · no centre or clinic reservation</span>
+                {b.kind === 'care' && onDetails && <><br /><button className="drop-link" onClick={onDetails}>See demo details</button></>}
               </span>
-              <button disabled={busy} onClick={() => run(api.dropCancelBooking(donorId, b.id, true), true)}>Change</button>
-              <button disabled={busy} onClick={() => run(api.dropCancelBooking(donorId, b.id, false), true)}>Cancel</button>
+              {b.kind === 'donate' && b.guided ? (
+                <button disabled={!onDonate} onClick={onDonate}>Manage in Donate</button>
+              ) : <>
+                <button disabled={busy} onClick={() => run(api.dropCancelBooking(donorId, b.id, true), true)}>Change demo booking</button>
+                <button disabled={busy} onClick={() => run(api.dropCancelBooking(donorId, b.id, false), true)}>Cancel demo booking</button>
+              </>}
             </div>
           ))}
         </div>

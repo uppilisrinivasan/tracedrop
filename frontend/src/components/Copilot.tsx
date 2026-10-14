@@ -114,6 +114,12 @@ export default function Copilot({ donorId, go, clientId, inline = false, top }: 
   const [turns, setTurns] = useState<Turn[]>(() => conversations.get(donorId)?.turns || []);
   const [history, setHistory] = useState<unknown[] | null>(() => conversations.get(donorId)?.history || null);
   useEffect(() => { conversations.set(donorId, { turns, history }); }, [donorId, turns, history]);
+  const historyRef = useRef<unknown[] | null>(history);
+  function recordLocal(userText: string, reply: string) {
+    const updated = [...(historyRef.current || []), { role: 'user', content: userText }, { role: 'assistant', content: reply }];
+    historyRef.current = updated;
+    setHistory(updated);
+  }
   useEffect(() => {
     turns.forEach((t) => t.actions?.forEach((a) => a.type === 'card' && a.cardId && chatCards.add(a.cardId)));
   }, [turns]);
@@ -137,6 +143,7 @@ export default function Copilot({ donorId, go, clientId, inline = false, top }: 
   function book(said?: string) {
     setOpen(true);
     setInput('');
+    if (said) recordLocal(said, "Let's book your donation. It takes about a minute.");
     setTurns((t) => [
       ...t.filter((x) => !x.booking),
       ...(said ? [{ role: 'user' as const, text: said }] : []),
@@ -153,9 +160,12 @@ export default function Copilot({ donorId, go, clientId, inline = false, top }: 
       chatCards.add(r.cardId);
       setView(r.view);
       changed();
+      if (said) recordLocal(said, text);
       setTurns((t) => [...t, { role: 'ai', text, actions: [{ type: 'card', cardId: r.cardId }] }]);
     } catch (e) {
-      setTurns((t) => [...t, { role: 'ai', text: `I couldn't load check-up times just now: ${(e as Error).message}` }]);
+      const errorText = `I couldn't load check-up times just now: ${(e as Error).message}`;
+      if (said) recordLocal(said, errorText);
+      setTurns((t) => [...t, { role: 'ai', text: errorText }]);
     }
   }
 
@@ -168,8 +178,9 @@ export default function Copilot({ donorId, go, clientId, inline = false, top }: 
     setTurns((t) => [...t, { role: 'user', text: message }]);
     setBusy(true);
     try {
-      const r = await api.copilot(donorId, message, history);
-      if (r.history) setHistory(r.history);
+      const r = await api.copilot(donorId, message, historyRef.current);
+      if (r.history) { historyRef.current = r.history; setHistory(r.history); }
+      else recordLocal(message, r.reply);
       r.actions.forEach((a) => a.type === 'card' && a.cardId && chatCards.add(a.cardId));
       setTurns((t) => [...t, { role: 'ai', text: r.reply, offline: r.offline, actions: r.actions }]);
       const nav = r.actions.find((a) => a.type === 'navigate');
@@ -179,7 +190,9 @@ export default function Copilot({ donorId, go, clientId, inline = false, top }: 
         changed();
       }
     } catch (e) {
-      setTurns((t) => [...t, { role: 'ai', text: `Sorry, something went wrong: ${(e as Error).message}` }]);
+      const errorText = `Sorry, something went wrong: ${(e as Error).message}`;
+      recordLocal(message, errorText);
+      setTurns((t) => [...t, { role: 'ai', text: errorText }]);
     } finally {
       setBusy(false);
     }

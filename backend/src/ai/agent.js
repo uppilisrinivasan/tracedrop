@@ -19,6 +19,7 @@ async function runAgent({ feature, system, messages, donorId, toolNames, maxToke
   const actions = [];
   let nudged = false;
   let retriedMalformed = false;
+  const partial = () => ({ text: '', steps, actions, messages: convo, incomplete: true });
 
   for (let i = 0; i < MAX_STEPS; i += 1) {
     let response;
@@ -40,14 +41,18 @@ async function runAgent({ feature, system, messages, donorId, toolNames, maxToke
           convo[convo.length - 1] = { ...last, content: [...last.content, { type: 'text', text: 'Now answer the donor in one or two short sentences, using these tool results.' }] };
           continue;
         }
-        return { text: '', steps, actions, messages: convo };
+        return partial();
       }
+      if (steps.length && !outputSchema) return partial();
       throw error;
     }
-    if (response.stop_reason === 'max_tokens') throw new llm.LLMUnavailable('Response cut off');
+    if (response.stop_reason === 'max_tokens') {
+      if (steps.length && !outputSchema) return partial();
+      throw new llm.LLMUnavailable('Response cut off');
+    }
 
     const result = outputSchema ? llm.submitted(response) : null;
-    if (result) return { result, steps, actions };
+    if (result) return { result: llm.structured(result, outputSchema), steps, actions };
 
     const toolUses = response.content.filter((b) => b.type === 'tool_use' && b.name !== llm.SUBMIT);
     if (response.stop_reason !== 'tool_use' || toolUses.length === 0) {
@@ -75,7 +80,7 @@ async function runAgent({ feature, system, messages, donorId, toolNames, maxToke
         isError = true;
       }
       steps.push({ tool: call.name, input: call.input, ms: Date.now() - started, summary: summarise(call.name, output) });
-      if (call.name === 'navigate') actions.push({ type: 'navigate', screen: call.input.screen, reason: call.input.reason });
+      if (call.name === 'navigate' && !output?.error) actions.push({ type: 'navigate', screen: call.input.screen, reason: call.input.reason });
       // Tools can put something on screen (a Drop Card, a chart, a memory line); the model only sees the facts
       let modelOutput = output;
       if (output && output._ui) {
@@ -87,6 +92,7 @@ async function runAgent({ feature, system, messages, donorId, toolNames, maxToke
     }));
     convo.push({ role: 'user', content: results });
   }
+  if (steps.length && !outputSchema) return partial();
   throw new llm.LLMUnavailable('Agent did not finish within the step limit');
 }
 

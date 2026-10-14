@@ -18,6 +18,8 @@ const has = (name) => (/s$/i.test(name) ? 'have' : 'has');
 const is = (name) => (/s$/i.test(name) ? 'are' : 'is');
 
 function healthLine(donorId) {
+  const urgent = health.findings(donorId).find((f) => f.severity === 'urgent');
+  if (urgent) return `${urgent.title}: ${urgent.detail}. Please see a doctor today.`;
   const view = drop.view(donorId);
   const bp = view.readings.filter((r) => r.marker === 'bp');
   const goal = (view.plan?.goals || []).find((g) => g.marker === 'bp');

@@ -77,7 +77,7 @@ function create(donorId) {
   };
   if (st.plan && !st.plan.nextCheckin && st.plan.goals?.[0]) st.plan.nextCheckin = { date: addDays(today, CHECKIN_DAYS), marker: st.plan.goals[0].marker };
   for (const e of s.earlier || []) {
-    st.cards.push({ id: id('c'), type: e.type, variant: e.type, status: 'answered', fresh: false, receipt: e.receipt, answeredOn: e.date, created: tickOf(e.date), createdOn: e.date, data: {} });
+    st.cards.push({ id: id('c'), type: e.type, variant: e.type, status: 'answered', fresh: false, receipt: e.type === 'slots' ? `Demo history: ${e.receipt}. No real centre reservation was made.` : e.receipt, answeredOn: e.date, created: tickOf(e.date), createdOn: e.date, data: {} });
   }
   for (const o of s.open || []) openFromSeed(st, o);
   st.cards.filter((c) => c.status === 'open').forEach((c) => { c.created = tickOf(today); c.createdOn = today; });
@@ -361,7 +361,6 @@ function planFindings(donorId) {
 const CLINIC = {
   place: 'Ayushman Arogya Mandir',
   address: '8th Cross Road, Malleshwaram',
-  phone: '080 2334 5521',
   day: { doctor: 'Dr. Kavya Rao', speciality: 'General physician' },
   evening: { doctor: 'Dr. Arvind Shetty', speciality: 'Family medicine' },
 };
@@ -373,8 +372,8 @@ function careDetails(st, time) {
   const who = time >= '17:00' ? CLINIC.evening : CLINIC.day;
   const reasons = health.findings(st.donorId).filter((f) => f.severity !== 'watch').slice(0, 2).map((f) => lcFirst(f.title));
   return {
-    place: `${CLINIC.place} (free), near you`, clinic: CLINIC.place, address: `${CLINIC.address}, ${district}`, phone: CLINIC.phone,
-    doctor: who.doctor, speciality: who.speciality, cost: 'Free',
+    place: `${CLINIC.place} (demo only)`, clinic: CLINIC.place, address: `${CLINIC.address}, ${district}`,
+    doctor: who.doctor, speciality: who.speciality, cost: 'Example free visit',
     reason: reasons.length ? `Review of ${reasons.join(' and ')}` : 'General health check-up',
     bring: BRING, durationMinutes: 20,
   };
@@ -407,7 +406,7 @@ const slotLabel = (s) => `${fmt(s.date)} · ${s.time}`;
 function label(c) {
   return {
     'results:results': 'Results', 'results:plan': 'Your Plan', 'results:goal': 'Goal reached', 'urgent:urgent': 'Urgent',
-    'impact:impact': 'Impact', 'slots:donate': 'Donate', 'slots:care': 'Free check-up', 'checkin:bp': 'Check-in · BP goal',
+    'impact:impact': 'Impact', 'slots:donate': 'Demo donation slots', 'slots:care': 'Demo check-up', 'checkin:bp': 'Check-in · BP goal',
     'checkin:hb': 'Check-in · Hb goal', 'checkin:visit': 'Check-in', 'reminder:setup': 'Reminder', 'reminder:due': `Reminder · ${time12(c.data?.time || '21:00')}`,
     'report:week': 'Weekly report', 'report:month': 'Monthly report',
   }[`${c.type}:${c.variant}`] || c.type;
@@ -443,8 +442,8 @@ function words(st, c) {
       const others = health.findings(donorId).filter((f) => f.severity === 'watch' && f.concept !== 'hypertension').map((f) => lcFirst(f.title));
       if (!acts.length) return { text: `Your results from ${fmt(visit.date)} are in. All in the healthy range${others.length ? `, apart from ${others.join(' and ')} to watch` : ''}. Nothing to do.`, main: { label: 'Got it', value: 'ok' } };
       return {
-        text: `Your results from ${fmt(visit.date)} are in. BP ${visit.vitals.systolic}/${visit.vitals.diastolic}${rising ? `, up for the third donation in a row (${series.join(', ')})` : ''}. ${acts.length > 1 ? `Also: ${acts.filter((f) => f.concept !== 'hypertension').map((f) => lcFirst(f.title)).join(', ')}. ` : ''}Nothing scary, but worth a free check-up. Want me to book one?`,
-        main: { label: 'Book a free check-up', value: 'book' },
+        text: `Your results from ${fmt(visit.date)} are in. BP ${visit.vitals.systolic}/${visit.vitals.diastolic}${rising ? `, up for the third donation in a row (${series.join(', ')})` : ''}. ${acts.length > 1 ? `Also: ${acts.filter((f) => f.concept !== 'hypertension').map((f) => lcFirst(f.title)).join(', ')}. ` : ''}Worth discussing with a real clinician. Want to try demo check-up slots? No clinic will be contacted.`,
+        main: { label: 'Try demo check-up slots', value: 'book' },
         chips: [{ label: 'Explain my results', value: 'explain', ask: 'Can you explain my latest results?' }],
       };
     }
@@ -453,14 +452,14 @@ function words(st, c) {
       return { text: `Your Plan is ready: ${p.goals.map((g) => g.label).join('; ')}, plus ${p.activity.label.toLowerCase()}.`, main: { label: 'Save my Plan', value: 'save' } };
     }
     case 'results:goal': {
-      if (d.marker === 'hb') return { text: `Hb ${d.value}. You did it: that's above ${d.target}, so you can donate again.`, main: { label: 'Book a slot', value: 'book' }, out: { label: 'Later', value: 'ok' } };
+      if (d.marker === 'hb') return { text: `Hb ${d.value}. You did it: that's above ${d.target}, so you can donate again.`, main: { label: 'Try demo slots', value: 'book' }, out: { label: 'Later', value: 'ok' } };
       return { text: `BP ${d.s}/${d.d}. You hit your goal of under ${BP_GOAL.s}/${BP_GOAL.d}. Your next donation will confirm it.`, main: { label: 'Nice', value: 'ok' } };
     }
     case 'urgent:urgent': {
       const f = health.findings(donorId).find((x) => x.id === d.findingId) || { detail: '' };
       return {
-        text: `${f.title}: ${f.detail}${d.date ? ` on ${fmt(d.date)}` : ''}. Please see a doctor today. Free care near you:`,
-        chips: [...careSlots(st, { urgent: true }).map((s) => ({ label: slotLabel(s), value: { slotId: s.id } })), { label: 'Call the clinic', value: 'call' }],
+        text: `${f.title}: ${f.detail}${d.date ? ` on ${fmt(d.date)}` : ''}. Please seek real medical care today; these example times are not clinic appointments.`,
+        chips: [...careSlots(st, { urgent: true }).map((s) => ({ label: `Demo ${slotLabel(s)}`, value: { slotId: s.id } })), { label: 'I will seek real care', value: 'call' }],
       };
     }
     case 'slots:care': {
@@ -468,8 +467,8 @@ function words(st, c) {
       const saturdays = st.memory.some((m) => /saturday/i.test(m.text));
       const who = evenings ? CLINIC.evening : CLINIC.day;
       return {
-        text: `Free check-up with ${who.doctor} (${who.speciality}) at ${CLINIC.place}, ${CLINIC.address}. ${evenings ? 'Weekday evenings:' : saturdays ? 'These suit your Saturdays:' : 'Next free slots:'}`,
-        chips: [...careSlots(st).map((s) => ({ label: slotLabel(s), value: { slotId: s.id } })), ...(evenings ? [] : [{ label: 'Weekday evenings instead', value: 'evenings' }])],
+        text: `Demo check-up options with fictional ${who.doctor} (${who.speciality}) at fictional ${CLINIC.place}, ${CLINIC.address}. No real clinic is reserved. ${evenings ? 'Weekday evenings:' : saturdays ? 'These suit your Saturdays:' : 'Example slots:'}`,
+        chips: [...careSlots(st).map((s) => ({ label: `Demo ${slotLabel(s)}`, value: { slotId: s.id } })), ...(evenings ? [] : [{ label: 'Weekday evenings instead', value: 'evenings' }])],
       };
     }
     case 'slots:donate': {
@@ -477,15 +476,15 @@ function words(st, c) {
       const shortage = d.reason === 'shortage';
       const from = d.from && d.from > store.today() ? d.from : null;
       if (hi) {
-        return { text: `आप फिर से रक्तदान कर सकते हैं। कौन-सा समय ठीक रहेगा?`, chips: slots.map((s) => ({ label: slotLabel(s), value: { slotId: s.id } })), label: 'रक्तदान' };
+        return { text: `डेमो: आप फिर से रक्तदान कर सकते हैं। कौन-सा समय ठीक रहेगा? कोई वास्तविक केंद्र बुक नहीं होता।`, chips: slots.map((s) => ({ label: `Demo ${slotLabel(s)}`, value: { slotId: s.id } })), label: 'रक्तदान' };
       }
       return {
-        text: `${shortage ? `${donor.bloodGroup} is running short at ${slots[0]?.centre || 'your blood centre'}. ` : ''}${from ? `You can donate from ${fmt(from)}.` : 'You can donate now.'} Book a slot?`,
-        chips: slots.map((s) => ({ label: `${slotLabel(s)} · ${s.centre.replace(' Blood Centre', '').replace(' Community Blood Bank', '')}`, value: { slotId: s.id } })),
+        text: `${shortage ? `Demo shortage of ${donor.bloodGroup} at ${slots[0]?.centre || 'the example blood centre'}. ` : ''}${from ? `You can donate from ${fmt(from)}.` : 'You can donate now.'} Try a demo slot? It does not reserve a place at a real centre.`,
+        chips: slots.map((s) => ({ label: `Demo ${slotLabel(s)} · ${s.centre.replace(' Blood Centre', '').replace(' Community Blood Bank', '')}`, value: { slotId: s.id } })),
       };
     }
     case 'checkin:visit':
-      return { text: 'How did the check-up go? Did the doctor start you on anything?', chips: [{ label: 'Started a tablet', value: 'tablet' }, { label: 'No tablet, just walking', value: 'walking' }, { label: "Didn't go", value: 'missed' }] };
+      return { text: 'How did the demo check-up go? If you saw a real clinician, did they start you on anything?', chips: [{ label: 'Started a tablet', value: 'tablet' }, { label: 'No tablet, just walking', value: 'walking' }, { label: "Didn't go", value: 'missed' }] };
     case 'checkin:bp': {
       const last = latestReading(st, 'bp') || lastVisitBp(donorId);
       return { text: `Got a BP reading this week? A pharmacy machine is fine. Last: ${last.s}/${last.d}.`, wheel: { kind: 'bp', s: last.s, d: last.d }, main: { label: 'Save reading', value: 'wheel' }, out: { label: 'No reading this week', value: 'none' } };
@@ -559,7 +558,7 @@ function answer(donorId, cardId, value) {
       done(`${c.variant === 'week' ? 'Weekly' : 'Monthly'} report seen`);
       break;
     case 'results:results':
-      if (value === 'book') { handOff('Results seen · chose a free check-up'); pushCard(st, 'slots', 'care', { purpose: 'care' }); } else done('Results seen · in Health');
+      if (value === 'book') { handOff('Results seen · chose demo check-up options'); pushCard(st, 'slots', 'care', { purpose: 'care' }); } else done('Results seen · in Health');
       break;
     case 'results:plan': {
       st.plan = draftPlan(st);
@@ -571,7 +570,7 @@ function answer(donorId, cardId, value) {
     case 'results:goal':
       // Goal reached: Drop keeps an eye on it monthly instead of every two weeks
       if (st.plan?.nextCheckin) st.plan.nextCheckin = { date: addDays(today, 28), marker: st.plan.nextCheckin.marker };
-      if (value === 'book') { handOff('Goal reached · chose a donation slot'); pushCard(st, 'slots', 'donate', { purpose: 'donate' }); } else done('Goal reached · in your Plan');
+      if (value === 'book') { handOff('Goal reached · chose a demo donation slot'); pushCard(st, 'slots', 'donate', { purpose: 'donate' }); } else done('Goal reached · in your Plan');
       break;
     case 'slots:care':
       if (value === 'evenings') {
@@ -584,23 +583,23 @@ function answer(donorId, cardId, value) {
         const booking = { ...slot, id: id('b'), kind: 'care', slotId: slot.id, bookedOn: today };
         st.bookings.push(booking);
         addEvent(st, { key: `postvisit:${booking.id}`, kind: 'postvisit', at: addDays(slot.date, 1), prompted: true, data: { bookingId: booking.id } });
-        done(`Booked ${slotLabel(slot)} with ${slot.doctor} · ${slot.clinic}`);
+        done(`Booked ${slotLabel(slot)} in this demo only with fictional ${slot.doctor} · ${slot.clinic}. No clinic reservation was made.`);
       }
       break;
     case 'slots:donate': {
       const appointment = donation.book(donorId, { slotId: value?.slotId });
       effects.push({ appointment: appointment.id });
-      st.bookings.push({ id: appointment.id, kind: 'donate', date: appointment.date, time: appointment.time, place: appointment.centre });
-      done(`Booked to donate: ${slotLabel(appointment)} · ${appointment.centre}`);
+      st.bookings.push({ id: appointment.id, kind: 'donate', guided: false, date: appointment.date, time: appointment.time, place: appointment.centre });
+      done(`Demo booking to donate: ${slotLabel(appointment)} · ${appointment.centre}. Saved in this demo session; no centre reservation was made.`);
       break;
     }
     case 'urgent:urgent':
-      if (value === 'call') done('Calling the clinic…');
+      if (value === 'call') done('Demo card acknowledged. No clinic was called; please seek real medical care today.');
       else {
         const slot = careSlots(st, { urgent: true }).find((s) => s.id === value?.slotId);
         if (!slot) throw new Error('That slot is not available');
         st.bookings.push({ ...slot, id: id('b'), kind: 'care', slotId: slot.id, bookedOn: today, urgent: true });
-        done(`Booked ${slotLabel(slot)} with ${slot.doctor} · please go today`);
+        done(`Booked ${slotLabel(slot)} in this demo only with fictional ${slot.doctor}. No clinic reservation was made; please seek real care today.`);
       }
       break;
     case 'checkin:visit':
@@ -611,7 +610,7 @@ function answer(donorId, cardId, value) {
         done('Saved to your Plan: started a BP tablet');
       } else if (value === 'missed') {
         pushCard(st, 'slots', 'care', { purpose: 'care' });
-        handOff("Didn't make the check-up · picking a new time");
+        handOff("Demo check-up marked missed · choosing another example time");
       } else {
         if (st.plan) st.plan.nextCheckin = { date: addDays(today, CHECKIN_DAYS), marker: 'bp' };
         done('Saved to your Plan: walking, no tablet');
@@ -696,6 +695,7 @@ function cancelBooking(donorId, bookingId, { reschedule = false } = {}) {
   const st = get(donorId);
   const b = st.bookings.find((x) => x.id === bookingId);
   if (!b) throw new Error('Booking not found');
+  if (b.kind === 'donate' && b.guided) throw new Error('To change or cancel this guided demo donation booking, use Donate. Any connected Google Calendar event must be handled there.');
   st.bookings = st.bookings.filter((x) => x.id !== bookingId);
   // The "How did it go?" check-in for a cancelled visit never comes
   st.events.filter((e) => e.key === `postvisit:${bookingId}` && e.status === 'pending').forEach((e) => { e.status = 'cancelled'; });
@@ -708,7 +708,7 @@ function cancelBooking(donorId, bookingId, { reschedule = false } = {}) {
     const existing = st.cards.find((c) => c.status === 'open' && c.type === 'slots' && c.variant === (b.kind === 'donate' ? 'donate' : 'care'));
     if (!existing) pushCard(st, 'slots', b.kind === 'donate' ? 'donate' : 'care', { purpose: b.kind === 'donate' ? 'donate' : 'care' });
   }
-  log(st, `${reschedule ? 'Changing' : 'Cancelled'} ${b.kind === 'donate' ? 'donation' : 'check-up'} on ${fmt(b.date)} ${b.time}.`);
+  log(st, `${reschedule ? 'Changing' : 'Cancelled'} demo ${b.kind === 'donate' ? 'donation booking' : 'check-up'} on ${fmt(b.date)} ${b.time}; no external reservation changed.`);
   return view(donorId);
 }
 
@@ -716,8 +716,8 @@ function cancelBooking(donorId, bookingId, { reschedule = false } = {}) {
 function recordBooking(donorId, appointment) {
   const st = get(donorId);
   if (st.bookings.some((x) => x.id === appointment.id)) return;
-  st.bookings.push({ id: appointment.id, kind: 'donate', date: appointment.date, time: appointment.time, place: appointment.centre });
-  log(st, `Booked to donate from the booking chat: ${slotLabel(appointment)} · ${appointment.centre}.`);
+  st.bookings.push({ id: appointment.id, kind: 'donate', guided: true, date: appointment.date, time: appointment.time, place: appointment.centre });
+  log(st, `Guided demo donation booking recorded: ${slotLabel(appointment)} · ${appointment.centre}. Use Donate to change or cancel it.`);
 }
 
 function forgetBooking(donorId, bookingId) {
@@ -816,11 +816,13 @@ function cardView(st, c) {
   const w = words(st, c);
   // AI wording is used only while it was written for exactly what the rules say now
   const ai = Boolean(c.aiText) && c.aiFor === signature(w);
-  const l = (ai && c.aiLabels) || {};
+  // Keep simulation warnings and action labels intact even when the AI rewrites other cards.
+  const demoBookingCard = c.type === 'slots' || c.type === 'urgent';
+  const l = (!demoBookingCard && ai && c.aiLabels) || {};
   const relabel = (a, name) => (a && name ? { ...a, label: name } : a || null);
   return {
     id: c.id, type: c.type, variant: c.variant, label: w.label || label(c), urgent: c.urgent, counted: c.counted, createdOn: c.createdOn,
-    text: ai ? c.aiText : w.text, ruleText: w.text, byAi: ai,
+    text: demoBookingCard ? w.text : ai ? c.aiText : w.text, ruleText: w.text, byAi: ai && !demoBookingCard,
     main: relabel(w.main, l.main), out: relabel(w.out, l.out),
     chips: (w.chips || []).map((chip, i) => relabel(chip, l.chips?.[i])), wheel: w.wheel || null,
     upload: Boolean(w.upload), story: w.story || null, snoozes: c.snoozes,

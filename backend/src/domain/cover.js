@@ -102,7 +102,7 @@ function evaluate(donorId) {
   const policy = store.getPolicy(donor.policyId);
   const base = policy.baseCover;
   const history = health.scoreHistory(donorId);
-  const current = history.length ? history[history.length - 1].score : 60;
+  const current = health.currentScore(donorId)?.score ?? 60;
   const yearAgo = health.addDays(store.today(), -365);
   const recentVisits = store.getDonations(donorId).filter((v) => v.date >= yearAgo);
 
@@ -174,6 +174,7 @@ function evaluate(donorId) {
 
 /** What-if: cover if the score changed by `delta` points. */
 function simulate(donorId, newScore) {
+  if (!Number.isFinite(newScore) || newScore < 0 || newScore > 100) throw new RangeError('Health score must be between 0 and 100');
   const donor = store.getDonor(donorId);
   const base = store.getPolicy(donor.policyId).baseCover;
   return { score: newScore, cover: ladderStep(headroom(newScore, base), base), relativeRisk: Number(relativeRisk(newScore).toFixed(2)) };

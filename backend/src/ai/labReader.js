@@ -101,15 +101,31 @@ function validate(donorId, parsed) {
 }
 
 /** Save confirmed results into the donor's timeline. */
-function save(donorId, { reportDate, labName, results }) {
-  const date = /^\d{4}-\d{2}-\d{2}$/.test(reportDate || '') ? reportDate : store.today();
+function save(donorId, { reportDate, labName, results } = {}) {
+  // An undated report is recorded at the demo clock's today; a supplied date
+  // must be a real calendar date, not a future result in this demo timeline.
+  const today = store.today();
+  const date = reportDate == null || reportDate === '' ? today : reportDate;
+  if (typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)
+    || !Number.isFinite(Date.parse(`${date}T00:00:00Z`))
+    || new Date(`${date}T00:00:00Z`).toISOString().slice(0, 10) !== date
+    || date < '1900-01-01' || date > today) throw new Error('Report date must be a real date no later than today');
+  if (!Array.isArray(results)) throw new Error('Results must be an array');
+  // The confirmation payload is untrusted: never rely on its plausible flag,
+  // canonical name, unit or LOINC code supplied by the browser.
+  for (const r of results) {
+    if (!r || !Object.hasOwn(MARKERS, r.marker) || typeof r.value !== 'number' || !Number.isFinite(r.value)) {
+      throw new Error('Each result needs a known marker and finite numeric value');
+    }
+  }
+  const accepted = results.filter((r) => r.value >= MARKERS[r.marker].range[0] && r.value <= MARKERS[r.marker].range[1]);
   const visitId = `EXT-${Date.now()}`;
-  const observations = results.filter((r) => r.plausible !== false && MARKERS[r.marker]).map((r) => ({
+  const observations = accepted.map((r) => ({
     id: `OBS-${visitId}-${r.marker}`, donorId, visitId, code: MARKERS[r.marker].loinc, key: r.marker,
     name: MARKERS[r.marker].name, value: r.value, unit: MARKERS[r.marker].unit, low: null, high: null,
     date, source: 'uploaded_report', labId: labName || 'External lab',
   }));
-  store.addObservations(donorId, observations);
+  if (observations.length) store.addObservations(donorId, observations);
   return { saved: observations.length, date };
 }
 

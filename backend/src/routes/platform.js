@@ -13,16 +13,13 @@ const llm = require('../ai/llm');
 
 const router = express.Router();
 
-let networkCache = null;
-store.onReset(() => { networkCache = null; });
-
 function network() {
-  if (networkCache) return networkCache;
+  const today = store.today();
   const donors = store.allDonors();
   const donations = store.allDonations();
-  const completed = donations.filter((d) => d.status === 'completed');
-  const components = store.allComponents();
-  const used = components.filter((c) => c.recipient);
+  const completed = donations.filter((d) => d.status === 'completed' && d.date <= today);
+  const components = store.allComponents().filter((c) => c.events[0]?.date <= today);
+  const used = components.filter((c) => c.recipient && c.events.some((e) => e.type === 'transfused' && e.date <= today));
   const byContext = {};
   const byHospitalKind = {};
   const byKind = {};
@@ -32,7 +29,7 @@ function network() {
     const h = store.hospital(c.recipient.hospitalId);
     byHospitalKind[h.kind] = (byHospitalKind[h.kind] || 0) + 1;
   }
-  const expired = components.filter((c) => c.events.some((e) => e.type === 'expired')).length;
+  const expired = components.filter((c) => c.events.some((e) => e.type === 'expired' && e.date <= today)).length;
 
   // Population health signal from donation-sample screening (anonymised)
   let elevatedBp = 0;
@@ -46,17 +43,17 @@ function network() {
     if (f.includes('HB_LOW')) lowHb += 1;
     if (cover.evaluate(d.id).currentCover > store.getPolicy(d.policyId).baseCover) coverUp += 1;
   }
-  const pct = (n) => Math.round((n / donors.length) * 100);
-  const repeat = donors.filter((d) => store.getDonations(d.id).filter((v) => v.status === 'completed').length >= 2).length;
+  const pct = (n) => donors.length ? Math.round((n / donors.length) * 100) : 0;
+  const repeat = donors.filter((d) => store.getDonations(d.id).filter((v) => v.status === 'completed' && v.date <= today).length >= 2).length;
 
-  networkCache = {
-    asOf: store.today(),
+  return {
+    asOf: today,
     donors: donors.length,
     donations: completed.length,
-    deferrals: donations.length - completed.length,
+    deferrals: donations.filter((d) => d.status !== 'completed' && d.date <= today).length,
     components: components.length,
     patientsHelped: used.length,
-    wastage: Math.round((expired / components.length) * 100),
+    wastage: components.length ? Math.round((expired / components.length) * 100) : 0,
     repeatDonorRate: pct(repeat),
     byKind: Object.entries(byKind).map(([kind, count]) => ({ kind, name: impact.COMPONENTS[kind].name, count })),
     byContext: Object.entries(byContext).sort((a, b) => b[1] - a[1]).map(([context, count]) => ({ context, count })),
@@ -64,7 +61,6 @@ function network() {
     screening: { elevatedBp: pct(elevatedBp), prediabetes: pct(prediabetes), lowHb: pct(lowHb), donorsWithCoverIncrease: pct(coverUp) },
     labTests: donors.reduce((s, d) => s + store.getObservations(d.id).length, 0) + completed.length * 5,
   };
-  return networkCache;
 }
 
 router.get('/network', (req, res) => res.json({ success: true, data: network() }));

@@ -55,7 +55,7 @@ const PROMPTS = {
 function normalise(raw) {
   const prefs = raw && typeof raw === 'object' ? raw : {};
   return {
-    days: Array.isArray(prefs.days) ? prefs.days.filter((day) => typeof day === 'string') : [],
+    days: Array.isArray(prefs.days) ? prefs.days.filter((day) => ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'].includes(day)) : [],
     timeWindows: Array.isArray(prefs.timeWindows) ? prefs.timeWindows.filter((item) => ['morning', 'afternoon', 'evening'].includes(item)) : [],
     maxDistanceKm: [5, 15, 30].includes(Number(prefs.maxDistanceKm)) ? Number(prefs.maxDistanceKm) : null,
     avoidHolidays: typeof prefs.avoidHolidays === 'boolean' ? prefs.avoidHolidays : null,

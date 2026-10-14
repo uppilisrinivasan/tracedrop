@@ -85,9 +85,11 @@ function findings(donorId) {
   // Haemoglobin and iron
   const hbMin = donor.sex === 'F' ? 12.5 : 13.0;
   const ferritin = latest(labs, 'ferritin');
-  // A lab report newer than the last visit (e.g. an uploaded one) gives the current Hb
+  // An external report on or after the last visit gives the current Hb;
+  // same-day donation samples still defer to the measured screening vital.
   const labHb = latest(labs, 'hb');
-  const hb = labHb && labHb.date > last.date ? { value: labHb.value, date: labHb.date } : { value: last.haemoglobin, date: last.date };
+  const hb = labHb && (labHb.date > last.date || (labHb.date === last.date && labHb.source === 'uploaded_report'))
+    ? { value: labHb.value, date: labHb.date } : { value: last.haemoglobin, date: last.date };
   if (hb.value < 7) {
     add({ id: 'HB_SEVERE', title: 'Severe anaemia', severity: 'urgent', protocolId: 'HB-SEV', concept: 'anemia',
           detail: `Haemoglobin ${hb.value} g/dL`, evidence: [`Hb ${hb.value} on ${hb.date}`] });
@@ -185,6 +187,20 @@ function scoreHistory(donorId) {
   });
 }
 
+/** Current score uses the newest available labs, including external reports, without
+ * rewriting the sample-based score recorded for each past donation. */
+function currentScore(donorId) {
+  const donor = store.getDonor(donorId);
+  const last = vitalsSeries(donorId).slice(-1)[0];
+  if (!last) return null;
+  const labs = labSeries(donorId);
+  const values = Object.fromEntries(Object.entries(labs).map(([key, list]) => [key, list[list.length - 1].value]));
+  const hb = latest(labs, 'hb');
+  const visit = hb && hb.source === 'uploaded_report' && hb.date >= last.date
+    ? { ...last, haemoglobin: hb.value } : last;
+  return scoreAt(donor, visit, values);
+}
+
 /** Whole-blood donation eligibility under NBTC (India) rules. */
 function eligibility(donorId) {
   const donor = store.getDonor(donorId);
@@ -204,4 +220,4 @@ function eligibility(donorId) {
   };
 }
 
-module.exports = { RESULT_KEYS, findings, scoreHistory, eligibility, labSeries, vitalsSeries, bmi, daysBetween, addDays };
+module.exports = { RESULT_KEYS, findings, scoreHistory, currentScore, eligibility, labSeries, vitalsSeries, bmi, daysBetween, addDays };

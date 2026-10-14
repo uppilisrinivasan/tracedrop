@@ -1,8 +1,8 @@
 /**
  * Donor concerns about what happened to their blood (wasted unit, wrong tracking,
- * privacy, treatment at the centre). Each concern has a named owner and a deadline;
- * when the deadline passes the donor can escalate to the next authority, so someone
- * is always answerable. Dates follow the demo clock.
+ * privacy, treatment at the centre). This is an in-process walkthrough of a
+ * possible response and escalation path; no centre or authority is contacted.
+ * Dates follow the demo clock.
  */
 
 const store = require('../data/store');
@@ -15,7 +15,7 @@ const CATEGORIES = {
   conduct: 'How I was treated at the centre',
 };
 
-// Who answers at each level, and how many days they have
+// Example owners and timelines for the demo ladder; not actual assignments
 const LADDER = [
   { owner: 'Medical Officer in charge, blood centre', ackDays: 1, dueDays: 7 },
   { owner: 'State Blood Transfusion Council', ackDays: 2, dueDays: 15 },
@@ -31,13 +31,13 @@ const addDays = (iso, days) => new Date(Date.parse(`${iso}T00:00:00Z`) + days * 
 function centreAnswer(c) {
   const unit = c.unit;
   if (c.category === 'wasted' && unit?.expiry) {
-    return `We checked unit ${unit.id}. ${unit.expiry.cause.join(' ')} We are reviewing how we time donation drives for ${unit.kind === 'PLT' ? 'platelets' : 'this blood group'}.`;
+    return `Demo-generated example, not a centre response: Synthetic unit ${unit.id} shows: ${unit.expiry.cause.join(' ')} A centre could review how it times drives for ${unit.kind === 'PLT' ? 'platelets' : 'this blood group'}.`;
   }
   if (c.category === 'tracking' && unit) {
-    return `We checked unit ${unit.id} against our register. The steps shown in TraceDrop match our records up to "${unit.statusLabel}". If something still looks wrong, tell us which step.`;
+    return `Demo-generated example, not a centre response: The simulated timeline for unit ${unit.id} shows "${unit.statusLabel}". No centre register was checked. A real discrepancy needs a direct enquiry with the centre.`;
   }
-  if (c.category === 'privacy') return 'Recipients and hospitals are never named, and dates of use are rounded to the month. Your results are shared with your insurer only as a score, and only if you allowed it.';
-  return 'We have spoken to the staff on duty and noted your feedback. The centre\'s donor care lead will call you within two days.';
+  if (c.category === 'privacy') return 'Demo-generated example, not a centre response: This walkthrough does not share your health score or results with an insurer. Review the app\'s privacy information and contact the relevant organisation directly for a real privacy concern.';
+  return 'Demo-generated example, not a centre response: Your feedback is recorded only in this demo session. No staff were contacted and no call has been requested. Please contact the centre directly to report real treatment concerns.';
 }
 
 /** Steps that have happened by the demo date, plus who owns it now and by when. */
@@ -47,11 +47,11 @@ function view(c) {
   const steps = [...c.log];
   const add = (step) => { if (!steps.some((s) => s.text === step.text)) steps.push(step); };
   const ackOn = addDays(c.levelSince, level.ackDays);
-  if (today >= ackOn) add({ on: ackOn, text: `Acknowledged by ${level.owner}` });
-  // The blood centre answers on day 3; higher levels answer on their own record (not simulated)
+  if (today >= ackOn) add({ on: ackOn, text: `Demo-generated acknowledgement for example ${level.owner}; no acknowledgement was sent or received.` });
+  // An example centre reply appears on demo day 3; no real response is received.
   const answerOn = c.level === 0 ? addDays(c.levelSince, 3) : null;
   const answered = Boolean(c.status === 'open' && answerOn && today >= answerOn);
-  if (answered) add({ on: answerOn, text: `Answer from ${level.owner}: ${centreAnswer(c)}` });
+  if (answered) add({ on: answerOn, text: `Answer from demo generator (not ${level.owner}): ${centreAnswer(c)}` });
   const dueOn = addDays(c.levelSince, level.dueDays);
   const overdue = c.status === 'open' && !answered && today > dueOn;
   return {
@@ -94,7 +94,7 @@ function raise(donorId, { category, details, unitId }) {
   const c = {
     id: `CN-${String(seq++).padStart(4, '0')}`,
     donorId, category, details: text, unit, createdOn: today, level: 0, levelSince: today, status: 'open',
-    log: [{ on: today, text: `You raised this. Sent to ${LADDER[0].owner}.` }],
+    log: [{ on: today, text: `Demo concern saved in this session. Example owner: ${LADDER[0].owner}. Nothing was sent.` }],
   };
   concerns.set(donorId, [...(concerns.get(donorId) || []), c]);
   return view(c);
@@ -103,19 +103,19 @@ function raise(donorId, { category, details, unitId }) {
 function escalate(donorId, id) {
   const c = find(donorId, id);
   const v = view(c);
-  if (!v.canEscalate) throw new Error(c.level >= LADDER.length - 1 ? 'This is already with the highest authority' : `You can escalate after ${v.dueOn} if there is no answer, or once an answer arrives`);
+  if (!v.canEscalate) throw new Error(c.level >= LADDER.length - 1 ? 'The demo has reached its last example level' : `You can escalate after ${v.dueOn} in this demo if there is no example reply, or once an example reply appears`);
   const today = store.today();
   c.log = v.steps;
   c.level += 1;
   c.levelSince = today;
-  c.log.push({ on: today, text: `You escalated this to ${LADDER[c.level].owner}${v.overdue ? ' because the deadline passed' : ' because the answer did not resolve it'}.` });
+  c.log.push({ on: today, text: `Demo escalation advanced to example ${LADDER[c.level].owner}${v.overdue ? ' after the simulated deadline' : ' after the demo-generated reply'}. No authority was contacted.` });
   return view(c);
 }
 
 function resolve(donorId, id) {
   const c = find(donorId, id);
   const v = view(c);
-  c.log = [...v.steps, { on: store.today(), text: 'You marked this as resolved.' }];
+  c.log = [...v.steps, { on: store.today(), text: 'You closed this demo concern; no external case was resolved.' }];
   c.status = 'resolved';
   return view(c);
 }
