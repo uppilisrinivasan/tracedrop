@@ -1,6 +1,6 @@
 /**
  * Raise a concern about a unit (wasted, tracked wrongly, privacy, treatment) and follow it:
- * who owns it, the deadline, and escalation to the next authority when it is missed.
+ * simulated owner, example deadline, and demo escalation when it is missed.
  */
 import { useState } from 'react';
 import { api, fmtDate, type Concern, type Journey } from '../../api';
@@ -38,10 +38,10 @@ export function ConcernForm({ donorId, unit, onDone, onCancel }: { donorId: stri
         {CATEGORIES.map((c) => <button key={c.id} className="chip" aria-pressed={category === c.id} onClick={() => setCategory(c.id)}>{c.label}</button>)}
       </div>
       <textarea className="input mt-8" rows={3} maxLength={1000} value={details} onChange={(e) => setDetails(e.target.value)} placeholder="What happened? (optional)" aria-label="Details" />
-      <div className="tiny muted mt-8">It goes to the blood centre's Medical Officer, who must answer within 7 days. If they don't, you can take it to the State Blood Transfusion Council, then the State Drugs Control Department.</div>
+      <div className="tiny muted mt-8">Demo only: this concern stays in this app session. Nothing is sent to a Medical Officer, blood centre or authority. Advance the demo clock to see an example reply and try escalation; for a real concern, contact the centre or relevant authority directly.</div>
       {error && <ErrorNote error={error} />}
       <div className="row mt-8">
-        <button className="btn btn-primary btn-sm" disabled={busy} onClick={submit}><Icon name="flag" size={14} /> Send</button>
+        <button className="btn btn-primary btn-sm" disabled={busy} onClick={submit}><Icon name="flag" size={14} /> Save demo concern</button>
         <button className="btn btn-sm" onClick={onCancel}>Cancel</button>
       </div>
     </div>
@@ -58,19 +58,19 @@ export function ConcernList({ donorId, concerns, onChange }: { donorId: string; 
   }
 
   return (
-    <Section title={<><Icon name="flag" size={18} /> Your concerns</>} sub="Every concern has a named owner and a deadline. Miss it, and you can take it higher." collapsible>
+    <Section title={<><Icon name="flag" size={18} /> Demo concerns</>} sub="Saved only in this session. Example owners, replies, deadlines and escalations are simulated; no organisation is contacted." collapsible>
       <div className="stack" style={{ gap: 12 }}>
         {concerns.map((c) => (
           <div key={c.id} className="concern">
             <div className="row between wrap">
               <div><b>{c.categoryLabel}</b> <span className="tiny muted">· {c.id}{c.unitName ? ` · ${c.unitName}` : ''}</span></div>
               <span className={`pill ${c.status === 'resolved' ? 'pill-good' : c.overdue ? 'pill-bad' : c.answered ? 'pill-info' : 'pill-warn'}`}>
-                {c.status === 'resolved' ? 'Resolved' : c.overdue ? 'Overdue' : c.answered ? 'Answered' : 'Waiting for answer'}
+                {c.status === 'resolved' ? 'Demo closed' : c.overdue ? 'Demo deadline passed' : c.answered ? 'Example reply shown' : 'Awaiting example reply'}
               </span>
             </div>
             {c.status === 'open' && (
               <div className="small mt-8">
-                With <b>{c.owner}</b> (level {c.level} of {c.levels}) · {c.answered ? 'answer received' : `answer due by ${fmtDate(c.dueOn)}`}
+                Example owner: <b>{c.owner}</b> (level {c.level} of {c.levels}) · {c.answered ? 'demo-generated reply shown' : `example deadline ${fmtDate(c.dueOn)}`}
               </div>
             )}
             <ol className="concern-steps">
@@ -78,9 +78,9 @@ export function ConcernList({ donorId, concerns, onChange }: { donorId: string; 
             </ol>
             {c.status === 'open' && (
               <div className="row wrap mt-8">
-                {c.canEscalate && <button className="btn btn-sm btn-primary" onClick={() => act(c, 'escalate')}>{c.answered ? 'Not resolved: ' : ''}Escalate to {c.nextOwner}</button>}
-                {!c.canEscalate && c.nextOwner && <span className="tiny muted">You can escalate after {fmtDate(c.dueOn)} if there is no answer.</span>}
-                <button className="btn btn-sm" onClick={() => act(c, 'resolve')}>Mark resolved</button>
+                {c.canEscalate && <button className="btn btn-sm btn-primary" onClick={() => act(c, 'escalate')}>{c.answered ? 'Not satisfied: ' : ''}Try demo escalation to {c.nextOwner}</button>}
+                {!c.canEscalate && c.nextOwner && <span className="tiny muted">Demo escalation unlocks after {fmtDate(c.dueOn)} if no example reply appears.</span>}
+                <button className="btn btn-sm" onClick={() => act(c, 'resolve')}>Close demo concern</button>
               </div>
             )}
           </div>

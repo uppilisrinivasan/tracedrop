@@ -61,6 +61,7 @@ router.get('/:donorId/overview', (req, res) => {
   const visits = store.getDonations(id);
   const journeys = impact.donorJourneys(id);
   const scores = health.scoreHistory(id);
+  const currentScore = health.currentScore(id);
   const c = cover.evaluate(id);
   ok(res, {
     donor: { ...req.donor, policyId: undefined },
@@ -69,7 +70,7 @@ router.get('/:donorId/overview', (req, res) => {
       firstDate: visits.length ? visits[0].date : null, litres: Number((visits.filter((v) => v.status === 'completed').reduce((s, v) => s + v.volumeMl, 0) / 1000).toFixed(2)) },
     impact: impact.summarise(journeys),
     latestJourney: journeys.filter((j) => j.recipient).slice(-1)[0] || null,
-    health: { score: scores.length ? scores[scores.length - 1].score : null, previousScore: scores.length > 1 ? scores[scores.length - 2].score : null,
+    health: { score: currentScore?.score ?? null, previousScore: scores.length > 1 ? scores[scores.length - 2].score : null,
       findings: health.findings(id).map(({ id: fid, title, severity, detail }) => ({ id: fid, title, severity, detail })) },
     eligibility: health.eligibility(id),
     // null until an insurer is linked (the New donor)
@@ -96,6 +97,7 @@ router.get('/:donorId/health', (req, res) => {
   ok(res, {
     findings: health.findings(id),
     scores: health.scoreHistory(id),
+    currentScore: health.currentScore(id),
     vitals: health.vitalsSeries(id),
     labs: Object.fromEntries(Object.entries(labs).map(([k, list]) => [k, list.map(({ id, date, value, unit, low, high, name, source }) => ({ id, date, value, unit, low, high, name, source }))])),
     eligibility: health.eligibility(id),
@@ -106,7 +108,13 @@ router.get('/:donorId/health', (req, res) => {
 
 // demo: in the demo no insurer receives anything, and the Cover page says so
 router.get('/:donorId/cover', (req, res) => ok(res, { ...cover.evaluate(req.donor.id), demo: require('./demo').enabled() }));
-router.get('/:donorId/cover/simulate', (req, res) => ok(res, cover.simulate(req.donor.id, Number(req.query.score))));
+router.get('/:donorId/cover/simulate', (req, res) => {
+  try {
+    ok(res, cover.simulate(req.donor.id, Number(req.query.score)));
+  } catch (error) {
+    fail(res, 400, error.message);
+  }
+});
 
 router.get('/:donorId/communities', (req, res) => ok(res, community.forDonor(req.donor.id)));
 
@@ -152,11 +160,18 @@ router.get('/:donorId/appointments', async (req, res) => {
     fail(res, error.status || 400, error.message);
   }
 });
-router.post('/:donorId/appointments/:appointmentId/checkin', (req, res) => {
+router.post('/:donorId/appointments/:appointmentId/checkin', async (req, res) => {
   try {
-    ok(res, donation.checkIn(req.donor.id, req.params.appointmentId, req.body));
+    // A donor-triggered demo simulation, not staff authentication or proof of
+    // a scanned pass. Resolve only this account's appointments before writing.
+    const rows = await settings.listAppointments(req.user, req.donor.id);
+    const appointment = rows.find((a) => a.id === req.params.appointmentId);
+    if (!appointment) return fail(res, 400, 'Appointment not found');
+    const prepared = donation.prepareCheckIn(req.donor.id, appointment.id, req.body, [appointment]);
+    await settings.saveAppointment(req.user, { ...appointment, status: prepared.status });
+    ok(res, donation.applyCheckIn(req.donor.id, appointment.id, prepared));
   } catch (error) {
-    fail(res, 400, error.message);
+    fail(res, error.status || 400, error.message);
   }
 });
 
@@ -186,9 +201,13 @@ router.post('/:donorId/labs/extract', (req, res) => {
 });
 
 router.post('/:donorId/labs/save', (req, res) => {
-  const result = labReader.save(req.donor.id, req.body);
-  store.session.carePlans.delete(req.donor.id); // plan must reflect new results
-  ok(res, result);
+  try {
+    const result = labReader.save(req.donor.id, req.body);
+    if (result.saved) store.session.carePlans.delete(req.donor.id); // plan must reflect new results
+    ok(res, result);
+  } catch (error) {
+    fail(res, 400, error.message);
+  }
 });
 
 /** Values read from lab report photos (the photos are not kept); a Drop reading's own value is listed with the readings. */

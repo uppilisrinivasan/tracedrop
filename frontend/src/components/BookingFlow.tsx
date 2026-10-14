@@ -241,22 +241,22 @@ export default function BookingFlow({ donorId, clientId, onBooked, onClose }: {
 
       {step === 'confirm' && chosen && (
         <div className="stack" style={{ gap: 12 }}>
-          <p className="bold">Confirm your booking</p>
+          <p className="bold">Save this demo slot</p>
           <div className="bflow-summary">
             <div><Icon name="calendar" size={15} /> {fmtDate(chosen.date)} at {chosen.time} (about 45 minutes)</div>
             <div><Icon name="pin" size={15} /> {chosen.centre}, {chosen.district}{chosen.distanceKm != null ? ` · ${chosen.distanceKm} km` : ''}</div>
-            <div><Icon name="mail" size={15} /> {token ? 'Confirmation email and a Google Calendar reminder 1 day before' : 'A reminder 1 day before (add it to your calendar on the next screen)'}</div>
+            <div><Icon name="info" size={15} /> This is a demo slot, not a reservation with the centre. {token ? 'With your consent, we also try to add a real Google Calendar event and send an email.' : 'You can add an optional calendar reminder on the next screen.'}</div>
           </div>
           <div className="row">
             <button className="btn" onClick={() => setStep('slots')}>Back</button>
-            <button className="btn btn-primary" disabled={busy} onClick={confirm}><Icon name="check" size={15} /> Confirm booking</button>
+            <button className="btn btn-primary" disabled={busy} onClick={confirm}><Icon name="check" size={15} /> Save demo slot</button>
           </div>
         </div>
       )}
 
       {step === 'done' && booked && (
         <div className="stack" style={{ gap: 10 }}>
-          <p className="bold">You're booked. Thank you!</p>
+          <p className="bold">Your demo slot is saved.</p>
           <AppointmentPass appointment={booked} />
           {onClose && <button className="btn btn-ghost btn-sm" onClick={onClose}>Done</button>}
         </div>

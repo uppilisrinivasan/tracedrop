@@ -11,7 +11,7 @@ export type ChoiceKey = keyof Donor['consent'];
 export const CHOICE_TEXT: Record<ChoiceKey, { label: string; sub: string }> = {
   shareHealthWithInsurer: { label: 'Share my health score with my insurer', sub: 'Can raise your cover at the same premium. Only the score, never your results.' },
   showOnLeaderboard: { label: "Show me on my Circles' leaderboards", sub: 'Your first name, donations and patients helped' },
-  includeInCommunityStats: { label: "Count my donations in my Circles' totals", sub: 'Anonymous numbers only. Off: you are left out of every total' },
+  includeInCommunityStats: { label: "Count my donations in my Circles' totals", sub: 'Anonymous numbers only. Off: you are left out of every total and the leaderboard' },
 };
 
 /** Tell every screen that a Choice changed. */

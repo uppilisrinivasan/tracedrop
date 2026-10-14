@@ -2,7 +2,7 @@
 # Run TraceDrop locally without Docker.
 #
 #   ./run.sh            install deps (first run) and start backend + frontend
-#   ./run.sh --install  force a fresh npm install before starting
+#   ./run.sh --install  reinstall dependencies from lockfiles before starting
 #   ./run.sh --data     regenerate synthetic data before starting
 #
 # Backend:  http://localhost:8080  (API at /api/health)
@@ -12,7 +12,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
-BACKEND_PORT="${PORT:-8080}"
+BACKEND_PORT=8080
 FRONTEND_PORT=5173
 
 FORCE_INSTALL=false
@@ -50,20 +50,11 @@ if [ ! -f "$ROOT/.env" ]; then
 fi
 
 # --- Dependencies ----------------------------------------------------------
-# A past `sudo npm` can leave root-owned files in ~/.npm, which makes installs
-# fail with EACCES/EEXIST. Fall back to a project-local cache in that case.
-NPM_CACHE_ARGS=()
-if [ -d "$HOME/.npm" ] && [ -n "$(find "$HOME/.npm" ! -user "$(id -un)" -print -quit 2>/dev/null)" ]; then
-  warn "~/.npm has root-owned files; using local cache .npm-cache/ instead."
-  warn "Permanent fix: sudo chown -R \"\$(id -u):\$(id -g)\" ~/.npm"
-  NPM_CACHE_ARGS=(--cache "$ROOT/.npm-cache")
-fi
-
 install_deps() {
   local dir="$1"
-  if $FORCE_INSTALL || [ ! -d "$ROOT/$dir/node_modules" ]; then
+  if $FORCE_INSTALL || [ ! -d "$ROOT/$dir/node_modules" ] || ! npm --prefix "$ROOT/$dir" ls --depth=0 >/dev/null 2>&1; then
     info "Installing $dir dependencies..."
-    (cd "$ROOT/$dir" && npm install --no-audit --no-fund ${NPM_CACHE_ARGS[@]+"${NPM_CACHE_ARGS[@]}"})
+    npm --prefix "$ROOT/$dir" ci --cache "$ROOT/.npm-cache" --no-audit --no-fund
   fi
 }
 install_deps backend
@@ -94,14 +85,41 @@ info "Starting frontend on :$FRONTEND_PORT"
 (cd "$ROOT/frontend" && npm run dev -- --port "$FRONTEND_PORT" --strictPort) &
 PIDS+=($!)
 
-# Wait for the backend health check so failures surface early.
+# Wait for both services before reporting success.
+backend_ready=false
 for _ in $(seq 1 30); do
   if curl -fs "http://localhost:$BACKEND_PORT/api/health" >/dev/null 2>&1; then
-    info "Backend healthy: http://localhost:$BACKEND_PORT/api/health"
+    backend_ready=true
     break
   fi
   sleep 1
 done
+$backend_ready || fail "Backend did not become healthy on port $BACKEND_PORT. Check the errors above."
+info "Backend healthy: http://localhost:$BACKEND_PORT/api/health"
+
+frontend_ready=false
+for _ in $(seq 1 30); do
+  if curl -fs "http://localhost:$FRONTEND_PORT/" >/dev/null 2>&1; then
+    frontend_ready=true
+    break
+  fi
+  sleep 1
+done
+$frontend_ready || fail "Frontend did not become ready on port $FRONTEND_PORT. Check the errors above."
+
+if ! curl -fs "http://localhost:$BACKEND_PORT/api/auth/config" | node -e '
+  let response = "";
+  process.stdin.on("data", chunk => response += chunk);
+  process.stdin.on("end", () => {
+    const config = JSON.parse(response).data;
+    if (!config.authDisabled && !config.clientId) {
+      console.error("Google sign-in is not configured. For local use, set AUTH_DISABLED=true and NODE_ENV=development in the root .env, then restart ./run.sh.");
+      process.exitCode = 1;
+    }
+  });
+'; then
+  fail "Local authentication is not configured."
+fi
 
 info "Open the app: http://localhost:$FRONTEND_PORT   (Ctrl+C to stop)"
 

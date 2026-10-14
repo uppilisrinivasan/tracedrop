@@ -2,8 +2,8 @@ import { api } from '../api';
 import type { PageProps } from '../App';
 import { ErrorNote, Icon, Loading, Section, useLoad } from '../ui';
 
-export default function Ecosystem(_props: PageProps) {
-  const { data, error, loading } = useLoad(() => api.network(), []);
+export default function Ecosystem({ version }: PageProps) {
+  const { data, error, loading } = useLoad(() => api.network(), [version]);
   if (loading && !data) return <Loading />;
   if (error || !data) return <ErrorNote error={error || 'Could not load'} />;
   const maxCtx = Math.max(...data.byContext.map((c) => c.count), 1);

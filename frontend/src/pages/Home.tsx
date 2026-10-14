@@ -71,14 +71,14 @@ export default function Home({ donorId, go, version, refresh, clientId, user }: 
           </div>
         </div>
         <button className="btn btn-primary" onClick={() => (daysTo != null ? startBooking() : go('donate'))}>
-          <Icon name="calendar" /> {firstTime ? 'Book my first donation' : daysTo != null ? 'Book a donation' : 'Donation status'}
+          <Icon name="calendar" /> {firstTime ? 'Book my first donation' : daysTo != null ? 'Try demo donation booking' : 'Donation status'}
         </button>
       </div>
 
       <div className="drop-board">
         <div className="drop-main">
           <Copilot key={donorId} donorId={donorId} go={go} clientId={clientId} inline firstTime={firstTime}
-            top={<DropFeed donorId={donorId} version={version} refresh={refresh} calmLine={firstTime ? 'Your first donation will show here.' : `You have helped ${im.patientsHelped} patients so far.`} storiesInChat onDetails={() => go('checkups')} />} />
+            top={<DropFeed donorId={donorId} version={version} refresh={refresh} calmLine={firstTime ? 'Your first donation will show here.' : `You have helped ${im.patientsHelped} patients so far.`} storiesInChat onDetails={() => go('checkups')} onDonate={() => go('donate')} />} />
         </div>
 
         <div className="drop-side">
@@ -109,23 +109,23 @@ export default function Home({ donorId, go, version, refresh, clientId, user }: 
           </button>
 
           <button className={tile('checkup')} style={{ textAlign: 'left' }} onClick={() => (checkup ? go('checkups') : bookCheckup())}>
-            <div className="row between"><span className="stat-label">Doctor check-up</span><Icon name="doctor" className="faint" /></div>
+            <div className="row between"><span className="stat-label">Demo doctor check-up</span><Icon name="doctor" className="faint" /></div>
             {checkup ? (
               <>
                 <div className="bold mt-8">{fmtVisitDay(checkup.date)} · {checkup.time}</div>
-                <div className="small muted mt-8">{checkup.doctor ? `${checkup.doctor} · ` : ''}{checkup.clinic || checkup.place}</div>
-                <div className="tiny faint mt-8">{checkup.address}</div>
+                <div className="small muted mt-8">Fictional {checkup.doctor ? `${checkup.doctor} · ` : ''}{checkup.clinic || checkup.place}</div>
+                <div className="tiny faint mt-8">Demo only · no clinic reserved. Example address: {checkup.address}</div>
               </>
             ) : (
               <>
-                <div className="bold mt-8">None booked</div>
-                <div className="small muted mt-8">Free at a government clinic near me. Tap to see times.</div>
+                <div className="bold mt-8">No demo visit booked</div>
+                <div className="small muted mt-8">Try fictional clinic times; no real appointment is made.</div>
               </>
             )}
           </button>
 
           <button className={tile('cover')} style={{ textAlign: 'left' }} onClick={() => go('cover')}>
-            <div className="row between"><span className="stat-label">Health insurance cover</span><Icon name="shield" className="faint" /></div>
+            <div className="row between"><span className="stat-label">Illustrative health cover</span><Icon name="shield" className="faint" /></div>
             {!cover ? <div className="bold mt-8">No cover linked yet</div> : (
               <>
                 <div className="row mt-8" style={{ alignItems: 'baseline' }}>
@@ -133,7 +133,7 @@ export default function Home({ donorId, go, version, refresh, clientId, user }: 
                   {cover.current > cover.base && <span className="pill pill-good">+{rupees(cover.current - cover.base)}</span>}
                 </div>
                 <div className="small muted mt-8">
-                  {cover.pointsToNext != null && cover.next ? `${cover.pointsToNext} score point${cover.pointsToNext === 1 ? '' : 's'} to ${rupees(cover.next)}, same premium` : cover.next ? 'Keep monitoring to grow your cover' : 'Top cover step reached'}
+                  {cover.pointsToNext != null && cover.next ? `${cover.pointsToNext} score point${cover.pointsToNext === 1 ? '' : 's'} to example ${rupees(cover.next)}; premium unchanged in demo` : cover.next ? 'Demo: keep monitoring for next step' : 'Top demo cover step reached'} · no insurer sharing
                 </div>
               </>
             )}

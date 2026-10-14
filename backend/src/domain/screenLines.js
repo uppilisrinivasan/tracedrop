@@ -20,6 +20,8 @@ const is = (name) => (/s$/i.test(name) ? 'are' : 'is');
 const firstTime = (donorId) => store.getDonations(donorId).length === 0;
 
 function healthLine(donorId) {
+  const urgent = health.findings(donorId).find((f) => f.severity === 'urgent');
+  if (urgent) return `${urgent.title}: ${urgent.detail}. Please see a doctor today.`;
   if (firstTime(donorId)) return 'Every donation includes a free health check. Your results will show here after your first one.';
   const view = drop.view(donorId);
   const bp = view.readings.filter((r) => r.marker === 'bp');

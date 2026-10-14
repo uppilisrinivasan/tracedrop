@@ -55,7 +55,7 @@ async function confirm(user, donor, body) {
   if (!ranked) throw httpError(400, 'That slot does not fit the chosen days, distance or centre hours');
 
   const appointment = {
-    id: `APT-${Date.now()}`,
+    id: `APT-${crypto.randomUUID()}`,
     sub: user.sub,
     donorId: donor.id,
     ...slot,
@@ -66,24 +66,35 @@ async function confirm(user, donor, body) {
   };
   const code = checkInCode(appointment.id);
 
+  let email;
   if (body.accessToken) {
-    const email = await calendar.assertCalendarOwner(body.accessToken, user);
+    email = await calendar.assertCalendarOwner(body.accessToken, user);
     const busy = await calendar.freeBusy(body.accessToken, `${slot.date}T00:00:00+05:30`, `${slot.date}T23:59:59+05:30`);
     if (calendarBusy(slot, busy)) throw httpError(409, 'That time is busy on your calendar. Choose another slot.');
-    const event = calendar.buildEvent({ slot, email, reminderMinutes: prefs.reminderMinutes, checkInCode: code });
-    const created = await calendar.createEvent(body.accessToken, event);
-    appointment.eventId = created.id;
+  }
+
+  await settings.saveAppointment(user, appointment);
+  drop.recordBooking(donor.id, appointment);
+  if (body.accessToken) {
+    const eventId = crypto.randomUUID().replace(/-/g, '');
+    await settings.saveAppointment(user, { ...appointment, eventId });
+    appointment.eventId = eventId;
+    try {
+      const event = calendar.buildEvent({ slot, email, reminderMinutes: prefs.reminderMinutes, checkInCode: code });
+      await calendar.createEvent(body.accessToken, { ...event, id: eventId });
+    } catch (error) {
+      appointment.calendarError = error.message;
+      return withCheckIn(await settings.saveAppointment(user, appointment));
+    }
     try {
       await calendar.sendConfirmation(body.accessToken, calendar.confirmationMail({ to: email, slot, reminderMinutes: prefs.reminderMinutes, checkInCode: code }));
       appointment.emailSent = true;
     } catch (error) {
       appointment.emailError = error.message;
     }
+    return withCheckIn(await settings.saveAppointment(user, appointment));
   }
-
-  const saved = await settings.saveAppointment(user, appointment);
-  drop.recordBooking(donor.id, saved);
-  return withCheckIn(saved);
+  return withCheckIn(appointment);
 }
 
 function calendarBusy(slot, busy) {
@@ -95,14 +106,22 @@ async function cancel(user, donorId, appointmentId, accessToken) {
   const list = await settings.listAppointments(user, donorId);
   const appointment = list.find((item) => item.id === appointmentId && item.status === 'booked');
   if (!appointment) throw httpError(404, 'Appointment not found');
-  if (appointment.eventId) {
-    if (!accessToken) throw httpError(400, 'Connect Google Calendar again to remove the event');
-    await calendar.assertCalendarOwner(accessToken, user);
-    await calendar.deleteEvent(accessToken, appointment.eventId);
-  }
-  appointment.status = 'cancelled';
+  if (appointment.eventId && accessToken) await calendar.assertCalendarOwner(accessToken, user);
+  let updated = await settings.saveAppointment(user, { ...appointment, status: 'cancelled', calendarError: null });
   drop.forgetBooking(donorId, appointment.id);
-  return settings.saveAppointment(user, appointment);
+  if (appointment.eventId) {
+    if (accessToken) {
+      try {
+        await calendar.deleteEvent(accessToken, appointment.eventId);
+        updated = await settings.saveAppointment(user, { ...updated, eventId: null });
+      } catch (error) {
+        updated = await settings.saveAppointment(user, { ...updated, calendarError: error.message });
+      }
+    } else {
+      updated = await settings.saveAppointment(user, { ...updated, calendarError: 'Google Calendar was not connected during cancellation' });
+    }
+  }
+  return updated;
 }
 
 module.exports = { availability, confirm, cancel, checkInCode, withCheckIn };

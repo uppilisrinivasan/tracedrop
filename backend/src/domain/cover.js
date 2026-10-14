@@ -98,7 +98,7 @@ function stack(donor, policy, cover) {
 }
 
 /** A Donor with no insurer linked yet (the New donor): nothing to step up, only what sharing would do. */
-function notLinked(donor, history) {
+function notLinked(donor, score) {
   return {
     linked: false,
     policy: null,
@@ -107,7 +107,7 @@ function notLinked(donor, history) {
     eligibleCover: null,
     nextStep: null,
     pointsToNextStep: null,
-    healthScore: history.length ? history[history.length - 1].score : null,
+    healthScore: score ? score.score : null,
     conditions: {
       consentToShare: { met: donor.consent.shareHealthWithInsurer, detail: donor.consent.shareHealthWithInsurer ? 'Sharing is on, for when an insurer is linked' : 'Sharing is off' },
     },
@@ -119,10 +119,10 @@ function notLinked(donor, history) {
 function evaluate(donorId) {
   const donor = store.getDonor(donorId);
   const policy = store.getPolicy(donor.policyId);
-  if (!policy) return notLinked(donor, health.scoreHistory(donorId));
+  if (!policy) return notLinked(donor, health.currentScore(donorId));
   const base = policy.baseCover;
   const history = health.scoreHistory(donorId);
-  const current = history.length ? history[history.length - 1].score : 60;
+  const current = health.currentScore(donorId)?.score ?? 60;
   const yearAgo = health.addDays(store.today(), -365);
   const recentVisits = store.getDonations(donorId).filter((v) => v.date >= yearAgo);
 
@@ -207,6 +207,7 @@ function evaluate(donorId) {
 
 /** What-if: cover if the score changed by `delta` points. */
 function simulate(donorId, newScore) {
+  if (!Number.isFinite(newScore) || newScore < 0 || newScore > 100) throw new RangeError('Health score must be between 0 and 100');
   const donor = store.getDonor(donorId);
   const policy = store.getPolicy(donor.policyId);
   if (!policy) return { score: newScore, cover: null, relativeRisk: Number(relativeRisk(newScore).toFixed(2)) };

@@ -2,7 +2,7 @@
  * Drop's voice: Gemini rewrites the wording of open Cards (at most 3 at a
  * time) in the Donor's language. The rules engine has already decided which
  * Cards exist and what they say; the AI only phrases them. A Card keeps its
- * rule wording if the AI is unavailable or drops any number from it.
+ * rule wording if the AI is unavailable or cannot be checked safely.
  */
 
 const store = require('../data/store');
@@ -47,14 +47,19 @@ Rules:
 - Write in ${LANGUAGE_NAMES[language] || 'English'}. Keep numbers as digits and keep BP, Hb and HbA1c as they are.`;
 }
 
-/** Every number in the rule wording must survive the rewrite. */
+/** A numeric match alone does not preserve triage, donation eligibility or negation. */
 function keepsFacts(ruleText, aiText) {
+  if (typeof ruleText !== 'string' || typeof aiText !== 'string' || !aiText.trim()) return false;
   const numbers = ruleText.match(/\d+(?:[./]\d+)?/g) || [];
-  return numbers.every((n) => aiText.includes(n));
+  if (!numbers.every((n) => aiText.includes(n))) return false;
+  // Semantically equivalent phrasing cannot be established from digits or keywords.
+  // Only cosmetic whitespace/punctuation changes are safe without a factual verifier.
+  return ruleText.replace(/[\s.,!?;:]+/g, ' ').trim().toLowerCase() === aiText.replace(/[\s.,!?;:]+/g, ' ').trim().toLowerCase();
 }
 
 async function write(donorId) {
-  const pending = drop.openForWriting(donorId).slice(0, MAX_CARDS);
+  // Existing safety-sensitive Cards always retain deterministic rule wording.
+  const pending = drop.openForWriting(donorId).filter(({ card, words }) => !card.urgent && keepsFacts(words.text, words.text)).slice(0, MAX_CARDS);
   if (!pending.length || !llm.available(2000)) return 0;
   const donor = store.getDonor(donorId);
   const language = drop.chatContext(donorId).language;
@@ -68,14 +73,15 @@ async function write(donorId) {
   });
   const result = await Promise.race([call, new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), TIMEOUT_MS))]);
   let written = 0;
-  for (const out of result.cards || []) {
+  for (const out of llm.structured(result, SCHEMA).cards) {
     const given = input.find((c) => c.id === out.id);
-    if (!given || !out.text || !keepsFacts(given.text, out.text)) continue;
-    const chipsOk = Array.isArray(out.chips) && out.chips.length === given.chips.length && out.chips.every((label, i) => keepsFacts(given.chips[i], label));
+    if (!given || !keepsFacts(given.text, out.text)) continue;
+    // Do not let button or chip rewrites alter the effect of a donor action.
+    if (out.main && out.main !== given.main || out.out && out.out !== given.out || out.chips && JSON.stringify(out.chips) !== JSON.stringify(given.chips)) continue;
     drop.setAi(donorId, out.id, {
       sig: pending.find((p) => p.card.id === out.id).sig,
       text: out.text,
-      labels: { main: given.main ? out.main || null : null, out: given.out ? out.out || null : null, chips: chipsOk ? out.chips : null },
+      labels: null,
     });
     written += 1;
   }

@@ -96,7 +96,7 @@ module.exports = {
   /** Put the clock and all demo-session writes back to the start, including what donors chose (language, Choices). */
   resetDemo() {
     clock = { ...START };
-    donors = loadDonors();
+    donors = loadDonors(); // fresh records: every donor's Choices and language go back to the start
     loadRecords();
     Object.values(session).forEach((map) => map.clear());
     listeners.reset.forEach((fn) => fn());

@@ -34,10 +34,15 @@ function exampleDonation() {
   return store.getDonations(EXAMPLE_DONOR).find((d) => d.id === EXAMPLE_DONATION);
 }
 
+/** How many parts the example donation was split into, as of the demo clock. */
+function exampleParts(d) {
+  return store.getComponents(EXAMPLE_DONOR).filter((c) => c.donationId === d.id && c.events.length && c.events[0].date <= store.today()).length;
+}
+
 /** Drop's English words for each step. {first} is the person's first name (dropped when unknown). */
 function script() {
   const d = exampleDonation();
-  const parts = impact.donorJourneys(EXAMPLE_DONOR).filter((j) => j.donationDate === d.date).length;
+  const parts = exampleParts(d);
   return [
     { id: 'language', title: 'Language', text: ["Hi, I'm Drop, your TraceDrop assistant. Which language should I use?"],
       buttons: LANGUAGES.map(([code, label]) => ({ label, value: code, primary: code === 'en' })) },
@@ -74,15 +79,16 @@ function journeyPicture() {
   const parts = impact.donorJourneys(EXAMPLE_DONOR).filter((j) => j.donationDate === d.date);
   const tested = parts.flatMap((j) => j.events).find((e) => e.type === 'tested');
   const frozen = (kind) => ['FFP', 'CRYO'].includes(kind);
-  const rows = parts.map((j) => (j.recipient
-    ? { name: j.name, tag: j.events.find((e) => e.type === 'transfused')?.when || 'Used', good: true, text: `Helped a patient: ${j.recipient.context.toLowerCase()} (${j.recipient.patient.toLowerCase()})` }
+  // A part can reach a patient while the patient's details stay hidden (too few similar cases to share them)
+  const rows = parts.map((j) => (j.helped
+    ? { name: j.name, tag: j.events.find((e) => e.type === 'transfused')?.when || 'Used', good: true, text: j.recipient ? `Helped a patient: ${j.recipient.context.toLowerCase()} (${j.recipient.patient.toLowerCase()})` : 'Helped a patient' }
     : { name: j.name, tag: frozen(j.kind) ? 'Frozen' : 'Waiting', good: false, text: frozen(j.kind) ? 'Frozen and kept for up to a year' : 'At the blood centre, ready for the right patient' }));
   const helped = rows.filter((r) => r.good);
   const waiting = rows.filter((r) => !r.good);
   const story = [
     `${fmt(d.date)}. Someone gave ${d.volumeMl} ml of blood at ${store.centre(d.centreId).name}.`,
     `It was tested and split into ${count(parts.length)} parts: ${parts.map((j) => j.name.toLowerCase()).join(', ')}.`,
-    ...helped.map((r) => `${r.tag}. The ${r.name.toLowerCase()} reached a patient: ${r.text.replace('Helped a patient: ', '')}.`),
+    ...helped.map((r) => (r.text === 'Helped a patient' ? `${r.tag}. The ${r.name.toLowerCase()} reached a patient.` : `${r.tag}. The ${r.name.toLowerCase()} reached a patient: ${r.text.replace('Helped a patient: ', '')}.`)),
     ...(waiting.length ? [`The ${waiting.map((r) => r.name.toLowerCase()).join(' and ')} ${waiting.length === 1 && !/s$/.test(waiting[0].name) ? 'is' : 'are'} waiting for the next patients who need them.`] : []),
     'One donation can help up to three people. Yours will too.',
   ];

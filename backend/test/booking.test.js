@@ -2,8 +2,13 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const { turn, normalise } = require('../src/domain/bookingChat');
-const { haversineKm, overlaps, rankSlots } = require('../src/domain/bookingRank');
-const { reminderOverrides, buildEvent, confirmationMail, assertCalendarOwner } = require('../src/calendar/googleCalendar');
+const { haversineKm, overlaps, rankSlots, recommend, findSlot } = require('../src/domain/bookingRank');
+const cover = require('../src/domain/cover');
+const calendar = require('../src/calendar/googleCalendar');
+const { reminderOverrides, buildEvent, confirmationMail, assertCalendarOwner } = calendar;
+const booking = require('../src/booking/service');
+const settings = require('../src/auth/userSettings');
+const store = require('../src/data/store');
 
 function prefs(extra = {}) {
   return normalise({
@@ -64,9 +69,24 @@ test('distance, holidays, downtime and calendar clashes remove slots', () => {
   assert.equal(overlaps(slot({ id: 'busy' }), [{ start: '2026-10-13T09:00:00+05:30', end: '2026-10-13T10:00:00+05:30' }]), true);
 });
 
+test('selected days constrain suggested and confirmable slots', () => {
+  const monday = prefs({ days: ['mon'] });
+  const slots = recommend('D-003', monday, [], 50).slots;
+  assert.ok(slots.length > 0);
+  assert.ok(slots.every((item) => item.weekday === 'mon'));
+  assert.equal(findSlot('D-003', monday, 'BC-01-2026-10-10-09:30'), null);
+});
+
+test('cover scenarios reject scores outside the health scale', () => {
+  for (const score of [-200, 101, Number.NaN, Infinity]) {
+    assert.throws(() => cover.simulate('D-001', score), /between 0 and 100/);
+  }
+});
+
 test('a booking email and calendar reminders are both created', () => {
   const event = buildEvent({ slot: slot({ id: 'near' }), email: 'a@gmail.com', reminderMinutes: [1440, 120] });
   assert.equal(event.start.dateTime, '2026-10-13T09:30:00+05:30');
+  assert.match(event.description, /not a reservation/);
   assert.deepEqual(event.attendees, [{ email: 'a@gmail.com' }]);
   assert.deepEqual(reminderOverrides([1440, 120]), [
     { method: 'email', minutes: 1440 }, { method: 'popup', minutes: 1440 },
@@ -77,7 +97,7 @@ test('a booking email and calendar reminders are both created', () => {
   assert.match(mail.text, /09:30/);
   assert.match(mail.text, /AB12CD34/);
   assert.match(mail.text, /1 day before/);
-  assert.match(mail.text, /reminder email/);
+  assert.match(mail.text, /not a reservation/);
   assert.ok(mail.raw.length > 20);
 });
 
@@ -87,4 +107,46 @@ test('a calendar token for a different Google account is rejected', async () => 
     () => assertCalendarOwner('token', { email: 'a@gmail.com', local: false }, fetchImpl),
     /does not match/,
   );
+});
+
+test('Calendar event ID is saved before creation and cancellation survives missing access', async () => {
+  store.resetDemo();
+  const originals = { save: settings.saveAppointment, list: settings.listAppointments, owner: calendar.assertCalendarOwner,
+    busy: calendar.freeBusy, create: calendar.createEvent, mail: calendar.sendConfirmation };
+  const saved = [];
+  let created = null;
+  settings.saveAppointment = async (_user, appointment) => {
+    const copy = { ...appointment };
+    saved.push(copy);
+    return originals.save({ sub: 'local', local: true }, copy);
+  };
+  settings.listAppointments = async (_user, donorId) => originals.list({ sub: 'local', local: true }, donorId);
+  calendar.assertCalendarOwner = async () => 'donor@example.com';
+  calendar.freeBusy = async () => [];
+  calendar.createEvent = async (_token, event) => {
+    created = event;
+    assert.ok(saved.some((a) => a.eventId === event.id && a.status === 'booked'));
+    return { id: event.id };
+  };
+  calendar.sendConfirmation = async () => {};
+  try {
+    const user = { sub: 'local', local: true };
+    const { slots } = recommend('D-003', prefs(), [], 50);
+    const booked = await booking.confirm(user, store.getDonor('D-003'), { preferences: prefs(), slotId: slots[0].id, accessToken: 'token' });
+    assert.match(created.id, /^[a-f0-9]{32}$/);
+    assert.equal(booked.eventId, created.id);
+    assert.equal(booked.emailSent, true);
+    const cancelled = await booking.cancel(user, 'D-003', booked.id);
+    assert.equal(cancelled.status, 'cancelled');
+    assert.equal(cancelled.eventId, created.id);
+    assert.match(cancelled.calendarError, /not connected/);
+  } finally {
+    settings.saveAppointment = originals.save;
+    settings.listAppointments = originals.list;
+    calendar.assertCalendarOwner = originals.owner;
+    calendar.freeBusy = originals.busy;
+    calendar.createEvent = originals.create;
+    calendar.sendConfirmation = originals.mail;
+    store.resetDemo();
+  }
 });

@@ -10,6 +10,8 @@ const DAILY_CALLS = Math.max(1, Number(process.env.LLM_MAX_CALLS_PER_DAY || 200)
 const SUBMIT = 'submit_result';
 const usage = { day: today(), tokens: 0, calls: 0, cacheReadTokens: 0 };
 const traces = [];
+let verified = false;
+let lastError = null;
 class LLMUnavailable extends Error {}
 function today() { return new Date().toISOString().slice(0, 10); }
 function rollDay() {
@@ -27,7 +29,7 @@ function available(estimatedTokens = 0) {
 }
 function status() {
   rollDay();
-  return { model: MODEL, endpoint: ENDPOINT, live: available(), reason: reason(),
+  return { model: MODEL, endpoint: ENDPOINT, live: available() && verified, reason: reason() || (!verified ? lastError || 'Vertex access not yet verified' : null),
     tokensUsedToday: usage.tokens, dailyTokenBudget: DAILY_TOKENS, callsToday: usage.calls,
     dailyCallBudget: DAILY_CALLS, cacheReadTokens: usage.cacheReadTokens, rateLimitRps: RPS };
 }
@@ -124,6 +126,8 @@ async function call({ feature, system, messages, tools, maxTokens = 4000, output
       body: JSON.stringify(body), signal: AbortSignal.timeout(120000) });
     if (!res.ok) throw new Error(`Vertex AI HTTP ${res.status}: ${(await res.text()).slice(0, 300)}`);
     const response = normalise(await res.json());
+    verified = true;
+    lastError = null;
     const inputTokens = response.usage.input_tokens;
     const outputTokens = response.usage.output_tokens;
     usage.tokens += inputTokens + outputTokens;
@@ -133,6 +137,8 @@ async function call({ feature, system, messages, tools, maxTokens = 4000, output
     return response;
   } catch (error) {
     const message = error.message || 'Vertex AI request failed';
+    lastError = message;
+    verified = false;
     record({ feature, model: MODEL, ms: Date.now() - started, error: message });
     console.error(`[llm] ${feature}: ${message}`);
     throw new LLMUnavailable(message);
@@ -153,16 +159,42 @@ function visibleReply(raw) {
 
 function text(response) { return visibleReply(response.content.filter((b) => b.type === 'text').map((b) => b.text).join('\n\n')); }
 function submitted(response) { return response.content.find((b) => b.type === 'tool_use' && b.name === SUBMIT)?.input || null; }
+/** Check raw Gemini output against the application schema; provider-side constraints are not a trust boundary. */
+function validate(value, schema) {
+  if (!schema) return true;
+  if (schema.enum && !schema.enum.includes(value)) return false;
+  if (schema.type === 'object') {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+    if ((schema.required || []).some((key) => !Object.hasOwn(value, key))) return false;
+    if (schema.additionalProperties === false && Object.keys(value).some((key) => !Object.hasOwn(schema.properties || {}, key))) return false;
+    return Object.entries(value).every(([key, child]) => !schema.properties?.[key] || validate(child, schema.properties[key]));
+  }
+  if (schema.type === 'array') return Array.isArray(value) && value.every((item) => validate(item, schema.items));
+  if (schema.type === 'integer' && !Number.isInteger(value)) return false;
+  if (schema.type === 'number' && (typeof value !== 'number' || !Number.isFinite(value))) return false;
+  if (schema.type === 'string' && typeof value !== 'string') return false;
+  if (schema.type === 'boolean' && typeof value !== 'boolean') return false;
+  if (typeof value === 'number' && (schema.minimum != null && value < schema.minimum || schema.maximum != null && value > schema.maximum)) return false;
+  return true;
+}
+function structured(value, schema) {
+  if (!validate(value, schema)) throw new LLMUnavailable('AI returned an invalid structured result');
+  return value;
+}
 async function json(options) {
   const response = await call(options);
+  if (response.stop_reason === 'max_tokens') throw new LLMUnavailable('Structured response cut off');
   const fromTool = submitted(response);
-  if (fromTool) return fromTool;
+  if (fromTool) return structured(fromTool, options.outputSchema);
   const raw = text(response);
   if (!raw) throw new LLMUnavailable('AI did not return a structured result');
-  try { return JSON.parse(raw); } catch { throw new LLMUnavailable('AI did not return a structured result'); }
+  try { return structured(JSON.parse(raw), options.outputSchema); } catch (error) {
+    if (error instanceof LLMUnavailable) throw error;
+    throw new LLMUnavailable('AI did not return a structured result');
+  }
 }
 async function verify() {
   if (!PROJECT) return { ok: false, reason: reason() };
   return { ok: true, reason: 'Access checked on the first AI request' };
 }
-module.exports = { call, text, visibleReply, json, submitted, available, status, verify, traces: () => traces, toContents, LLMUnavailable, MODEL, SUBMIT };
+module.exports = { call, text, visibleReply, json, submitted, validate, structured, available, status, verify, traces: () => traces, toContents, LLMUnavailable, MODEL, SUBMIT };

@@ -2,11 +2,14 @@
  * The Intro in the donor's language: Gemini translates each step's words and buttons
  * (and the Intro's own words: the bar, Skip, coming back) when they are first shown,
  * once per language. A translation is used only if every number and every {placeholder}
- * survives, the same check as Drop's Cards; otherwise that text stays in English.
+ * survives; otherwise that text stays in English.
+ *
+ * This is its own check, not Drop's Card check: Card wording now has to match the rules
+ * word for word, because Cards carry triage and eligibility. The Intro's words are
+ * scripted and non-clinical (its example results stay in English in the pictures).
  */
 
 const llm = require('./llm');
-const { keepsFacts } = require('./dropWriter');
 
 const LANGUAGE_NAMES = { en: 'English', hi: 'Hindi', kn: 'Kannada', ta: 'Tamil', te: 'Telugu', ml: 'Malayalam' };
 const TIMEOUT_MS = 15000;
@@ -39,7 +42,9 @@ Rules:
 }
 
 const placeholders = (t) => (t.match(/\{\w+\}/g) || []).sort().join(',');
-const ok = (english, translated) => Boolean(translated) && keepsFacts(english, translated) && placeholders(english) === placeholders(translated);
+const numbers = (t) => t.match(/\d+(?:[./]\d+)?/g) || [];
+const ok = (english, translated) => typeof translated === 'string' && Boolean(translated.trim())
+  && numbers(english).every((n) => translated.includes(n)) && placeholders(english) === placeholders(translated);
 
 /**
  * Translate a list of English strings. Returns the strings in the same order (English

@@ -4,6 +4,19 @@ One entry per commit, newest first, so any change can be traced or reverted: the
 To revert one: find it with `git log --oneline --grep "<commit title>"`, then `git revert <hash>`.
 The design behind these changes is in `CONTEXT.md` (vocabulary) and the build plan.
 
+## 2026-10-14 · Merge Uppili's fixes from main into the onboarding work
+
+- **What and why:** `main` gained Uppili's commit `f06bbdf` ("corrected the small bugs and errors in logic and method": stricter AI checks, k-anonymity across all recipient fields, honest "demo / illustrative" labels for cover and booking, a current health score, and three new test files) while onboarding was being built. 10 files conflicted; each was resolved to keep both sides:
+  - **Choices:** Uppili had also made the totals switch work. Kept his rule that others see a member on the leaderboard only when both their switches allow it, his clearer privacy note and his participation fix, plus onboarding's: you still see yourself with your leaderboard switch off ("Only you see yourself here"), the "N not counted" figure, and "prefer not to be listed" counting whoever isn't shown. Once you leave the totals you also leave your own leaderboard view (his test); the switch's second line now says so.
+  - **Reset:** kept onboarding's reload of the donor records on Reset, which restores every donor's Choices (Uppili's intent) and also the New donor's language; his copy-and-restore code is dropped.
+  - **Wording:** his demo labels win on Arjun's screens ("Try demo donation booking", "Demo doctor check-up", "Illustrative health cover", the Cover page header); the New donor keeps "Book my first donation" and Donate reads "Try booking your first donation (demo)". The insurer switch stays the shared Choices switch (it already says no insurer receives anything in the demo).
+  - **Health:** his current score plus onboarding's empty state; Drop's line on My health shows his urgent line first, then the first-donation line.
+  - **Ecosystem:** his date-aware figures (no cache), still leaving out the New donor; **cover route:** his error handling plus the demo flag; **chat:** his history filter and incomplete-reply handling plus the New donor's name, the Intro step and the planning-note check.
+  - **Knock-on fixes:** Drop's Card check now only accepts AI wording identical to the rules, which would have blocked every Intro translation, so the Intro keeps its own check (every number and placeholder must survive; the Intro's words are scripted and non-clinical). The example journey shows a part as helped even when the patient's details are held back for privacy. The Intro no longer works out the whole k-anonymity picture just to name its current step. The team guide uses the new tile and button names.
+- **Checks:** 102 backend tests pass (onboarding's and Uppili's three new files), type-check clean; the New donor's Intro clicked through in Hindi end to end, and Arjun's screens and Choices checked, at 1280 px.
+- **Files:** `backend/src/ai/copilot.js`, `backend/src/ai/introWriter.js`, `backend/src/data/store.js`, `backend/src/domain/community.js`, `backend/src/domain/cover.js`, `backend/src/domain/intro.js`, `backend/src/domain/screenLines.js`, `backend/src/routes/donors.js`, `backend/src/routes/platform.js`, `frontend/src/components/Choices.tsx`, `frontend/src/pages/Cover.tsx`, `frontend/src/pages/Donate.tsx`, `frontend/src/pages/Health.tsx`, `frontend/src/pages/Home.tsx`, `docs/drop/index.html`.
+- **Revert:** `git revert -m 1 <merge commit>` takes the branch back to onboarding without Uppili's commit; prefer fixing forward.
+
 ## 2026-10-14 · Onboarding step 8: mock privacy policy and terms, and the team guide
 
 - **What and why:**

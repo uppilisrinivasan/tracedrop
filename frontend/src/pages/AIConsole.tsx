@@ -10,10 +10,10 @@ const FEATURES = [
     why: 'Rules flag each marker in isolation. Real people have several borderline results that interact (rising BP + borderline lipids + family history). The agent investigates trends, protocols and evidence, then writes one prioritised plan citing the evidence for every step.' },
   { name: 'Lab-report reader', kind: 'GenAI', where: 'Health → Add an outside lab report',
     why: 'Indian labs print results in endless formats, names and units, often as photos. Only a model can read any layout, map synonyms to LOINC codes and convert units reliably; schema-constrained output plus range checks keep it safe.' },
-  { name: 'Impact stories', kind: 'GenAI', where: 'Impact → a component → Write my story',
-    why: 'Turns anonymised journey data into a moving, shareable story in Kannada, Hindi, Tamil or English. The model sees only anonymised facts and must declare any added detail, so privacy holds.' },
+  { name: 'Impact stories', kind: 'Rules', where: 'Impact → a component → Write my story',
+    why: 'Recipient-facing stories currently use a deterministic English template. Model-written stories are disabled because a model cannot reliably certify its own added facts.' },
   { name: 'Insight of the day', kind: 'GenAI', where: 'Home',
-    why: 'Several signals compete for attention. The model chooses the one most likely to help this donor today and phrases it; candidates are computed by rules so it can only pick from real facts.' },
+    why: 'Several rule-derived signals compete for attention. The model selects a candidate; its title, message and destination come from rules. Invalid selections fall back to rules.' },
 ];
 
 const DETERMINISTIC = ['Eligibility to donate (NBTC rules)', 'Clinical findings and severity (ICMR / ACC-AHA thresholds)', 'Health score', 'Insurance cover ladder', 'Privacy: k-anonymity and recipient generalisation'];
@@ -38,7 +38,7 @@ export default function AIConsole() {
           <div className="page-title">AI console</div>
           <div className="page-sub">Where TraceDrop uses generative and agentic AI, why it's needed there, and live usage.</div>
         </div>
-        <span className={`pill ${s.live ? 'pill-good' : 'pill-warn'}`}>{s.live ? `Live · ${s.model}` : `Offline · ${s.reason}`}</span>
+        <span className={`pill ${s.live ? 'pill-good' : 'pill-warn'}`}>{s.live ? `Verified · ${s.model}` : `Not verified · ${s.reason}`}</span>
       </div>
 
       <div className="grid grid-4">
@@ -66,9 +66,9 @@ export default function AIConsole() {
         <Section title={<><Icon name="lock" size={17} /> Guardrails</>}>
           <ul className="small" style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 4 }}>
             <li>Agents can only call donor-scoped tools; no tool exposes recipient identity or other donors' health.</li>
-            <li>Structured outputs (JSON schema) for plans, lab extraction, stories and insights.</li>
+            <li>Structured outputs (JSON schema) for plans, lab extraction and insights, with local validation on the shared model path.</li>
             <li>Every agent answer shows its tool trace.</li>
-            <li>Rate limit, daily token budget and prompt caching; rule-based fallback for every feature when AI is unavailable.</li>
+            <li>Local request pacing and daily call/token budgets; some features have rule-based fallback, while outside lab extraction requires AI. Cached token use is reported only if Vertex provides it.</li>
             <li>No diagnosis or prescribing; urgent findings route to a doctor.</li>
           </ul>
         </Section>
