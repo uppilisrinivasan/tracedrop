@@ -9,7 +9,7 @@ function initials(name: string) {
 
 export function Avatar({ user, size = 34 }: { user: AuthUser; size?: number }) {
   const [broken, setBroken] = useState(false);
-  const label = user.local ? 'Local' : user.name || user.email;
+  const label = user.local ? 'Local' : user.guest ? 'Guest' : user.name || user.email;
   if (user.picture && !broken) {
     return <img className="avatar" src={user.picture} alt="" width={size} height={size} referrerPolicy="no-referrer" onError={() => setBroken(true)} />;
   }
@@ -30,8 +30,8 @@ interface Props {
 export default function AccountMenu({ user, donorLabel, onSignOut, onReplayIntro, onYourData, compact = false }: Props) {
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
-  const name = user.local ? 'Local development' : user.name || user.email;
-  const email = user.local ? 'Sign-in skipped' : user.email;
+  const name = user.local ? 'Local development' : user.guest ? 'Guest' : user.name || user.email;
+  const email = user.local ? 'Sign-in skipped' : user.guest ? 'Browsing without Google sign-in' : user.email;
 
   useEffect(() => {
     if (!open) return undefined;

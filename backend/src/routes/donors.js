@@ -181,7 +181,7 @@ router.post('/:donorId/appointments/:appointmentId/checkin', async (req, res) =>
 router.post('/:donorId/copilot', async (req, res) => {
   const { message, history, chat } = req.body;
   if (!message || typeof message !== 'string') return fail(res, 400, 'message is required');
-  const userName = req.user && !req.user.local ? req.user.name : null;
+  const userName = req.user && !req.user.local && !req.user.guest ? req.user.name : null;
   const id = req.donor.id;
   // A question asked during the Intro is kept with it ("Intro · finished … · the questions you asked")
   const keep = (reply) => { intro.noteQuestion(id, message, reply && reply.reply); return reply; };

@@ -1,4 +1,4 @@
-/** First page. The only way in is a Google account. */
+/** Sign in with Google, or continue as a guest (demo session, no Google account). */
 import { useEffect, useRef, useState } from 'react';
 import { api, type AuthUser } from './api';
 import { Icon } from './ui';
@@ -66,10 +66,17 @@ export default function Login({ clientId, sessionMinutes, onSignedIn }: {
     <div className="login">
       <div className="login-card">
         <div className="brand"><span className="brand-mark"><Icon name="drop" size={18} stroke={2.4} /></span>TraceDrop</div>
-        <h1>Sign in with Google</h1>
-        <p className="muted">TraceDrop is available only after you sign in with a Google account. A session lasts {sessionLength(sessionMinutes)}, then you sign in again.</p>
+        <h1>Welcome to TraceDrop</h1>
+        <p className="muted">Sign in with Google to save preferences and bookings to your account, or continue as a guest to explore the demo. Sessions last {sessionLength(sessionMinutes)}.</p>
         {clientId ? <div ref={host} className="login-google" /> : <p className="login-error">Google sign-in is not configured.</p>}
-        {busy && <p className="tiny muted">Checking your Google account…</p>}
+        <div className="login-or"><span>or</span></div>
+        <button type="button" className="btn login-guest" disabled={busy} onClick={() => {
+          setBusy(true);
+          setError('');
+          api.guestSignIn().then(onSignedIn).catch((e: Error) => setError(e.message)).finally(() => setBusy(false));
+        }}>Continue as guest</button>
+        <p className="tiny faint login-guest-note">Guest mode uses demo data only. Nothing is saved to Google or the cloud when you leave.</p>
+        {busy && <p className="tiny muted">One moment…</p>}
         {error && <p className="login-error">{error}</p>}
         <LegalLinks />
       </div>

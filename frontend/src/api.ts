@@ -172,12 +172,13 @@ export interface AuthUser {
   picture: string;
   expiresAt: number | null;
   local?: boolean;
+  guest?: boolean;
 }
 
 /** What "Your data" shows about the Google account: profile, sign-in history and every booking. */
 export interface AccountBooking { id: string; donorId: string; date: string; time: string; centre: string; district: string; status: string; calendar: boolean }
 export interface AccountData {
-  local: boolean; name: string; email: string; picture: string;
+  local: boolean; guest?: boolean; name: string; email: string; picture: string;
   firstSeen: string | null; signIns: number; lastSignIn: string | null; lastBrowser: string | null; bookings: AccountBooking[];
 }
 export interface AccountDeleted { bookings: number; calendarRemoved: number; calendarFailed: number; signIns: number; local: boolean }
@@ -308,6 +309,7 @@ export const api = {
   authConfig: () => request<{ authDisabled: boolean; clientId: string; sessionMinutes: number }>('/auth/config'),
   me: () => request<AuthUser>('/auth/me'),
   googleSignIn: (credential: string) => post<AuthUser>('/auth/google', { credential }),
+  guestSignIn: () => post<AuthUser>('/auth/guest'),
   logout: () => post<{ signedOut: boolean }>('/auth/logout'),
   preferences: () => request<BookingPreferences | null>('/auth/preferences'),
   savePreferences: (preferences: Partial<BookingPreferences>) => request<BookingPreferences>('/auth/preferences', { method: 'PUT', body: JSON.stringify(preferences) }),

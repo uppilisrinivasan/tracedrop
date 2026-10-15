@@ -14,7 +14,7 @@ const INTRO_TILES: Record<string, string[]> = { journey: ['helped'], health: ['s
 /** The New donor is the signed-in person themself: greet them by their Google first name ("Hello" with sign-in off). */
 function greeting(donor: { name: string; newUser?: boolean }, user: AuthUser) {
   if (!donor.newUser) return `Hello, ${donor.name.split(' ')[0]}`;
-  const first = !user.local && user.name ? user.name.split(' ')[0] : '';
+  const first = !user.local && !user.guest && user.name ? user.name.split(' ')[0] : '';
   return first ? `Hello, ${first}` : 'Hello';
 }
 

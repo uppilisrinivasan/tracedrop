@@ -78,6 +78,10 @@ button { font: inherit; color: inherit; cursor: pointer; background: none; borde
 }
 .login-card h1 { font-size: 28px; letter-spacing: -0.03em; margin: 8px 0 10px; }
 .login-google { min-height: 44px; margin-top: 22px; }
+.login-or { display: flex; align-items: center; gap: 12px; margin: 18px 0 14px; color: var(--muted); font-size: 13px; }
+.login-or::before, .login-or::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.login-guest { width: 100%; justify-content: center; min-height: 44px; }
+.login-guest-note { margin-top: 10px; line-height: 1.4; text-align: center; }
 .login-error { color: var(--bad); margin-top: 14px; }
 .legal-links { margin-top: 22px; }
 .legal { width: min(720px, 100%); }

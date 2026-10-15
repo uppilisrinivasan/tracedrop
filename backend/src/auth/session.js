@@ -5,7 +5,8 @@ const { SESSION_MS } = require('./policy');
 const COOKIE = 'tracedrop_session';
 
 function secret() {
-  const value = process.env.SESSION_SECRET;
+  const value = process.env.SESSION_SECRET
+    || (process.env.NODE_ENV !== 'production' ? 'tracedrop-local-dev-only' : '');
   if (!value) throw new Error('SESSION_SECRET is not set');
   return value;
 }
@@ -17,6 +18,8 @@ function publicUser(payload) {
     name: payload.name,
     picture: payload.picture || '',
     expiresAt: payload.exp,
+    guest: Boolean(payload.guest),
+    local: Boolean(payload.local),
   };
 }
 
@@ -26,6 +29,8 @@ function sign(user, now = Date.now()) {
     email: user.email,
     name: user.name,
     picture: user.picture || '',
+    guest: Boolean(user.guest),
+    local: Boolean(user.local),
     iat: now,
     exp: now + SESSION_MS,
   };
@@ -46,7 +51,8 @@ function verify(token, now = Date.now()) {
   let payload;
   try { payload = JSON.parse(Buffer.from(body, 'base64url').toString()); }
   catch { return null; }
-  if (!payload || !payload.email || !payload.sub || !payload.exp || payload.exp <= now) return null;
+  if (!payload || !payload.sub || !payload.exp || payload.exp <= now) return null;
+  if (!payload.email && !payload.guest) return null;
   return publicUser(payload);
 }
 

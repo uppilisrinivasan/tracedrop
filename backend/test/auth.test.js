@@ -28,6 +28,15 @@ test('a session lasts one day and then must be signed in again', () => {
   assert.equal(verify(issued.token, now + SESSION_MS), null);
 });
 
+test('a guest session is signed and verified without Firestore fields', () => {
+  process.env.SESSION_SECRET = 'test-secret';
+  const now = Date.parse('2026-10-11T10:00:00Z');
+  const issued = sign({ sub: 'guest-abc', email: 'guest@tracedrop.app', name: 'Guest', guest: true }, now);
+  const user = verify(issued.token, now);
+  assert.equal(user.guest, true);
+  assert.equal(user.name, 'Guest');
+});
+
 test('a tampered session cookie is rejected', () => {
   process.env.SESSION_SECRET = 'test-secret';
   const issued = sign({ sub: '1', email: 'a@gmail.com', name: 'A' }, Date.now());

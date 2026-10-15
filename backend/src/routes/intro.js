@@ -19,7 +19,8 @@ router.use((req, res, next) => {
 
 /** The signed-in person's first name for "You're all set, {first}" (none with sign-in off). */
 function firstName(req) {
-  return req.user && !req.user.local && req.user.name ? String(req.user.name).split(' ')[0] : '';
+  const u = req.user;
+  return u && !u.local && !u.guest && u.name ? String(u.name).split(' ')[0] : '';
 }
 
 function personal(text, first) {

@@ -1,5 +1,5 @@
 /** Booking preferences and appointments saved against the signed-in Google account (in memory with sign-in off). */
-const { authDisabled } = require('./policy');
+const { isEphemeral } = require('./ephemeral');
 
 const memory = new Map();
 let db;
@@ -13,19 +13,24 @@ function firestore() {
   return db;
 }
 
-function local(user) {
-  return authDisabled() || !user || user.local || user.sub === 'local';
+function memKey(user) {
+  if (!user) return 'local';
+  if (user.sub === 'local' || user.local) return 'local';
+  if (user.guest || String(user.sub).startsWith('guest-')) return user.sub;
+  return null;
 }
 
 async function getPreferences(user) {
-  if (local(user)) return memory.get('local') || null;
+  const key = memKey(user);
+  if (key) return memory.get(key) || null;
   const snap = await firestore().collection('users').doc(user.sub).get();
   return snap.exists && snap.data().booking ? snap.data().booking : null;
 }
 
 async function savePreferences(user, preferences) {
-  if (local(user)) {
-    memory.set('local', preferences);
+  const key = memKey(user);
+  if (key) {
+    memory.set(key, preferences);
     return preferences;
   }
   await firestore().collection('users').doc(user.sub).set({ booking: preferences }, { merge: true });
@@ -34,14 +39,17 @@ async function savePreferences(user, preferences) {
 
 async function listAppointments(user, donorId) {
   const { session } = require('../data/store');
-  if (local(user)) return (session.appointments.get(donorId) || []).filter((item) => item.sub === 'local' || !item.sub);
+  if (isEphemeral(user)) {
+    const sub = user.sub || 'local';
+    return (session.appointments.get(donorId) || []).filter((item) => item.sub === sub || item.sub === 'local' || !item.sub);
+  }
   const snap = await firestore().collection('appointments').where('sub', '==', user.sub).get();
   return snap.docs.map((doc) => doc.data()).filter((item) => item.donorId === donorId);
 }
 
 async function saveAppointment(user, appointment) {
   const store = require('../data/store');
-  if (!local(user)) await firestore().collection('appointments').doc(appointment.id).set(appointment);
+  if (!isEphemeral(user)) await firestore().collection('appointments').doc(appointment.id).set(appointment);
   const list = (store.session.appointments.get(appointment.donorId) || []).filter((item) => item.id !== appointment.id);
   list.push(appointment);
   store.session.appointments.set(appointment.donorId, list);
@@ -49,8 +57,9 @@ async function saveAppointment(user, appointment) {
 }
 
 async function deletePreferences(user) {
-  if (local(user)) {
-    memory.delete('local');
+  const key = memKey(user);
+  if (key) {
+    memory.delete(key);
     return;
   }
   const { FieldValue } = require('@google-cloud/firestore');
@@ -60,7 +69,10 @@ async function deletePreferences(user) {
 /** Every appointment the account made, for any demo donor. */
 async function allAppointments(user) {
   const { session } = require('../data/store');
-  if (local(user)) return [...session.appointments.values()].flat().filter((item) => item.sub === 'local' || !item.sub);
+  if (isEphemeral(user)) {
+    const sub = user.sub || 'local';
+    return [...session.appointments.values()].flat().filter((item) => item.sub === sub || item.sub === 'local' || !item.sub);
+  }
   const snap = await firestore().collection('appointments').where('sub', '==', user.sub).get();
   return snap.docs.map((doc) => doc.data());
 }
@@ -70,7 +82,7 @@ async function deleteAppointment(user, appointment) {
   const store = require('../data/store');
   const list = store.session.appointments.get(appointment.donorId) || [];
   store.session.appointments.set(appointment.donorId, list.filter((item) => item.id !== appointment.id));
-  if (!local(user)) await firestore().collection('appointments').doc(appointment.id).delete();
+  if (!isEphemeral(user)) await firestore().collection('appointments').doc(appointment.id).delete();
 }
 
 module.exports = { getPreferences, savePreferences, deletePreferences, listAppointments, allAppointments, saveAppointment, deleteAppointment };

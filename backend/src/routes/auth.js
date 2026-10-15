@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const express = require('express');
 const { authDisabled, SESSION_MS } = require('../auth/policy');
 const session = require('../auth/session');
@@ -78,6 +79,14 @@ router.get('/me', (req, res) => {
   const user = session.readRequest(req);
   if (!user) return fail(res, 401, 'Sign in with Google');
   return ok(res, user);
+});
+
+router.post('/guest', (req, res) => {
+  if (authDisabled()) return fail(res, 400, 'Sign-in is turned off for local development');
+  const user = { sub: `guest-${crypto.randomUUID()}`, email: 'guest@tracedrop.app', name: 'Guest', picture: '', guest: true };
+  const issued = session.sign(user);
+  session.setCookie(res, issued.token);
+  return ok(res, issued.user);
 });
 
 router.post('/google', async (req, res) => {

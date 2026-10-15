@@ -109,3 +109,5 @@ Skip this for normal local work. To try the login page against the real project:
 4. Restart `./run.sh`.
 
 A successful sign-in writes your email to the same Firestore `users` and `accessEvents` collections as production. Your `gcloud` login must be allowed to write to Firestore.
+
+On that login screen you can also choose **Continue as guest** — same demo app, but preferences and bookings stay in this browser session only (no Google account, no Firestore).

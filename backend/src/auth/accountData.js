@@ -5,7 +5,7 @@
  * only the server's in-memory copy of the preferences and bookings.
  */
 
-const { authDisabled } = require('./policy');
+const { isEphemeral, isGuest } = require('./ephemeral');
 const settings = require('./userSettings');
 const calendar = require('../calendar/googleCalendar');
 
@@ -20,7 +20,7 @@ function firestore() {
   return db;
 }
 
-const local = (user) => authDisabled() || !user || user.local || user.sub === 'local';
+const local = (user) => isEphemeral(user);
 
 function httpError(status, message) {
   const error = new Error(message);
@@ -61,7 +61,19 @@ async function deleteDocs(docs) {
 async function read(user) {
   const bookings = (await settings.allAppointments(user)).map(publicBooking).sort((a, b) => `${b.date}${b.time}`.localeCompare(`${a.date}${a.time}`));
   if (local(user)) {
-    return { local: true, name: 'Local development', email: 'local-dev', picture: '', firstSeen: null, signIns: 0, lastSignIn: null, lastBrowser: null, bookings };
+    const guest = isGuest(user);
+    return {
+      local: !guest,
+      guest,
+      name: guest ? 'Guest' : 'Local development',
+      email: guest ? 'Browsing without Google sign-in' : 'local-dev',
+      picture: '',
+      firstSeen: null,
+      signIns: 0,
+      lastSignIn: null,
+      lastBrowser: null,
+      bookings,
+    };
   }
   const doc = await firestore().collection('users').doc(user.sub).get();
   const profile = doc.exists ? doc.data() : {};
