@@ -46,6 +46,8 @@ export interface Overview {
   cover: { base: number; current: number; eligible: number; next: number | null; pointsToNext: number | null; blockedBy: string | null } | null;
   communities: { id: string; name: string; kind: string; memberCount: number; notCounted: number; totals: { donations: number; patientsHelped: number } }[];
   ai: AIStatus;
+  badges?: Badge[];
+  newBadges?: string[];
 }
 
 export interface Eligibility { eligibleNow: boolean; nextEligibleDate: string | null; gapDays: number; lastDonationDate: string | null; blockers: string[] }
@@ -201,6 +203,7 @@ export interface Postcard { kind: string; component: string; headline: string; c
 export interface Badge {
   id: string; name: string; ring: string; rule: string; goal: string; earned: boolean;
   earnedMonth: string | null; earnedLabel: string | null; completedBy: { componentId?: string; donationId?: string } | null; progress: string | null;
+  progressRatio: number | null;
 }
 /** A Story's shareable last slide: the postcard, or a Badge with how many of the 8 the Donor holds. */
 export type StoryLast = { postcard: Postcard } | { badge: Badge; held: number };

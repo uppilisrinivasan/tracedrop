@@ -3,6 +3,7 @@
  * Earned slots show a small medal and the month; unearned ones are greyed with
  * their goal and progress. Clicking an earned Badge opens it to share.
  */
+import { useId } from 'react';
 import type { Badge } from '../../api';
 import './badges.css';
 
@@ -37,8 +38,36 @@ function Glyph({ ring }: { ring: string }) {
   return <span className={ring.length > 2 ? 'medal-num long' : 'medal-num'}>{ring}</span>;
 }
 
-export function Medal({ ring, grey }: { ring: string; grey?: boolean }) {
-  return <span className={`medal${grey ? ' grey' : ''}`}><span className="medal-disc"><Glyph ring={ring} /></span></span>;
+const RING_R = 25;
+const RING_LEN = 2 * Math.PI * RING_R;
+
+export function Medal({ ring, earned, progressRatio, compact }: { ring: string; earned?: boolean; progressRatio?: number | null; compact?: boolean }) {
+  const gid = useId().replace(/:/g, '');
+  const done = Boolean(earned);
+  const pct = done ? 1 : Math.max(0, Math.min(1, progressRatio ?? 0));
+  const size = compact ? 48 : 56;
+  const uid = `medal-gold-${gid}`;
+  return (
+    <span className={`medal-wrap${compact ? ' compact' : ''}`} style={{ width: size, height: size }}>
+      {!done && (
+        <svg className="medal-progress" viewBox="0 0 56 56" aria-hidden="true">
+          <defs>
+            <linearGradient id={uid} x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#e9cf7a" /><stop offset="50%" stopColor="#fff3c4" /><stop offset="100%" stopColor="#b88a2a" />
+            </linearGradient>
+          </defs>
+          <circle cx="28" cy="28" r={RING_R} fill="none" stroke="var(--border)" strokeWidth="3.5" opacity="0.55" />
+          {pct > 0 && (
+            <circle cx="28" cy="28" r={RING_R} fill="none" stroke={`url(#${uid})`} strokeWidth="3.5"
+              strokeDasharray={`${pct * RING_LEN} ${RING_LEN}`} strokeLinecap="round" transform="rotate(-90 28 28)" />
+          )}
+        </svg>
+      )}
+      <span className={`medal${done ? '' : ' in-progress'}`}>
+        <span className="medal-disc"><Glyph ring={ring} /></span>
+      </span>
+    </span>
+  );
 }
 
 export default function BadgeShelf({ badges, fresh, onOpen }: { badges: Badge[]; fresh: string[]; onOpen: (badge: Badge) => void }) {
@@ -51,13 +80,13 @@ export default function BadgeShelf({ badges, fresh, onOpen }: { badges: Badge[];
           ? (
             <button key={b.id} className={`badge-slot${fresh.includes(b.id) ? ' new' : ''}`} onClick={() => onOpen(b)}
               aria-label={`${fresh.includes(b.id) ? 'New Badge: ' : ''}${b.name}, earned ${b.earnedLabel}. Open to share`}>
-              <Medal ring={b.ring} />
+              <Medal ring={b.ring} earned />
               <span className="badge-slot-text">{fresh.includes(b.id) && <i className="badge-new">New</i>}<b>{b.name}</b><span>Earned {b.earnedLabel}</span></span>
             </button>
           )
           : (
             <div key={b.id} className="badge-slot locked">
-              <Medal ring={b.ring} grey />
+              <Medal ring={b.ring} progressRatio={b.progressRatio} />
               <span className="badge-slot-text"><b>{b.name}</b><span>{b.goal}{b.progress ? ` · ${b.progress}` : ''}</span></span>
             </div>
           ))}

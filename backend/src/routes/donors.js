@@ -77,6 +77,8 @@ router.get('/:donorId/overview', (req, res) => {
     cover: c.linked ? { base: c.baseCover, current: c.currentCover, eligible: c.eligibleCover, next: c.nextStep, pointsToNext: c.pointsToNextStep, blockedBy: c.blockedBy } : null,
     communities: community.forDonor(id).map(({ id: cid, name, kind, memberCount, notCounted, totals }) => ({ id: cid, name, kind, memberCount, notCounted, totals })),
     ai: llm.status(),
+    badges: badges(id),
+    newBadges: require('../domain/drop').newBadges(id).map((b) => b.id),
   });
 });
 

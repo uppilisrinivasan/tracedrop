@@ -14,8 +14,10 @@ test('Arjun (D-001) holds 6 of 8, with progress on the two he has not earned', (
   const b = byId(list);
   assert.equal(b.patients_10.earned, false);
   assert.equal(b.patients_10.progress, '8 so far');
+  assert.equal(b.patients_10.progressRatio, 0.8);
   assert.equal(b.all_five_parts.earned, false);
   assert.equal(b.all_five_parts.progress, '3 of 5 so far');
+  assert.equal(b.all_five_parts.progressRatio, 0.6);
   assert.equal(b.helped_child.earnedMonth, '2026-07');
   const child = impact.donorJourneys('D-001').find((j) => j.id === b.helped_child.completedBy.componentId);
   assert.ok(child.recipient.patient.startsWith('Teenager'));

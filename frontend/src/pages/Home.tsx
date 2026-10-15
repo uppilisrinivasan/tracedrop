@@ -5,6 +5,7 @@ import { ErrorNote, Icon, Loading, severityPill, useLoad } from '../ui';
 import DropFeed from '../components/drop/DropFeed';
 import Copilot, { bookCheckup, startBooking } from '../components/Copilot';
 import { fmtVisitDay } from '../components/drop/Checkup';
+import BadgeHomePreview from '../components/impact/BadgeHomePreview';
 import { introFocus } from '../components/intro/Intro';
 
 // The tiles each Intro step talks about; on the "Your data" step the account chip pulses instead
@@ -91,6 +92,10 @@ export default function Home({ donorId, go, version, refresh, clientId, user }: 
               </>
             )}
           </button>
+
+          {!firstTime && data.badges && data.badges.length > 0 && (
+            <BadgeHomePreview badges={data.badges} fresh={data.newBadges} onMore={() => go('impact')} />
+          )}
 
           <button className={tile('score')} style={{ textAlign: 'left' }} onClick={() => go('health')}>
             <div className="row between"><span className="stat-label">Health score</span><Icon name="heart" className="faint" /></div>
