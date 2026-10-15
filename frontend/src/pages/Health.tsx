@@ -372,24 +372,35 @@ function Trends({ data, added }: { data: HealthData; added: DropReading[] }) {
   else if (marker === 'weight') points = data.vitals.map((v) => ({ date: v.date, value: v.weightKg }));
   else points = (data.labs[marker] || []).map((o) => ({ date: o.date, value: o.value, source: o.source }));
   const available = MARKERS.filter((m) => m.key === 'bp' || m.key === 'weight' || (data.labs[m.key] || []).length);
+  // The axis always reaches the healthy limit (5.7% HbA1c, 120 systolic…), so the shaded band shows and a small change isn't stretched to fill the chart
+  const values = points.flatMap((p) => (p.value2 != null ? [p.value, p.value2] : [p.value])).concat(def.good ? [def.good[1]] : []);
+  const lo0 = values.length ? Math.min(...values) : 0;
+  const hi0 = values.length ? Math.max(...values) : 1;
+  const span = Math.max(hi0 - lo0, hi0 * 0.05, 0.1);
+  const step = span <= 2 ? 0.1 : span <= 20 ? 1 : span <= 100 ? 5 : 10;
+  const domain: [number, number] = [Math.max(0, Math.floor((lo0 - span * 0.1) / step) * step), Math.ceil((hi0 + span * 0.1) / step) * step];
+  const round = (n: number) => Number(n.toFixed(step < 1 ? 1 : 0));
 
   return (
     <Section title={<><Icon name="trend" size={18} /> Trends across your donations</>} sub="Each point is one donation visit, an uploaded report or a reading you added" collapsible defaultOpen={false}
       right={<div className="tabs">{available.map((m) => <button key={m.key} className={`tab ${marker === m.key ? 'active' : ''}`} onClick={() => setMarker(m.key)}>{m.label}</button>)}</div>}>
       <div style={{ height: 260 }}>
         <ResponsiveContainer>
-          <LineChart data={points.map((p) => ({ ...p, label: fmtDate(p.date) }))} margin={{ top: 10, right: 16, left: -8, bottom: 0 }}>
+          <LineChart data={points.map((p) => ({ ...p, label: fmtDate(p.date), text: p.value2 != null ? `${p.value}/${p.value2}` : String(p.value) }))} margin={{ top: 22, right: 16, left: -8, bottom: 0 }}>
             <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" />
             <XAxis dataKey="label" tick={{ fontSize: 12, fill: 'var(--muted)' }} />
-            <YAxis tick={{ fontSize: 12, fill: 'var(--muted)' }} domain={['auto', 'auto']} unit={marker === 'hba1c' ? '%' : ''} />
-            {def.good && <ReferenceArea y1={def.good[0]} y2={def.good[1]} fill="var(--good)" fillOpacity={0.08} />}
+            <YAxis tick={{ fontSize: 12, fill: 'var(--muted)' }} domain={domain.map(round)} allowDataOverflow tickFormatter={(v: number) => String(round(v))} unit={marker === 'hba1c' ? '%' : ''} />
+            {def.good && <ReferenceArea y1={def.good[0]} y2={def.good[1]} ifOverflow="hidden" fill="var(--good)" fillOpacity={0.12} />}
             <Tooltip contentStyle={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10 }} formatter={(v, n) => [`${v} ${def.unit}`, n === 'value2' ? 'Diastolic' : marker === 'bp' ? 'Systolic' : def.label]} />
-            <Line type="monotone" dataKey="value" stroke="#c8102e" strokeWidth={2.5} dot={{ r: 5 }} />
+            <Line type="monotone" dataKey="value" stroke="#c8102e" strokeWidth={2.5} dot={{ r: 5 }}>
+              {/* Each value is printed on its point, so reading the chart never needs hover */}
+              <LabelList dataKey={marker === 'bp' ? 'text' : 'value'} position="top" style={{ fontSize: 11, fill: 'var(--text)' }} />
+            </Line>
             {marker === 'bp' && <Line type="monotone" dataKey="value2" stroke="#1d4ed8" strokeWidth={2} dot={{ r: 4 }} />}
           </LineChart>
         </ResponsiveContainer>
       </div>
-      {def.good && <div className="tiny faint">Shaded band: healthy range.</div>}
+      {def.good && <div className="tiny faint">Shaded band: healthy range ({marker === 'bp' ? `top number ${def.good[0]}–${def.good[1]}` : `under ${def.good[1]}${marker === 'hba1c' ? '%' : ''}`}).</div>}
     </Section>
   );
 }

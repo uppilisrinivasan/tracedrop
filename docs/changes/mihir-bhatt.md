@@ -4,6 +4,16 @@ One entry per commit, newest first, so any change can be traced or reverted: the
 To revert one: find it with `git log --oneline --grep "<commit title>"`, then `git revert <hash>`.
 The design behind these changes is in `CONTEXT.md` (vocabulary) and the build plan.
 
+## 2026-10-15 · Trends shows its healthy band again
+
+- **What and why:** on My health, Trends' shaded healthy band was missing whenever a Donor's values sat outside it, even partly. Recharts drops a `ReferenceArea` that runs past the axis, and the axis was set to fit the values only. Ananya's HbA1c (5.1–5.2%) got no band, and a 0.1% change filled the whole chart. Arjun's BP (126–148, band 90–120) had no band either.
+  - The y-axis now always reaches the band's healthy limit (5.7% HbA1c, 120 systolic, 130 LDL, 150 triglycerides), with round steps. The band is clipped to the chart (`ifOverflow="hidden"`) instead of dropped.
+  - Each point's value is printed on it (systolic/diastolic for BP), so reading Trends never needs hover.
+  - The note under the chart names the range: "healthy range (under 5.7%)", "(top number 90–120)".
+  - Checked in the browser: Ananya's HbA1c inside the band up to 5.7%, and Arjun's BP above the 90–120 band.
+- **Files:** `frontend/src/pages/Health.tsx` (`Trends`).
+- **Revert:** safe to revert on its own.
+
 ## 2026-10-15 · Merge the Gemini 3.1 Flash-Lite swap into main, checked live
 
 - **What and why:** `gemini-2.5-flash-lite` retires on 20 Oct 2026 (team decision D2). This merges `chore/gemini-3.1-flash-lite` (commit c7189dc, its entry is below) into `feature/health-goals` and then `main`, after the live check its entry asked for. The only conflict was this change log; both sides are kept.
