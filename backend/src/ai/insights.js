@@ -60,7 +60,9 @@ async function forDonor(donorId) {
   const list = candidates(donorId);
   if (!list.length || list[0].id === 'urgent') return fallback(donorId);
   const pick = await llm.json({
-    feature: 'home_insight', system: SYSTEM, maxTokens: 800, effort: 'low', outputSchema: SCHEMA,
+    // The model may only pick one of these candidates, so its id is limited to theirs
+    feature: 'home_insight', system: SYSTEM, maxTokens: 800, effort: 'low',
+    outputSchema: { ...SCHEMA, properties: { ...SCHEMA.properties, candidateId: { type: 'string', enum: list.map((c) => c.id) } } },
     messages: [{ role: 'user', content: `Donor: ${donor.newUser ? 'a new user (name not known)' : donor.name.split(' ')[0]}. Language: ${LANGUAGE_NAMES[donor.language] || 'English'}.\nCandidates:\n${list.map((c) => `- [${c.id}] ${c.fact}`).join('\n')}` }],
   });
   const chosen = list.find((c) => c.id === pick.candidateId);

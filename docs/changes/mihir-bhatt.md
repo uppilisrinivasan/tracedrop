@@ -4,6 +4,18 @@ One entry per commit, newest first, so any change can be traced or reverted: the
 To revert one: find it with `git log --oneline --grep "<commit title>"`, then `git revert <hash>`.
 The design behind these changes is in `CONTEXT.md` (vocabulary) and the build plan.
 
+## 2026-10-15 · Merge the Gemini 3.1 Flash-Lite swap into main, checked live
+
+- **What and why:** `gemini-2.5-flash-lite` retires on 20 Oct 2026 (team decision D2). This merges `chore/gemini-3.1-flash-lite` (commit c7189dc, its entry is below) into `feature/health-goals` and then `main`, after the live check its entry asked for. The only conflict was this change log; both sides are kept.
+  - **Checked against live Vertex AI with `gemini-3.1-flash-lite`** (project from the machine's application-default credentials):
+    - **Chat:** Vikram's Movement Chat, twice, gets a doctor first and no exercise. Arjun's "Show my BP trend" calls `show_chart`. A second turn after that tool call ("my BP was 141/90 this morning") calls `log_reading` and saves the reading, and a third turn answers where his platelets went. So the returned `functionCall.id` works across turns. Meera's "I prefer evenings, and please talk to me in Tamil" calls `remember` and replies in Tamil.
+    - **Lab reader:** a low-contrast photo of a report and the same report as text both give triglycerides 204.6, LDL 138.4, HDL 40.2 mg/dL, HbA1c 5.63% and Hb 14.1, with the right date and lab name.
+    - **Card rewording:** the fact-check filter declines it, as it does on 2.5; this isn't a change.
+  - **One fix:** 3.1 sometimes answered the insight of the day with a made-up candidate id ("iron_depletion_001" for Meera), which fell back to the rules wording. `insights.js` now limits `candidateId` to the real candidates' ids, and Meera and Arjun get the AI insight in 2 of 2 runs.
+  - 149 backend tests pass.
+- **Files:** the swap's files (see its entry below), `backend/src/ai/insights.js`, `docs/changes/mihir-bhatt.md`.
+- **Revert:** revert this merge commit with `git revert -m 1`; the app goes back to `gemini-2.5-flash-lite`, which stops working on 20 Oct.
+
 ## 2026-10-15 · Drop's chat knows which Chat it's in and follows the Goals' steps
 
 - **What and why:** a fix found while trying the side sheet (branch `feature/health-goals`). In Vikram's Movement Chat, "Help me plan this week's movement" and then "I want to have a plan" got "Sorry, I lost my words there" twice. The model had written its own notes ("The user wants…", "Given this, I should advise the user…") or Python-style tool code as its answer, and the filter threw the whole reply away. Separately, Drop's chat didn't know the Goals' write-ups: in testing it suggested 150 minutes of exercise a week to Vikram, whose urgent Goal says no exercise until a doctor has seen him.
@@ -83,6 +95,15 @@ The design behind these changes is in `CONTEXT.md` (vocabulary) and the build pl
   - Imran is not in the Persona switcher; the tests use synthetic donor D-013 (Imran Menon), the only Imran with prediabetes alone.
 - **Files:** `backend/src/domain/goals.js` (new), `backend/src/domain/drop.js`, `backend/src/domain/health.js`, `backend/src/domain/screenLines.js`, `backend/test/goals.test.js` (new), `backend/test/drop.test.js`, `data/demo/drop-seed.json`, `frontend/src/api.ts` (`DropGoal`, `goals` on the Drop view, `goals` off `DropPlan`), `frontend/src/components/drop/DropKnows.tsx`, `frontend/src/components/drop/HealthDrop.tsx` (Your Plan lists the Goals until step 4 removes it), `CONTEXT.md`.
 - **Revert:** safe to revert on its own before step 2; the Plan goes back to BP 135/85 and Hb 12.5 Goals made on Save my Plan.
+## 2026-10-15 · Gemini 2.5 Flash-Lite swapped for 3.1 Flash-Lite before its retirement
+
+- **What and why:** branch `chore/gemini-3.1-flash-lite` (from `main`). Google's Vertex AI model versions page (checked 15 Oct 2026) says `gemini-2.5-flash-lite` retires on 20 Oct 2026. It names `gemini-3.8-flash`, `gemini-3.1-flash-lite` or Gemma 4 as replacements. 3.1 Flash-Lite is GA, available on the `global` endpoint, with the same 65,536 output and 1,048,576 context limits, the same image types and 7 MB inline cap, and structured output and function calling. Every AI feature (Drop's chat, lab reader, care plan, Drop's and the Intro's wording, home insight) uses this one model.
+  - The model id changes in `llm.js` (the default), the Cloud Run deploy workflow (`LLM_MODEL`), `.env.example` and `docs/RUN_LOCALLY.md`.
+  - Request changes from Google's 2.5 → 3.x migration guide: `temperature: 0.2` is removed, since Google says to drop sampling parameters on 3.x models. Gemini's own function-call `id`, when it sends one, now goes back on the call and on its `functionResponse` (3.x matches results to calls by id; a mismatch can give an empty reply).
+  - No change needed: JSON schema mode (`responseMimeType` + `responseSchema`) and image input (`inlineData`) keep the same shape. Thinking defaults to `MINIMAL` on 3.1 Flash-Lite, and thought signatures already go back with each tool call.
+  - Two new tests in `backend/test/llm.test.js`. All 119 backend tests pass. Not yet checked against live Vertex.
+- **Files:** `backend/src/ai/llm.js`, `backend/src/ai/agent.js`, `backend/test/llm.test.js`, `.github/workflows/deploy-cloud-run.yml`, `.env.example`, `docs/RUN_LOCALLY.md`.
+- **Revert:** safe to revert on its own until 20 Oct; after that the reverted model id stops answering and every AI feature falls back to rules.
 
 ## 2026-10-14 · An impact Card's own unit is no longer repeated in the report
 
