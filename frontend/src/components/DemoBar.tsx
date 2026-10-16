@@ -57,11 +57,11 @@ export default function DemoBar({ donorId, onChange }: { donorId: string; onChan
     }
   }
 
-  if (hidden) return <button className="demobar-tab" onClick={() => setHidden(false)}><Icon name="refresh" size={14} /> Demo · {fmt(clock.date)}</button>;
+  if (hidden) return <button className="demobar-tab" onClick={() => setHidden(false)}><Icon name="refresh" size={14} /> Preview · {fmt(clock.date)}</button>;
 
   return (
-    <div className="demobar" role="region" aria-label="Demo controls">
-      <button className="date" onClick={() => setHidden(true)} title="Hide the demo bar">
+    <div className="demobar" role="region" aria-label="Preview timeline controls">
+      <button className="date" onClick={() => setHidden(true)} title="Hide the preview bar">
         <Icon name="calendar" size={16} /> {fmt(clock.date)} · {TIMES[clock.partName]}
       </button>
       <button className="b" aria-label="What is this bar?" aria-expanded={info} onClick={() => setInfo(!info)}><Icon name="info" size={16} /></button>
@@ -70,12 +70,12 @@ export default function DemoBar({ donorId, onChange }: { donorId: string; onChan
       <button className="b" disabled={busy} onClick={() => run(api.demoAdvance(4))}>+1 day</button>
       <button className="b" disabled={busy} onClick={() => run(api.demoAdvance(28))}>+1 week</button>
       <button className="b" disabled={busy} onClick={() => run(api.demoNext(donorId))}>Next event</button>
-      <button className="b" disabled={busy} aria-label="Reset the demo" title="Reset the demo" onClick={() => run(api.demoReset(), true)}><Icon name="refresh" size={16} /></button>
+      <button className="b" disabled={busy} aria-label="Reset timeline" title="Reset timeline" onClick={() => run(api.demoReset(), true)}><Icon name="refresh" size={16} /></button>
       <button className="b" aria-pressed={knows} onClick={() => setKnows(!knows)}><Icon name="cpu" size={15} /> What Drop knows</button>
       {knows && <DropKnows donorId={donorId} onClose={() => setKnows(false)} />}
       {info && (
         <div className="demobar-info">
-          <b>Demo only.</b> Moves the app's date so you can see how Drop behaves over days and weeks. Real donors never see this bar. Reset puts everything back to Sat 10 Oct. Tap the date to hide the bar.
+          <b>Preview timeline.</b> Moves the app's date so you can see how Drop behaves over days and weeks. Reset puts everything back to Sat 10 Oct. Tap the date to hide the bar.
         </div>
       )}
     </div>

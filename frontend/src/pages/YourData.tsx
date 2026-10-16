@@ -195,12 +195,12 @@ export default function YourData({ donorId, version, clientId, user, donorName, 
     shareHealthWithInsurer: `insurer sharing ${choices[k] ? 'on' : 'off'}`, showOnLeaderboard: `${choices[k] ? 'on' : 'off'} leaderboards`, includeInCommunityStats: `${choices[k] ? 'counted' : 'not counted'} in totals`,
   }[k])).join(' · ') : '';
   const donorRows: Row[] = [
-    { id: 'choices', what: 'Your choices', detail: choiceSummary.charAt(0).toUpperCase() + choiceSummary.slice(1), kept: 'Until changed or the demo resets', fate: 'above' },
-    ...(view?.memory || []).map((m): Row => ({ id: `mem-${m.id}`, what: `Drop remembers: "${m.text}"`, detail: 'Something you told Drop', kept: 'Until deleted or the demo resets', remove: { label: 'Delete', toast: 'Memory deleted', run: () => api.dropForget(donorId, m.id) } })),
-    ...(view?.readings || []).map((r): Row => ({ id: `reading-${r.id}`, what: readingText(r), detail: r.observationId ? 'A value you added from a lab report' : 'A reading you added', kept: 'Until deleted or the demo resets', remove: { label: 'Delete', toast: 'Reading deleted', run: () => api.dropDeleteReading(donorId, r.id) } })),
-    ...(labs.data || []).map((o): Row => ({ id: `lab-${o.id}`, what: `${o.name} ${o.value} ${o.unit}, ${fmtDay(o.date)}`, detail: `Read from a lab report photo (${o.lab}). The photo itself is not kept.`, kept: 'Until deleted or the demo resets', remove: { label: 'Delete', toast: 'Lab value deleted', run: () => api.deleteUploadedValue(donorId, o.id) } })),
+    { id: 'choices', what: 'Your choices', detail: choiceSummary.charAt(0).toUpperCase() + choiceSummary.slice(1), kept: 'Until changed or the timeline resets', fate: 'above' },
+    ...(view?.memory || []).map((m): Row => ({ id: `mem-${m.id}`, what: `Drop remembers: "${m.text}"`, detail: 'Something you told Drop', kept: 'Until deleted or the timeline resets', remove: { label: 'Delete', toast: 'Memory deleted', run: () => api.dropForget(donorId, m.id) } })),
+    ...(view?.readings || []).map((r): Row => ({ id: `reading-${r.id}`, what: readingText(r), detail: r.observationId ? 'A value you added from a lab report' : 'A reading you added', kept: 'Until deleted or the timeline resets', remove: { label: 'Delete', toast: 'Reading deleted', run: () => api.dropDeleteReading(donorId, r.id) } })),
+    ...(labs.data || []).map((o): Row => ({ id: `lab-${o.id}`, what: `${o.name} ${o.value} ${o.unit}, ${fmtDay(o.date)}`, detail: `Read from a lab report photo (${o.lab}). The photo itself is not kept.`, kept: 'Until deleted or the timeline resets', remove: { label: 'Delete', toast: 'Lab value deleted', run: () => api.deleteUploadedValue(donorId, o.id) } })),
     ...(overview.data && overview.data.donations.completed + overview.data.donations.deferred > 0
-      ? [{ id: 'records', what: 'Donations and test results', detail: 'From the blood centre. In this demo, made-up records.', kept: 'Medical records the blood centre must keep', fate: 'centre' as Fate }]
+      ? [{ id: 'records', what: 'Donations and test results', detail: 'From the blood centre. In this preview, made-up records.', kept: 'Medical records the blood centre must keep', fate: 'centre' as Fate }]
       : []),
   ];
   const donorVisible = visible(donorRows);
@@ -213,8 +213,8 @@ export default function YourData({ donorId, version, clientId, user, donorName, 
   const saved = browserKeys();
   const browserRows: Row[] = [
     saved.length
-      ? { id: 'browser', what: 'Which demo donor you viewed, and Drop lines you hid', detail: 'Saved so the app opens where you left it', kept: 'Until you clear it', remove: { label: 'Clear', toast: "This browser's saved data cleared", run: async () => clearBrowserData() } }
-      : { id: 'browser', what: 'Which demo donor you viewed, and Drop lines you hid', detail: 'Nothing saved in this browser', fate: 'nothing' },
+      ? { id: 'browser', what: 'Which donor you viewed, and Drop lines you hid', detail: 'Saved so the app opens where you left it', kept: 'Until you clear it', remove: { label: 'Clear', toast: "This browser's saved data cleared", run: async () => clearBrowserData() } }
+      : { id: 'browser', what: 'Which donor you viewed, and Drop lines you hid', detail: 'Nothing saved in this browser', fate: 'nothing' },
     { id: 'cookie', what: 'Sign-in cookie', detail: a.local ? 'Sign-in is off on this computer, so there is no cookie' : 'Keeps you signed in', kept: a.local ? undefined : '24 hours, or until you sign out', fate: a.local ? 'nothing' : 'expires' },
   ];
 
@@ -242,10 +242,10 @@ export default function YourData({ donorId, version, clientId, user, donorName, 
       <Group icon="lock" title="With your Google account" where={a.local ? "This computer's server memory (sign-in is off)" : 'Google Cloud database (Firestore)'}
         rows={visible(googleRows)} onRemove={remove} busy={busy} />
       <Group icon="globe" title="In your own Google account" where="Your Google Calendar, Gmail and account settings" rows={visible(inGoogleRows)} onRemove={remove} busy={busy} />
-      <Group icon="drop" title={`Demo donor you're viewing: ${donorName}`} where="Pratidaan's server memory, shared"
+      <Group icon="drop" title={`Donor you're viewing: ${donorName}`} where="Pratidaan's server memory, shared"
         note={overview.data?.donor.newUser
-          ? 'Everyone trying the demo shares the New donor and sees and changes the same things, and all of this resets when the demo restarts. In the real app this would be yours alone.'
-          : `${donorName} is made up. Everyone trying the demo sees and changes the same ${donorName}, and all of this resets when the demo restarts. In the real app this would be yours alone.`}
+          ? 'Everyone using this preview shares the New donor; it resets when the timeline resets. In the real app this would be yours alone.'
+          : `${donorName} is made up. Everyone using this preview shares the same ${donorName}; it resets when the timeline resets. In the real app this would be yours alone.`}
         rows={donorVisible} empty={donorVisible.length <= 1 ? 'Nothing else is kept for this donor yet.' : undefined} onRemove={remove} busy={busy} />
       <Group icon="sparkles" title="Sent to Google's Gemini AI" where="Google Cloud (Vertex AI)" rows={fixedRows.ai} onRemove={remove} busy={busy} />
       <Group icon="doc" title="Server logs" where="Google Cloud Logging" rows={fixedRows.logs} onRemove={remove} busy={busy} />
@@ -328,7 +328,7 @@ function DeleteAccount({ user, account, clientId, donorName, onDeleted }: { user
                 <li>Confirmation emails in your Gmail</li>
                 <li>Pratidaan's access, in your Google Account settings</li>
               </ul>
-              <p className="tiny muted">The demo donor {donorName} is shared by everyone trying the demo, so its records and choices stay.</p>
+              <p className="tiny muted">The donor {donorName} is shared in this preview, so its records and choices stay.</p>
             </div>
           </div>
           <label className="yd-type"><span>Type <b>DELETE</b> to confirm</span><input value={typed} onChange={(e) => setTyped(e.target.value)} aria-label="Type DELETE to confirm" autoFocus /></label>

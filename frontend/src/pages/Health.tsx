@@ -285,7 +285,7 @@ function ScoreCard({ donorId, data, version }: { donorId: string; data: HealthDa
         ))}
       </div>
       {cover && <div className="callout callout-info small mt-12"><Icon name="shield" size={16} /><span>{cover}</span></div>}
-      <div className="tiny faint mt-12">Demo score from fixed rules (not AI), including uploaded results. Feeds the illustrative cover model; earlier donation scores stay unchanged.</div>
+      <div className="tiny faint mt-12">Score from fixed rules (not AI), including uploaded results. Feeds the cover model; earlier donation scores stay unchanged.</div>
     </section>
   );
 }
@@ -348,8 +348,8 @@ function CheckupsSection({ donorId, view, onChange }: { donorId: string; view: D
   return (
     <section className="card">
       <div className="card-title">Check-ups</div>
-      <div className="card-sub">{checkups.length ? `${checkups.length} simulated visit${checkups.length === 1 ? '' : 's'} coming up` : 'Example clinic times, not confirmed availability'}</div>
-      {checkups.length === 0 && <p className="small muted mt-12">No check-up booked. These demo times don't reserve a visit; contact a real care provider to arrange one.</p>}
+      <div className="card-sub">{checkups.length ? `${checkups.length} visit${checkups.length === 1 ? '' : 's'} coming up` : 'Clinic times shown are not confirmed availability'}</div>
+      {checkups.length === 0 && <p className="small muted mt-12">No check-up booked. These times don't reserve a visit; contact a care provider to arrange one.</p>}
       <div className="stack mt-12" style={{ gap: 10 }}>
         {checkups.map((b) => <Checkup key={b.id} booking={b} busy={busy} onChange={() => cancel(b.id, true)} onCancel={() => cancel(b.id, false)} />)}
       </div>
@@ -457,7 +457,7 @@ function LabReader({ donorId, onSaved, focusLabs }: { donorId: string; onSaved: 
     setErr(null);
     try {
       const r = await api.saveLabs(donorId, result);
-      setSaved(`${r.saved} results added to this demo persona (${fmtDate(r.date)}). The current score and illustrative cover model now use them; earlier donation scores remain unchanged.`);
+      setSaved(`${r.saved} results added (${fmtDate(r.date)}). The current score and cover model now use them; earlier donation scores remain unchanged.`);
       setResult(null);
       setText('');
       setImage(null);
@@ -471,7 +471,7 @@ function LabReader({ donorId, onSaved, focusLabs }: { donorId: string; onSaved: 
 
   return (
     <Section title={<><Icon name="doc" size={18} /> Add an outside lab report <AIBadge label="GenAI" /></>}
-      sub="AI can read text or photos and map recognised tests to the demo timeline. Review every extracted value before saving; do not upload a real person's medical records to a shared demo persona."
+      sub="AI can read text or photos and map recognised tests to your timeline. Review every extracted value before saving; do not upload a real person's medical records to a shared preview account."
       collapsible defaultOpen={focusLabs}>
       <div className="grid grid-2">
         <div className="stack" style={{ gap: 10 }}>
@@ -508,7 +508,7 @@ function LabReader({ donorId, onSaved, focusLabs }: { donorId: string; onSaved: 
               </div>
               {result.notes && <div className="tiny muted"><b>Conversions:</b> {result.notes}</div>}
               {result.unmapped.length > 0 && <div className="tiny faint">Not tracked: {result.unmapped.join(', ')}</div>}
-              <div className="row"><button className="btn btn-primary" disabled={busy} onClick={save}>Add to demo persona</button><button className="btn" onClick={() => setResult(null)}>Discard</button></div>
+              <div className="row"><button className="btn btn-primary" disabled={busy} onClick={save}>Save results</button><button className="btn" onClick={() => setResult(null)}>Discard</button></div>
             </div>
           )}
         </div>

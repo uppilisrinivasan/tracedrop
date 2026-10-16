@@ -22,7 +22,7 @@ function DemoNote() {
   return (
     <div className="callout callout-warn small legal-demo">
       <Icon name="info" size={16} />
-      <span><b>Demo policy.</b> Pratidaan is a hackathon demo with made-up blood donation records. This page says what the demo really does with your data, in plain words. It has not had a legal review.</span>
+      <span><b>Preview policy.</b> Pratidaan is a hackathon preview with made-up blood donation records. This page says what the app does with your data, in plain words. It has not had a legal review.</span>
     </div>
   );
 }
@@ -46,18 +46,18 @@ function Privacy() {
 
       <p><b>In your own Google account</b>, only if you connect Google Calendar when you book: a Calendar event for each booking, and a confirmation email sent from your Gmail to yourself. Pratidaan can remove its Calendar events when you allow Calendar access again, but it can't read or delete your email.</p>
 
-      <p><b>With the demo donor you are viewing</b>, in Pratidaan's server memory: your Choices, things you ask Drop to remember (never health facts, religion, caste or income), readings you add, and values read from lab reports. Demo donors are shared by everyone trying the demo, so others can see and change the same things, and all of it resets when the demo restarts. Lab report photos are not kept: they are sent to the AI to read, then discarded.</p>
+      <p><b>With the donor profile you are viewing</b>, in Pratidaan's server memory: your Choices, things you ask Drop to remember (never health facts, religion, caste or income), readings you add, and values read from lab reports. Shared preview donors can be seen and changed by others using this preview, and all of it resets when the timeline resets. Lab report photos are not kept: they are sent to the AI to read, then discarded.</p>
 
-      <p><b>Sent to Google's Gemini AI</b> (Google Cloud Vertex AI): what you type to Drop, lab report photos, and the demo donor's records Drop needs to answer. It never gets your name or email. Google doesn't train its AI on it. Google may keep it in memory for up to 24 hours to answer faster, and for up to 90 days if its automated checks flag it for possible abuse. We don't promise which country this processing happens in.</p>
+      <p><b>Sent to Google's Gemini AI</b> (Google Cloud Vertex AI): what you type to Drop, lab report photos, and the donor records Drop needs to answer. It never gets your name or email. Google doesn't train its AI on it. Google may keep it in memory for up to 24 hours to answer faster, and for up to 90 days if its automated checks flag it for possible abuse. We don't promise which country this processing happens in.</p>
 
       <p><b>Server logs</b> (Google Cloud Logging): the pages and actions you used, your IP address and browser, kept for 30 days to find errors and stop misuse, then deleted automatically.</p>
 
-      <p><b>This browser</b> remembers which demo donor you viewed and Drop lines you hid. A sign-in cookie keeps you signed in for 1 day, or until you sign out. Pratidaan sets no other cookies; Google's sign-in button follows Google's own privacy policy.</p>
+      <p><b>This browser</b> remembers which donor you viewed and Drop lines you hid. A sign-in cookie keeps you signed in for 1 day, or until you sign out. Pratidaan sets no other cookies; Google's sign-in button follows Google's own privacy policy.</p>
 
       <h2>Your choices</h2>
       <p>Three switches, which you can change any time in Your data, Health cover or Community:</p>
       <ul>
-        <li><b>Share my health score with my insurer</b> (off unless you turn it on). Only the score, never your results. It can raise your cover at the same premium. In this demo no insurer receives anything.</li>
+        <li><b>Share my health score with my insurer</b> (off unless you turn it on). Only the score, never your results. It can raise your cover at the same premium. In this preview no insurer receives anything.</li>
         <li><b>Show me on my Circles' leaderboards</b> (on). Your first name, donations and patients helped.</li>
         <li><b>Count my donations in my Circles' totals</b> (on). Anonymous numbers only; off, you are left out of every total.</li>
       </ul>
@@ -86,12 +86,12 @@ function Terms() {
       <DemoNote />
       <h2>Using Pratidaan</h2>
       <p>Pratidaan is a demonstration of tracing blood donations and following up on the health check that comes with each one. You need a Google account to sign in. Use it lawfully and do not try to access data or accounts that are not yours.</p>
-      <h2>Demo donors</h2>
-      <p>The donors you can view are made up, apart from the New donor, which stands for you as a new user. Everyone trying the demo shares them, so what you enter for a demo donor can be seen and changed by others, and it all resets when the demo restarts. Don't enter anything about a demo donor that you wouldn't want others to see.</p>
+      <h2>Preview donor profiles</h2>
+      <p>The donors you can view are made up, apart from the New donor, which stands for you as a new user. Everyone using this preview shares them, so what you enter can be seen and changed by others, and it all resets when the timeline resets. Don't enter anything you wouldn't want others to see.</p>
       <h2>Your content</h2>
       <p>You are responsible for what you enter. Do not upload real medical records, or anyone else's personal data without their consent.</p>
       <h2>No medical advice</h2>
-      <p>Drop's answers and the health findings are for information only. They are not medical advice and do not replace a doctor. In this demo, bookings, insurance cover and health records are illustrations: no blood centre, clinic or insurer receives anything.</p>
+      <p>Drop's answers and the health findings are for information only. They are not medical advice and do not replace a doctor. Bookings, insurance cover and health records shown here are illustrations: no blood centre, clinic or insurer receives anything.</p>
       <h2>Availability</h2>
       <p>Pratidaan is provided as is, without warranty. It may change, pause or stop at any time, and we may end access for anyone who misuses it.</p>
       <h2>Privacy</h2>

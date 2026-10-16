@@ -61,7 +61,7 @@ export default function ReportUpload({ donorId, onSave, onClose }: { donorId: st
             <input type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(e) => e.target.files?.[0] && read(e.target.files[0], false)} />
           </label>
           <button className="btn" style={{ minHeight: 44 }} disabled={busy} onClick={async () => read(await (await fetch(SAMPLE)).blob(), true)}>
-            Use a sample report <span className="pill pill-warn">Demo</span>
+            Use a sample report <span className="pill pill-warn">Sample</span>
           </button>
         </div>
         {preview && <img src={preview} alt="The lab report" style={{ width: '100%', marginTop: 14, borderRadius: 10, border: '1px solid var(--border)' }} />}

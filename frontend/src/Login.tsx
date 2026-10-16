@@ -70,7 +70,7 @@ export default function Login({ clientId, sessionMinutes, onSignedIn }: {
         <p className="login-script" lang="hi">{APP_NAME_DEVANAGARI}</p>
         <p className="login-tagline">{APP_TAGLINE}</p>
         <h1>Welcome to {APP_NAME}</h1>
-        <p className="muted">Sign in with Google to save preferences and bookings to your account, or continue as a guest to explore the demo. Sessions last {sessionLength(sessionMinutes)}.</p>
+        <p className="muted">Sign in with Google to save preferences and bookings to your account, or continue as a guest to explore without signing in. Sessions last {sessionLength(sessionMinutes)}.</p>
         {clientId ? <div ref={host} className="login-google" /> : <p className="login-error">Google sign-in is not configured.</p>}
         <div className="login-or"><span>or</span></div>
         <button type="button" className="btn login-guest" disabled={busy} onClick={() => {
@@ -78,7 +78,7 @@ export default function Login({ clientId, sessionMinutes, onSignedIn }: {
           setError('');
           api.guestSignIn().then(onSignedIn).catch((e: Error) => setError(e.message)).finally(() => setBusy(false));
         }}>Continue as guest</button>
-        <p className="tiny faint login-guest-note">Guest mode uses demo data only. Nothing is saved to Google or the cloud when you leave.</p>
+        <p className="tiny faint login-guest-note">Guest mode uses shared preview data. Nothing is saved to Google or the cloud when you leave.</p>
         {busy && <p className="tiny muted">One moment…</p>}
         {error && <p className="login-error">{error}</p>}
         <LegalLinks />

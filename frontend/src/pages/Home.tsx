@@ -130,7 +130,7 @@ export default function Home({ donorId, go, version, refresh, clientId, user }: 
           </button>
 
           <button className={tile('cover')} style={{ textAlign: 'left' }} onClick={() => go('cover')}>
-            <div className="row between"><span className="stat-label">Illustrative health cover</span><Icon name="shield" className="faint" /></div>
+            <div className="row between"><span className="stat-label">Health cover</span><Icon name="shield" className="faint" /></div>
             {!cover ? <div className="bold mt-8">No cover linked yet</div> : (
               <>
                 <div className="row mt-8" style={{ alignItems: 'baseline' }}>
@@ -138,7 +138,7 @@ export default function Home({ donorId, go, version, refresh, clientId, user }: 
                   {cover.current > cover.base && <span className="pill pill-good">+{rupees(cover.current - cover.base)}</span>}
                 </div>
                 <div className="small muted mt-8">
-                  {cover.pointsToNext != null && cover.next ? `${cover.pointsToNext} score point${cover.pointsToNext === 1 ? '' : 's'} to example ${rupees(cover.next)}; premium unchanged in demo` : cover.next ? 'Demo: keep monitoring for next step' : 'Top demo cover step reached'} · no insurer sharing
+                  {cover.pointsToNext != null && cover.next ? `${cover.pointsToNext} score point${cover.pointsToNext === 1 ? '' : 's'} to ${rupees(cover.next)}; premium unchanged` : cover.next ? 'Keep monitoring for next step' : 'Top cover step reached'} · no insurer sharing
                 </div>
               </>
             )}

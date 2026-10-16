@@ -139,15 +139,15 @@ export default function DropFeed({ donorId, version, refresh, calmLine, storiesI
             <div key={b.id} className="drop-booking">
               <Icon name="calendar" size={16} />
               <span>
-                <b>{b.kind === 'donate' ? 'Demo donation booking' : `Demo check-up${b.doctor ? ` with fictional ${b.doctor}` : ''}`}</b> · {fmtDay(b.date)} · {b.time}<br />
+                <b>{b.kind === 'donate' ? 'Donation booking' : `Check-up${b.doctor ? ` · ${b.doctor}` : ''}`}</b> · {fmtDay(b.date)} · {b.time}<br />
                 <span className="tiny muted">{b.kind === 'care' && b.clinic ? `Fictional ${b.clinic}, ${b.address}` : b.place} · no centre or clinic reservation</span>
-                {b.kind === 'care' && onDetails && <><br /><button className="drop-link" onClick={onDetails}>See demo details</button></>}
+                {b.kind === 'care' && onDetails && <><br /><button className="drop-link" onClick={onDetails}>See details</button></>}
               </span>
               {b.kind === 'donate' && b.guided ? (
                 <button disabled={!onDonate} onClick={onDonate}>Manage in Donate</button>
               ) : <>
-                <button disabled={busy} onClick={() => run(api.dropCancelBooking(donorId, b.id, true), true)}>Change demo booking</button>
-                <button disabled={busy} onClick={() => run(api.dropCancelBooking(donorId, b.id, false), true)}>Cancel demo booking</button>
+                <button disabled={busy} onClick={() => run(api.dropCancelBooking(donorId, b.id, true), true)}>Change booking</button>
+                <button disabled={busy} onClick={() => run(api.dropCancelBooking(donorId, b.id, false), true)}>Cancel booking</button>
               </>}
             </div>
           ))}

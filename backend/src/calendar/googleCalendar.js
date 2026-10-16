@@ -71,9 +71,9 @@ function buildEvent({ slot, email, reminderMinutes, checkInCode }) {
   const endMinutes = hour * 60 + minute + 45;
   const endTime = `${String(Math.floor(endMinutes / 60)).padStart(2, '0')}:${String(endMinutes % 60).padStart(2, '0')}`;
   return {
-    summary: `Pratidaan demo donation slot at ${slot.centre}`,
+    summary: `Pratidaan donation slot at ${slot.centre}`,
     location: `${slot.centre}, ${slot.district} (illustrative; not reserved)`,
-    description: `This is a presentation/demo slot, not a reservation with the blood centre. Do not travel on the basis of this event.${checkInCode ? ` Demo check-in code: ${checkInCode}.` : ''}`,
+    description: `This is not a reservation with the blood centre. Do not travel on the basis of this event.${checkInCode ? ` Check-in code (not valid at a centre): ${checkInCode}.` : ''}`,
     start: { dateTime: start, timeZone: 'Asia/Kolkata' },
     end: { dateTime: `${slot.date}T${endTime}:00+05:30`, timeZone: 'Asia/Kolkata' },
     attendees: [{ email }],
@@ -97,16 +97,16 @@ async function deleteEvent(token, eventId, fetchImpl) {
 function confirmationMail({ to, slot, reminderMinutes, checkInCode }) {
   const leads = reminderMinutes.map((value) => (value >= 1440 ? `${value / 1440} day${value === 1440 ? '' : 's'}` : `${value / 60} hour${value === 60 ? '' : 's'}`)).join(' and ');
   const text = [
-    `Your Pratidaan demo slot is saved for ${slot.date} at ${slot.time}. This is not a reservation with a blood centre; do not travel based on this message.`,
+    `Your Pratidaan slot is saved for ${slot.date} at ${slot.time}. This is not a reservation with a blood centre; do not travel based on this message.`,
     `${slot.centre}, ${slot.district} (illustrative).`,
-    checkInCode ? `Demo check-in code: ${checkInCode}. It cannot be used at a blood centre.` : null,
+    checkInCode ? `Check-in code: ${checkInCode}. It cannot be used at a blood centre.` : null,
     `Your connected calendar may remind you ${leads} before the slot.`,
     'Before you come: eat a meal 3 to 4 hours before, sleep at least 6 hours, drink water, and skip alcohol for 24 hours.',
     'Bring a photo ID.',
   ].filter(Boolean).join('\n');
   const raw = Buffer.from([
     `To: ${to}`,
-    'Subject: Your Pratidaan demo slot is saved',
+    'Subject: Your Pratidaan slot is saved',
     'Content-Type: text/plain; charset=utf-8',
     '',
     text,

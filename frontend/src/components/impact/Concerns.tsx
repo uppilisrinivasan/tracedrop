@@ -64,12 +64,12 @@ export function ConcernList({ donorId, concerns, onChange }: { donorId: string; 
             <div className="row between wrap">
               <div><b>{c.categoryLabel}</b> <span className="tiny muted">· {c.id}{c.unitName ? ` · ${c.unitName}` : ''}</span></div>
               <span className={`pill ${c.status === 'resolved' ? 'pill-good' : c.overdue ? 'pill-bad' : c.answered ? 'pill-info' : 'pill-warn'}`}>
-                {c.status === 'resolved' ? 'Demo closed' : c.overdue ? 'Demo deadline passed' : c.answered ? 'Example reply shown' : 'Awaiting example reply'}
+                {c.status === 'resolved' ? 'Closed' : c.overdue ? 'Deadline passed' : c.answered ? 'Reply shown' : 'Awaiting reply'}
               </span>
             </div>
             {c.status === 'open' && (
               <div className="small mt-8">
-                Example owner: <b>{c.owner}</b> (level {c.level} of {c.levels}) · {c.answered ? 'demo-generated reply shown' : `example deadline ${fmtDate(c.dueOn)}`}
+                Owner: <b>{c.owner}</b> (level {c.level} of {c.levels}) · {c.answered ? 'reply shown' : `deadline ${fmtDate(c.dueOn)}`}
               </div>
             )}
             <ol className="concern-steps">
@@ -77,8 +77,8 @@ export function ConcernList({ donorId, concerns, onChange }: { donorId: string; 
             </ol>
             {c.status === 'open' && (
               <div className="row wrap mt-8">
-                {c.canEscalate && <button className="btn btn-sm btn-primary" onClick={() => act(c, 'escalate')}>{c.answered ? 'Not satisfied: ' : ''}Try demo escalation to {c.nextOwner}</button>}
-                {!c.canEscalate && c.nextOwner && <span className="tiny muted">Demo escalation unlocks after {fmtDate(c.dueOn)} if no example reply appears.</span>}
+                {c.canEscalate && <button className="btn btn-sm btn-primary" onClick={() => act(c, 'escalate')}>{c.answered ? 'Not satisfied: ' : ''}Escalate to {c.nextOwner}</button>}
+                {!c.canEscalate && c.nextOwner && <span className="tiny muted">Escalation unlocks after {fmtDate(c.dueOn)} if no reply appears.</span>}
                 <button className="btn btn-sm" onClick={() => act(c, 'resolve')}>Close concern</button>
               </div>
             )}

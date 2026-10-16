@@ -46,7 +46,7 @@ export default function DropKnows({ donorId, onClose }: { donorId: string; onClo
       <div className="knows-head">
         <div>
           <div className="bold"><Icon name="cpu" size={16} /> What Drop knows</div>
-          <div className="tiny muted">{name} · demo only, from the rules engine</div>
+          <div className="tiny muted">{name} · rules engine state</div>
         </div>
         <button className="btn btn-ghost btn-sm" style={{ minWidth: 40, minHeight: 40 }} aria-label="Close" onClick={onClose}><Icon name="x" /></button>
       </div>

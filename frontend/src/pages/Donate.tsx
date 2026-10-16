@@ -36,7 +36,7 @@ export default function Donate({ donorId, go, version, refresh, clientId }: Page
       }
       const cancelled = await api.cancelAppointment(donorId, a.id, accessToken);
       appts.reload();
-      if (cancelled.calendarError) setErr(`Demo slot cancelled, but its Google Calendar event could not be confirmed removed: ${cancelled.calendarError}. Check Google Calendar and remove it there if present.`);
+      if (cancelled.calendarError) setErr(`Slot cancelled, but its Google Calendar event could not be confirmed removed: ${cancelled.calendarError}. Check Google Calendar and remove it there if present.`);
     } catch (e) {
       setErr((e as Error).message);
     } finally {
@@ -76,11 +76,11 @@ export default function Donate({ donorId, go, version, refresh, clientId }: Page
           <Icon name={result.status === 'completed' ? 'check' : 'info'} />
           <div>
             {result.status === 'completed' ? (
-              <><b>Demo donation recorded.</b> The simulation produced {result.components.length} components ({result.components.join(', ')}) — follow their demo journey on Impact. These are simulated health results, not clinical tests.</>
+              <><b>Donation recorded.</b> {result.components.length} components ({result.components.join(', ')}) — follow their journey on Impact. These are simulated results, not clinical tests.</>
             ) : (
-              <><b>Demo donation deferred.</b> {result.reasons.join('; ')}. Simulated screening values were recorded for this persona; this is not a clinical assessment.</>
+              <><b>Donation deferred.</b> {result.reasons.join('; ')}. Simulated screening values were recorded; this is not a clinical assessment.</>
             )}
-            {result.assumedVitals?.length ? <div className="small muted mt-8">Demo values supplied for: {result.assumedVitals.join(', ')}. No measurement was taken.</div> : null}
+            {result.assumedVitals?.length ? <div className="small muted mt-8">Values supplied for: {result.assumedVitals.join(', ')}. No measurement was taken.</div> : null}
             <div className="row mt-8">
               <button className="btn btn-sm btn-primary" onClick={() => go(result.status === 'completed' ? 'impact' : 'plan')}>{result.status === 'completed' ? 'Track my components' : 'Open care plan'}</button>
               <button className="btn btn-sm" onClick={() => go('health')}>See my results</button>
@@ -89,14 +89,14 @@ export default function Donate({ donorId, go, version, refresh, clientId }: Page
         </div>
       )}
       {err && <ErrorNote error={err} />}
-      {pendingCalendarRemoval.map((a) => <div key={a.id} className="callout callout-warn small">The demo slot on {fmtDate(a.date)} was cancelled, but its Google Calendar event could not be confirmed removed. Check Google Calendar and remove it there if present.</div>)}
+      {pendingCalendarRemoval.map((a) => <div key={a.id} className="callout callout-warn small">The slot on {fmtDate(a.date)} was cancelled, but its Google Calendar event could not be confirmed removed. Check Google Calendar and remove it there if present.</div>)}
 
       {booked.map((a) => (
-        <Section key={a.id} title={<><Icon name="calendar" size={18} /> Demo donation booking on {fmtDate(a.date)}</>} sub={`Example centre: ${a.centre}, ${a.district} · no real reservation`}>
+        <Section key={a.id} title={<><Icon name="calendar" size={18} /> Donation booking on {fmtDate(a.date)}</>} sub={`${a.centre}, ${a.district} · not a centre reservation`}>
           <AppointmentPass appointment={a} />
           <details className="mt-16">
-            <summary className="small bold" style={{ cursor: 'pointer' }}>Demo: simulate check-in (no centre visit)</summary>
-          <p className="small muted mt-8">Demo only: no staff scan the QR code, take a sample or screen you. Leave blanks to use synthetic persona values, or enter values to try a simulated deferral (e.g. haemoglobin 11.9).</p>
+            <summary className="small bold" style={{ cursor: 'pointer' }}>Simulate check-in</summary>
+          <p className="small muted mt-8">Simulated check-in only: no staff scan the QR code or screen you. Leave blanks to use persona values, or enter values to try a simulated deferral (e.g. haemoglobin 11.9).</p>
           <div className="grid grid-3 mt-12" style={{ gap: 10 }}>
             <label className="small">Systolic BP<input className="input" inputMode="numeric" value={vitals.systolic} onChange={(e) => setVitals({ ...vitals, systolic: e.target.value })} placeholder="e.g. 128" /></label>
             <label className="small">Diastolic BP<input className="input" inputMode="numeric" value={vitals.diastolic} onChange={(e) => setVitals({ ...vitals, diastolic: e.target.value })} placeholder="e.g. 82" /></label>
@@ -106,7 +106,7 @@ export default function Donate({ donorId, go, version, refresh, clientId }: Page
             <button className="btn btn-primary" onClick={() => checkIn(a)} disabled={busy === a.id}><Icon name="drop" size={16} /> Simulate check-in and donation</button>
           </div>
           </details>
-          <div className="row mt-12"><button className="btn btn-sm" disabled={busy === a.id} onClick={() => cancel(a)}>Cancel demo booking</button></div>
+          <div className="row mt-12"><button className="btn btn-sm" disabled={busy === a.id} onClick={() => cancel(a)}>Cancel booking</button></div>
         </Section>
       ))}
 

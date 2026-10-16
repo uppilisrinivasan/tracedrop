@@ -115,7 +115,7 @@ const DATA_PICTURE = {
   rows: [
     { icon: 'lock', what: 'Your Google name, email and photo, and your sign-ins', where: 'With your Google account, in Google Cloud' },
     { icon: 'calendar', what: 'When donating suits you, and your bookings', where: 'With your Google account, in Google Cloud' },
-    { icon: 'shield', what: 'Your choices, and things you ask me to remember', where: 'With this demo donor. I never remember health facts, religion, caste or income' },
+    { icon: 'shield', what: 'Your choices, and things you ask me to remember', where: 'With your profile in this session. I never remember health facts, religion, caste or income' },
     { icon: 'flask', what: 'Donations and test results', where: 'From the blood centre. You have none yet' },
   ],
   note: "When you chat with me or add a lab report, it goes to Google's Gemini AI to answer you. Google doesn't train its AI on it.",

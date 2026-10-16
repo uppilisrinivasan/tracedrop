@@ -31,13 +31,13 @@ const addDays = (iso, days) => new Date(Date.parse(`${iso}T00:00:00Z`) + days * 
 function centreAnswer(c) {
   const unit = c.unit;
   if (c.category === 'wasted' && unit?.expiry) {
-    return `Demo-generated example, not a centre response: Synthetic unit ${unit.id} shows: ${unit.expiry.cause.join(' ')} A centre could review how it times drives for ${unit.kind === 'PLT' ? 'platelets' : 'this blood group'}.`;
+    return `Illustrative reply (not from a centre): Unit ${unit.id} shows: ${unit.expiry.cause.join(' ')} A centre could review how it times drives for ${unit.kind === 'PLT' ? 'platelets' : 'this blood group'}.`;
   }
   if (c.category === 'tracking' && unit) {
-    return `Demo-generated example, not a centre response: The simulated timeline for unit ${unit.id} shows "${unit.statusLabel}". No centre register was checked. A real discrepancy needs a direct enquiry with the centre.`;
+    return `Illustrative reply (not from a centre): The timeline for unit ${unit.id} shows "${unit.statusLabel}". No centre register was checked. A real discrepancy needs a direct enquiry with the centre.`;
   }
-  if (c.category === 'privacy') return 'Demo-generated example, not a centre response: This walkthrough does not share your health score or results with an insurer. Review the app\'s privacy information and contact the relevant organisation directly for a real privacy concern.';
-  return 'Demo-generated example, not a centre response: Your feedback is recorded only in this demo session. No staff were contacted and no call has been requested. Please contact the centre directly to report real treatment concerns.';
+  if (c.category === 'privacy') return 'Illustrative reply (not from a centre): This app does not share your health score or results with an insurer. Review the privacy information and contact the relevant organisation directly for a real privacy concern.';
+  return 'Illustrative reply (not from a centre): Your feedback is recorded only in this session. No staff were contacted. Please contact the centre directly to report real treatment concerns.';
 }
 
 /** Steps that have happened by the demo date, plus who owns it now and by when. */
@@ -47,11 +47,11 @@ function view(c) {
   const steps = [...c.log];
   const add = (step) => { if (!steps.some((s) => s.text === step.text)) steps.push(step); };
   const ackOn = addDays(c.levelSince, level.ackDays);
-  if (today >= ackOn) add({ on: ackOn, text: `Demo-generated acknowledgement for example ${level.owner}; no acknowledgement was sent or received.` });
+  if (today >= ackOn) add({ on: ackOn, text: `Illustrative acknowledgement for ${level.owner}; no acknowledgement was sent or received.` });
   // An example centre reply appears on demo day 3; no real response is received.
   const answerOn = c.level === 0 ? addDays(c.levelSince, 3) : null;
   const answered = Boolean(c.status === 'open' && answerOn && today >= answerOn);
-  if (answered) add({ on: answerOn, text: `Answer from demo generator (not ${level.owner}): ${centreAnswer(c)}` });
+  if (answered) add({ on: answerOn, text: `Illustrative answer (not from ${level.owner}): ${centreAnswer(c)}` });
   const dueOn = addDays(c.levelSince, level.dueDays);
   const overdue = c.status === 'open' && !answered && today > dueOn;
   return {
@@ -94,7 +94,7 @@ function raise(donorId, { category, details, unitId }) {
   const c = {
     id: `CN-${String(seq++).padStart(4, '0')}`,
     donorId, category, details: text, unit, createdOn: today, level: 0, levelSince: today, status: 'open',
-    log: [{ on: today, text: `Demo concern saved in this session. Example owner: ${LADDER[0].owner}. Nothing was sent.` }],
+    log: [{ on: today, text: `Concern saved in this session. Owner: ${LADDER[0].owner}. Nothing was sent.` }],
   };
   concerns.set(donorId, [...(concerns.get(donorId) || []), c]);
   return view(c);
@@ -103,19 +103,19 @@ function raise(donorId, { category, details, unitId }) {
 function escalate(donorId, id) {
   const c = find(donorId, id);
   const v = view(c);
-  if (!v.canEscalate) throw new Error(c.level >= LADDER.length - 1 ? 'The demo has reached its last example level' : `You can escalate after ${v.dueOn} in this demo if there is no example reply, or once an example reply appears`);
+  if (!v.canEscalate) throw new Error(c.level >= LADDER.length - 1 ? 'This concern has reached its last level' : `You can escalate after ${v.dueOn} if there is no reply, or once a reply appears`);
   const today = store.today();
   c.log = v.steps;
   c.level += 1;
   c.levelSince = today;
-  c.log.push({ on: today, text: `Demo escalation advanced to example ${LADDER[c.level].owner}${v.overdue ? ' after the simulated deadline' : ' after the demo-generated reply'}. No authority was contacted.` });
+  c.log.push({ on: today, text: `Escalated to ${LADDER[c.level].owner}${v.overdue ? ' after the deadline' : ' after the illustrative reply'}. No authority was contacted.` });
   return view(c);
 }
 
 function resolve(donorId, id) {
   const c = find(donorId, id);
   const v = view(c);
-  c.log = [...v.steps, { on: store.today(), text: 'You closed this demo concern; no external case was resolved.' }];
+  c.log = [...v.steps, { on: store.today(), text: 'You closed this concern; no external case was resolved.' }];
   c.status = 'resolved';
   return view(c);
 }

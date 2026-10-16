@@ -37,7 +37,7 @@ test('a concern has an owner and a deadline, and escalates once answered or over
   for (let i = 0; i < 4 * 3; i += 1) store.stepClock(); // three demo days
   const answered = concerns.list(donorId)[0];
   assert.equal(answered.answered, true);
-  assert.ok(answered.steps.some((s) => s.text.startsWith('Answer from')));
+  assert.ok(answered.steps.some((s) => s.text.startsWith('Illustrative answer')));
   assert.equal(answered.canEscalate, true);
 
   const up = concerns.escalate(donorId, raised.id);
