@@ -83,9 +83,3 @@ jobs:
           URL="$(gcloud run services describe "${SERVICE}" --project "${PROJECT_ID}" --region "${REGION}" --format='value(status.url)')"
           curl --fail --show-error --retry 5 --retry-delay 3 "${URL}/api/health"
           echo "Deployed: ${URL}"
-      - name: Remove legacy tracedrop Cloud Run service
-        run: |
-          gcloud run services delete tracedrop \
-            --project "${PROJECT_ID}" \
-            --region "${REGION}" \
-            --quiet 2>/dev/null || echo "Legacy tracedrop service already removed or not present."

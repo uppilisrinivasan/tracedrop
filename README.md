@@ -90,7 +90,7 @@ backend/src/
 data/               synthetic world (generate.py), demo overlay and seed, clinical protocols
 ```
 
-One container serves the API and the built app. GitHub Actions tests, builds and deploys every push to `main` to Cloud Run service **`pratidaan`** (asia-south1) and removes the legacy **`tracedrop`** service. Full details are in [docs/03-architecture.md](docs/03-architecture.md).
+One container serves the API and the built app. GitHub Actions tests, builds and deploys every push to `main` to Cloud Run service **`pratidaan`** (asia-south1). Full details are in [docs/03-architecture.md](docs/03-architecture.md).
 
 ## Tests
 
