@@ -1,40 +1,61 @@
-# Run TraceDrop locally with Vertex AI
+# Run TraceDrop locally
 
-The app runs on your laptop. Gemini calls go to the same Vertex AI model as Cloud Run, in the same Google Cloud project. There is no Gemini API key. Cloud Run uses its service account. Your laptop uses Application Default Credentials from `gcloud`, which are a short-lived token stored outside this repo.
+The app runs on your laptop, with or without Gemini.
 
-Sign-in stays off locally (`AUTH_DISABLED=true`), so you can open the app without the Google login page. That flag is ignored when `NODE_ENV=production`, which is what Cloud Run sets.
+- **Without Gemini:** every AI feature uses its rule-based fallback and says so.
+- **With Gemini:** calls go to the same Vertex AI model and Google Cloud project as Cloud Run. There is no Gemini API key. Your laptop uses Application Default Credentials from `gcloud`, a short-lived token stored outside this repo.
+
+Sign-in is normally off locally (`AUTH_DISABLED=true`), so the app opens without the Google login page. That flag is ignored when `NODE_ENV=production`, which the container sets.
 
 ## What you need
 
-- Node.js 20 or newer
-- The `gcloud` CLI, signed in with your Google account email
-- The `tracedrop` gcloud configuration, project `project-6055aa98-bf59-48b5-a50`
+- Node.js 20 or newer (the container and CI use 22)
+- For Gemini: the `gcloud` CLI and access to project `project-6055aa98-bf59-48b5-a50`
+- To regenerate data: Python 3
 
-Vertex AI is already enabled on that project. Your account owns the project, so it can call the model.
-
-## 1. Create local Google credentials
-
-Sign in with your Google account email:
+## 1. Start it
 
 ```sh
-gcloud config configurations activate tracedrop
-gcloud auth login <Add your Google email>
+./run.sh
+```
+
+- **First run:** it installs dependencies and copies `.env.example` to `.env`.
+- **What starts:** the API on http://localhost:8080 (restarting when backend code changes) and the web app on http://localhost:5173. Vite proxies `/api` to the API.
+- **When it's ready:** it checks both and prints the URL to open.
+- **Stopping:** Ctrl+C stops both.
+
+Options:
+- `./run.sh --install` reinstalls dependencies from the lockfiles.
+- `./run.sh --data` regenerates `data/synthetic/` with `data/generate.py`.
+
+With Docker instead, `docker compose up --build` serves everything on http://localhost:8080. It reads the same `.env` if one exists.
+
+The backend reads **only the project-root `.env`**, and its values override your shell. If `run.sh` stops with "Local authentication is not configured", set these in `.env`:
+
+```sh
+AUTH_DISABLED=true
+NODE_ENV=development
+```
+
+Then open the app, pick a donor in **Viewing as**, and use the demo bar on Home. The team guide in [drop/](drop/README.md) has test scripts.
+
+**Good to know:** Drop's state, the demo clock, Choices and the Intro live in the backend's memory. Restarting the backend, which any backend code change does under `run.sh`, puts the demo back to Sat 10 Oct, 8 am. Use **Reset** on the demo bar to start a test cleanly.
+
+## 2. Turn on Gemini (optional)
+
+Sign in once with your Google account:
+
+```sh
+gcloud config configurations activate tracedrop     # or create it
+gcloud auth login <your Google email>
 gcloud config set project project-6055aa98-bf59-48b5-a50
 gcloud auth application-default login
 gcloud auth application-default set-quota-project project-6055aa98-bf59-48b5-a50
 ```
 
-`application-default login` opens a browser once. The quota-project command tells Vertex which project to bill. These credentials live under your home directory, not in the TraceDrop repo.
+`application-default login` opens a browser once. The quota-project command tells Vertex which project to bill. These credentials live under your home directory, not in the repo.
 
-## 2. Point the app at that project
-
-From the repo root, create `.env` if you do not already have one:
-
-```sh
-cp .env.example .env
-```
-
-These values turn Gemini on. `.env.example` already contains them:
+These `.env` values turn Gemini on (`.env.example` has them):
 
 ```sh
 GOOGLE_CLOUD_PROJECT=project-6055aa98-bf59-48b5-a50
@@ -43,71 +64,54 @@ LLM_MODEL=gemini-3.1-flash-lite
 LLM_RATE_LIMIT_RPS=2
 LLM_RATE_LIMIT_TOKENS_PER_DAY=50000
 LLM_MAX_CALLS_PER_DAY=200
-AUTH_DISABLED=true
-NODE_ENV=development
 ```
 
-Leave `GOOGLE_CLOUD_PROJECT` empty if you want the rule-based fallback instead of Vertex. Do not add an API key.
+Leave `GOOGLE_CLOUD_PROJECT` empty to test with the AI off. Don't add an API key. (`.env.example` still has an unused `ANTHROPIC_API_KEY` line and Neo4j settings from the first design; the app ignores them.)
 
-## 3. Start the app
+At start-up the backend logs:
 
-```sh
-./run.sh
-```
+- `AI offline: Set GOOGLE_CLOUD_PROJECT to enable Vertex AI`: no project set, so rule-based fallbacks are used.
+- `AI offline: Vertex access not yet verified`, then `AI configured: aiplatform.googleapis.com; access checked on first request`: a project is set, and access is proven on the first model call.
 
-Open http://localhost:5173. The API is at http://localhost:8080. Vite proxies `/api` to the API, so the page and the API stay on your machine.
+## 3. Check that Gemini answered
 
-The backend log should include:
-
-```text
-AI: gemini-3.1-flash-lite via aiplatform.googleapis.com (budget 50000 tokens/day, 2 req/s)
-```
-
-`AI offline` means `GOOGLE_CLOUD_PROJECT` is unset. The app still runs, and each AI feature uses its rule-based fallback.
-
-## 4. Check that Vertex answered
-
-Open the copilot and ask a question, or generate a care plan. The sidebar **AI console** shows the live call, the model name, and the token count.
+As Arjun, ask Drop "How is my BP doing?". Then open the AI console at http://localhost:5173/#ai: it shows "Verified · gemini-3.1-flash-lite", the call, its latency and tokens.
 
 A credentials problem shows up on that first call, in the backend log, as `[llm]`. The usual fixes:
 
-- Run `gcloud auth application-default login` again if the message says credentials are unavailable.
-- Run the quota-project command again if Vertex says a quota project is required.
-- Confirm `gcloud config get-value project` prints `project-6055aa98-bf59-48b5-a50`.
+- If the message says credentials are unavailable, run `gcloud auth application-default login` again.
+- If Vertex says a quota project is required, run the quota-project command again.
+- Check that `gcloud config get-value project` prints `project-6055aa98-bf59-48b5-a50`.
+- A long test session can use up the 50,000-token day. Then Drop answers from rules; raise `LLM_RATE_LIMIT_TOKENS_PER_DAY` locally if you need more.
 
 ## What this spends
 
-Local Gemini calls bill the same free-trial project as the deployed app. The limits above stop the process after 50,000 tokens or 200 calls in a day. A full day at that cap is about ₹2. Firestore is not used while `AUTH_DISABLED=true`.
+Local Gemini calls bill the same project as the deployed app. The limits stop the process after 50,000 tokens or 200 calls in a day. Firestore isn't used while `AUTH_DISABLED=true`.
 
-## Donation booking and Google Calendar
+## Optional: Google sign-in, guest mode and Calendar on localhost
 
-Booking asks for convenient days, time, travel distance, holidays, reminder timing and location. Location is optional. If you allow it, the browser coordinates are rounded to about one kilometre before they are saved.
-
-Connecting Google Calendar is a separate consent from sign-in. TraceDrop asks only to read free/busy time, create events on calendars you own, and send the booking email through Gmail. The access token is held in the page until you reload it. It is not written to the database.
-
-In Google Auth Platform, add these scopes to the app before the consent screen will grant them:
-
-- `https://www.googleapis.com/auth/calendar.events.freebusy`
-- `https://www.googleapis.com/auth/calendar.events.owned`
-- `https://www.googleapis.com/auth/gmail.send`
-
-Calendar and Gmail scopes are sensitive. Until Google verifies the app, only accounts listed as test users can complete that consent. A booked event emails a confirmation immediately and adds email and popup reminders at the time chosen in the chat.
-
-Enable the APIs once on the project:
-
-```sh
-gcloud services enable calendar-json.googleapis.com gmail.googleapis.com --project project-6055aa98-bf59-48b5-a50
-```
-
-## Optional: Google sign-in on localhost
-
-Skip this for normal local work. To try the login page against the real project:
+Skip this for normal work. To try the login page against the real project:
 
 1. Set `AUTH_DISABLED=false` in `.env`.
-2. Set `GOOGLE_CLIENT_ID` to the web client ID and set `SESSION_SECRET` to any long random string.
-3. In Google Auth Platform, on that OAuth client, add `http://localhost:5173` as an authorized JavaScript origin.
+2. Set `GOOGLE_CLIENT_ID` to the OAuth web client ID, and `SESSION_SECRET` to any long random string.
+3. In Google Auth Platform, add `http://localhost:5173` as an authorized JavaScript origin on that client.
 4. Restart `./run.sh`.
 
-A successful sign-in writes your email to the same Firestore `users` and `accessEvents` collections as production. Your `gcloud` login must be allowed to write to Firestore.
+A Google sign-in writes to the same Firestore `users`, `accessEvents` and `appointments` collections as production, so your `gcloud` login must be able to write to Firestore. **Continue as guest** on the login page gives the same demo with no Google account: preferences and bookings stay in server memory, nothing goes to Firestore, and the session lasts a day.
 
-On that login screen you can also choose **Continue as guest** — same demo app, but preferences and bookings stay in this browser session only (no Google account, no Firestore).
+**Booking with Google Calendar:**
+- Connecting Calendar is a separate consent from sign-in. TraceDrop asks only to read free/busy time, create events on calendars you own, and send the confirmation through Gmail.
+- The access token stays in the page until you reload it, and is never stored.
+- Until Google verifies the app, only accounts listed as test users can grant these scopes.
+- Enable the APIs once:
+
+  ```sh
+  gcloud services enable calendar-json.googleapis.com gmail.googleapis.com --project project-6055aa98-bf59-48b5-a50
+  ```
+
+## Tests
+
+```sh
+cd backend && npm test            # 152 tests, no network or Google Cloud needed
+cd frontend && npm run type-check
+```

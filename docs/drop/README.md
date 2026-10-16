@@ -1,12 +1,18 @@
 # Drop: how it works and how to test it
 
-Open **[index.html](index.html)** in a browser (download it or open it from your local checkout; GitHub shows HTML as source). It explains, in plain language:
+Open **[index.html](index.html)** in a browser: download it, or open it from your local checkout, because GitHub shows HTML as source. It explains, in plain language:
 
-- why Drop exists (health follow-up between donations, with each donation as the check-up; not a food or calorie tracker)
-- the six demo donors and what each one shows
-- how Drop decides which cards to show (fixed rules), and where the AI comes in (wording, chat, reading lab reports)
-- the rules: message budget, priority, quiet hours, snooze, urgent cards, memory
-- how to run it locally and use the demo bar and "What Drop knows"
-- ten test scripts with expected results, tick boxes, and a "Copy my results" button for the team chat
+- why Drop exists: where your blood went, health follow-up between donations with each donation as the check-up, and the way back to donating. It is not a food or calorie tracker.
+- the seven demo donors and what each one shows
+- the New donor's Intro, Choices and Your data
+- Goals, Habits and the Chats in the side sheet
+- Stories and Badges
+- how Drop decides which Cards to show (fixed rules), and where the AI comes in (chat, lab reports, the Intro's language)
+- the rules: Message budget, priority, quiet hours, snooze, urgent Cards, memory
+- how to run it locally, and the demo bar, What Drop knows and the AI console
+- 20 test scripts with expected results, tick boxes, and a "Copy my results" button for the team chat
 
-Related: the shared vocabulary is in [`CONTEXT.md`](../../CONTEXT.md), and every change is logged with how to revert it in [`docs/changes/mihir-bhatt.md`](../changes/mihir-bhatt.md).
+Related:
+- [CONTEXT.md](../../CONTEXT.md): the shared vocabulary
+- [docs/02-product.md](../02-product.md) and [docs/03-architecture.md](../03-architecture.md): the whole product and the build
+- [docs/changes/mihir-bhatt.md](../changes/mihir-bhatt.md): every change to Drop, with how to revert it

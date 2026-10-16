@@ -1,6 +1,6 @@
 # TraceDrop
 
-A platform for voluntary blood donors in India. Each donation's free lab panel becomes a health follow-up between donations, and the donor sees where their blood went.
+A platform for voluntary blood donors in India. The donor sees where every part of their blood went and who it helped, without learning who; each donation's free lab panel becomes a health follow-up between donations; and good health can raise their insurance cover. What is built and what isn't yet is in [docs/02-product.md](docs/02-product.md).
 
 ## People
 
@@ -9,7 +9,7 @@ A person registered to give blood, whether eligible, deferred or lapsed. Everyon
 _Avoid_: User, patient, member
 
 **Persona**:
-One of the fixed demo Donors (e.g. Arjun, Meera, Ananya) chosen from the persona switcher; choosing one means using the app as that Donor. One Persona, the New donor, is a new user with no records yet, so it starts with the Intro.
+One of the fixed demo Donors (e.g. Arjun, Meera, Ananya) chosen in **Viewing as** at the top of every screen; choosing one means using the app as that Donor. One Persona, the New donor, is a new user with no records yet, so it starts with the Intro.
 _Avoid_: Test user, demo account
 
 **Drop**:
@@ -57,7 +57,7 @@ One conversation with Drop: the General Chat, or the Chat about one Goal or one 
 _Avoid_: Thread, session, conversation
 
 **Card**:
-One message from Drop in the conversation, of a fixed kind (impact, check-in, slots, reminder, weekly report, results), which may contain a small form the Donor answers in place.
+One message from Drop in the conversation, of a fixed kind (impact, results, urgent, check-in, slots, goal reached, reminder, weekly report), which may contain a small form the Donor answers in place.
 _Avoid_: Bubble, notification, widget
 
 **Cycle**:

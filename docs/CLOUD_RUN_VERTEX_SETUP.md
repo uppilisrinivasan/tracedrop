@@ -1,42 +1,60 @@
 # Cloud Run deployment through GitHub Actions
 
-The workflow at `.github/workflows/deploy-cloud-run.yml` runs whenever a
-commit reaches `main`, including a completed pull request merge. It tests the
-app, builds the container on GitHub's runner, pushes the image to Artifact
-Registry, deploys that exact commit to Cloud Run, and checks `/api/health`.
-The feature branch itself does not deploy.
+The workflow at `.github/workflows/deploy-cloud-run.yml` runs on every push to `main`, including a merged pull request. Pushes that change only Markdown, `docs/` or `.env.example` don't deploy. The workflow:
 
-Target Google Cloud project: `project-6055aa98-bf59-48b5-a50`.
-Cloud Run and Artifact Registry region: `asia-south1` (Mumbai).
+1. runs the backend tests;
+2. type-checks and builds the frontend;
+3. builds the container on GitHub's runner and pushes it to Artifact Registry;
+4. deploys that exact commit to Cloud Run;
+5. checks `/api/health`.
 
-## Before enabling automatic deployment
+Feature branches don't deploy.
 
-The repository and demo assets must satisfy the hackathon's fresh-code rule.
-See `DEPLOYMENT_HANDOFF.md`. The current repo began on 8 October 2026; the
-official hackathon start time must be checked before submission.
+- **Project:** `project-6055aa98-bf59-48b5-a50`
+- **Region:** `asia-south1` (Mumbai) for Cloud Run and Artifact Registry
+- **Service:** `tracedrop`
+- **Live URL:** https://tracedrop-25mgkruoeq-el.a.run.app
 
-In Google Cloud Billing, confirm the account is **Free trial**, and set a
-$200 budget with notifications at $50, $100, $150 and $200. Budgets send alerts
-but do not stop usage. Do not upgrade to pay-as-you-go if avoiding charges is
-the priority.
+## What the deploy sets
 
-## One-time Google Cloud setup in Cloud Shell
+The workflow deploys with these settings:
 
-Cloud Shell has already displayed the expected project ID, but check it before
-running write commands:
+- 1 vCPU and 512 MiB;
+- 0 minimum and 1 maximum instance, concurrency 1;
+- a 180 s timeout;
+- the runtime service account `tracedrop-run`;
+- public access (the app itself requires Google sign-in or a guest session);
+- these environment variables:
+
+| Variable | Value |
+|---|---|
+| `GOOGLE_CLOUD_PROJECT` | the project ID |
+| `VERTEX_LOCATION` | `global` |
+| `LLM_MODEL` | `gemini-3.1-flash-lite` |
+| `LLM_RATE_LIMIT_RPS` / `LLM_RATE_LIMIT_TOKENS_PER_DAY` / `LLM_MAX_CALLS_PER_DAY` | 2 / 50000 / 200 |
+| `GOOGLE_CLIENT_ID` | GitHub Actions variable `GOOGLE_CLIENT_ID` |
+| `SESSION_SECRET` | GitHub Actions secret `SESSION_SECRET` |
+
+The container sets `NODE_ENV=production`, which also disables the local sign-in bypass.
+
+## One-time Google Cloud setup (Cloud Shell)
+
+Check the active project first:
 
 ```sh
-gcloud config get-value project
+gcloud config get-value project   # must print project-6055aa98-bf59-48b5-a50
 ```
 
-The result must be `project-6055aa98-bf59-48b5-a50`. Then run:
+Then run:
 
 ```sh
-gcloud services enable run.googleapis.com artifactregistry.googleapis.com aiplatform.googleapis.com iam.googleapis.com iamcredentials.googleapis.com sts.googleapis.com
+gcloud services enable run.googleapis.com artifactregistry.googleapis.com aiplatform.googleapis.com firestore.googleapis.com iam.googleapis.com iamcredentials.googleapis.com sts.googleapis.com calendar-json.googleapis.com gmail.googleapis.com
 gcloud artifacts repositories create tracedrop --repository-format=docker --location=asia-south1 --description="TraceDrop application images"
+gcloud firestore databases create --location=asia-south1
 gcloud iam service-accounts create tracedrop-run --display-name="TraceDrop runtime"
 gcloud iam service-accounts create tracedrop-deploy --display-name="GitHub Actions deployer"
 gcloud projects add-iam-policy-binding project-6055aa98-bf59-48b5-a50 --member="serviceAccount:tracedrop-run@project-6055aa98-bf59-48b5-a50.iam.gserviceaccount.com" --role="roles/aiplatform.user"
+gcloud projects add-iam-policy-binding project-6055aa98-bf59-48b5-a50 --member="serviceAccount:tracedrop-run@project-6055aa98-bf59-48b5-a50.iam.gserviceaccount.com" --role="roles/datastore.user"
 gcloud projects add-iam-policy-binding project-6055aa98-bf59-48b5-a50 --member="serviceAccount:tracedrop-deploy@project-6055aa98-bf59-48b5-a50.iam.gserviceaccount.com" --role="roles/run.admin"
 gcloud artifacts repositories add-iam-policy-binding tracedrop --location=asia-south1 --member="serviceAccount:tracedrop-deploy@project-6055aa98-bf59-48b5-a50.iam.gserviceaccount.com" --role="roles/artifactregistry.writer"
 gcloud iam service-accounts add-iam-policy-binding tracedrop-run@project-6055aa98-bf59-48b5-a50.iam.gserviceaccount.com --member="serviceAccount:tracedrop-deploy@project-6055aa98-bf59-48b5-a50.iam.gserviceaccount.com" --role="roles/iam.serviceAccountUser"
@@ -44,9 +62,9 @@ gcloud iam workload-identity-pools create github-tracedrop --location=global --d
 gcloud iam workload-identity-pools describe github-tracedrop --location=global --format='value(name)'
 ```
 
-Copy the pool name returned by the last command. Its form is
-`projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/github-tracedrop`.
-Use it in the next command, replacing `POOL_NAME` with that exact value:
+The runtime needs Vertex AI User for Gemini, and Cloud Datastore User for Firestore, which holds accounts, sign-ins, preferences and bookings. If Firestore already exists in another location, skip the `databases create` line. The Firestore location is not promised to users: the privacy page names only the app server's region.
+
+Copy the pool name from the last command. Its form is `projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/github-tracedrop`. Put it in place of `POOL_NAME` below:
 
 ```sh
 gcloud iam workload-identity-pools providers create-oidc github --location=global --workload-identity-pool=github-tracedrop --display-name="GitHub OIDC" --issuer-uri="https://token.actions.githubusercontent.com" --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository,attribute.ref=assertion.ref" --attribute-condition="assertion.repository=='uppilisrinivasan/tracedrop' && assertion.ref=='refs/heads/main'"
@@ -54,30 +72,47 @@ gcloud iam service-accounts add-iam-policy-binding tracedrop-deploy@project-6055
 gcloud iam workload-identity-pools providers describe github --location=global --workload-identity-pool=github-tracedrop --format='value(name)'
 ```
 
-Copy the provider name from the last command. In the GitHub repository, open
-**Settings → Secrets and variables → Actions → Variables** and create:
+The provider accepts only `uppilisrinivasan/tracedrop` on `main`. No service-account key is downloaded or stored in GitHub.
 
-- `GCP_WIF_PROVIDER` = the full provider name, ending in `/providers/github`
-- `GCP_DEPLOY_SERVICE_ACCOUNT` =
-  `tracedrop-deploy@project-6055aa98-bf59-48b5-a50.iam.gserviceaccount.com`
+## Google sign-in, Calendar and Gmail
 
-The provider is restricted to `uppilisrinivasan/tracedrop` on `main`.
-No service-account key is downloaded or placed in GitHub.
+In **Google Auth Platform** for the project:
 
-## First deployment
+1. Create an OAuth **Web client**. Add the Cloud Run URL (and `http://localhost:5173` for local testing) as an authorized JavaScript origin.
+2. Add these scopes to the app:
+   - `https://www.googleapis.com/auth/calendar.events.freebusy`
+   - `https://www.googleapis.com/auth/calendar.events.owned`
+   - `https://www.googleapis.com/auth/gmail.send`
 
-Merge the reviewed feature branch into `main`. Open the repository's
-**Actions** tab and watch **Deploy TraceDrop to Cloud Run**. The workflow
-prints the deployed URL after a successful health check. Open the app in a
-private browser window; exercise the copilot, care plan, lab report reader,
-impact story and home insight. Check the AI console for successful calls.
-The health endpoint's `ai.live` value indicates configuration; it does not
-prove Vertex AI access by itself.
+   Calendar and Gmail scopes are sensitive: until Google verifies the app, only listed test users can complete that consent. Sign-in itself and guest mode work for anyone.
+3. Set the consent screen's privacy policy and terms links to `<Cloud Run URL>/privacy` and `<Cloud Run URL>/terms`. Both pages are public.
 
-The app has no sign-in and its data is synthetic, so the workflow exposes the
-Cloud Run URL publicly for team use. Anyone who reaches the URL can send AI
-requests. Cloud Run uses zero minimum instances and one maximum instance.
-The app's 50k-token and 200-call limits are per process and reset on restart,
-so they are usage brakes, not a project-wide monetary cap. Review Billing
-Reports after the first AI calls and weekly. Artifact Registry retains image
-versions until cleaned up; set a cleanup policy after the initial deployment.
+## GitHub settings
+
+In the repository, open **Settings → Secrets and variables → Actions**.
+
+**Variables:**
+- `GCP_WIF_PROVIDER`: the full provider name, ending in `/providers/github`
+- `GCP_DEPLOY_SERVICE_ACCOUNT`: `tracedrop-deploy@project-6055aa98-bf59-48b5-a50.iam.gserviceaccount.com`
+- `GOOGLE_CLIENT_ID`: the OAuth web client ID
+
+**Secrets:**
+- `SESSION_SECRET`: a long random string. It signs session cookies and check-in codes, and the server refuses to sign sessions in production without it.
+
+## Checking a deployment
+
+1. Open the repository's **Actions** tab and watch **Deploy TraceDrop to Cloud Run**. It prints the URL after the health check passes.
+2. Open the URL in a private window. Sign in with Google, or click **Continue as guest**.
+3. Pick Arjun in **Viewing as**, then exercise:
+   - Drop's chat ("How is my BP doing?");
+   - **Add an outside lab report** with the sample report;
+   - **+1 day** on the demo bar, which brings the Results Card.
+4. Open `/#ai`. The AI console should say "Verified · gemini-3.1-flash-lite" and list the calls. `ai.live` in `/api/health` is true only after a successful model call.
+
+## Costs and limits
+
+- **Instances:** Cloud Run scales to zero; with at most one instance and concurrency 1, requests queue under load rather than scaling up.
+- **AI limits:** the app's limits (50,000 tokens, 200 calls a day, 2 requests a second) are per process and reset on restart. They are brakes, not a project-wide spending cap.
+- **Budget alerts:** set a Google Cloud budget with alerts. Alerts don't stop usage.
+- **Who can spend:** anyone who signs in, or continues as a guest, can trigger model calls within those limits.
+- **Images:** Artifact Registry keeps every image; set a cleanup policy.

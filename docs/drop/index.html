@@ -75,6 +75,8 @@ footer{margin-top:60px;font-size:13px;color:var(--faint)}
   <a href="#why">Why Drop</a>
   <a href="#donors">The demo donors</a>
   <a href="#intro">The Intro and Your data</a>
+  <a href="#goals">Goals and Chats</a>
+  <a href="#impact">Stories and Badges</a>
   <a href="#how">How Drop decides</a>
   <a href="#rules">The rules</a>
   <a href="#cards">Card types</a>
@@ -87,14 +89,15 @@ footer{margin-top:60px;font-size:13px;color:var(--faint)}
 </nav>
 
 <main>
-<span class="tag">Team guide · updated 14 Oct 2026 (the Intro and Your data)</span>
+<span class="tag">Team guide · updated 16 Oct 2026 (Goals, Chats, Stories and Badges, guest sign-in)</span>
 <h1>Drop: how it works and how to test it</h1>
-<p class="lead">Drop is TraceDrop's assistant. It turns each donation's free lab panel into a light health follow-up between donations, and keeps the donor's blood and its impact in view, all through a few short cards instead of a tracker.</p>
+<p class="lead">Drop is TraceDrop's assistant. It tells donors where their blood went, turns each donation's free lab panel into a light health follow-up between donations, and shows them the way back to donating, all through a few short cards instead of a tracker.</p>
+<p>The whole product is described in <a href="../02-product.md">docs/02-product.md</a> and the build in <a href="../03-architecture.md">docs/03-architecture.md</a>. This page is for testing Drop.</p>
 
 <h2 id="why">Why Drop exists</h2>
 <p>People can donate blood every 90 days (men) or 120 days (women). That's too rare to keep anyone opening an app. But every donation comes with a free lab panel: BP, haemoglobin, sugar, cholesterol and more. Drop uses that:</p>
 <div class="grid">
-  <div class="card"><h4>Between donations</h4><p>Drop follows up on what the results found: a goal, a free check-up, a check-in every two weeks, a reminder the donor asked for.</p></div>
+  <div class="card"><h4>Between donations</h4><p>Drop follows up on what the results found: a Goal with one target and a few steps, a check-up, a check-in every two weeks, a reminder the donor asked for.</p></div>
   <div class="card"><h4>At each donation</h4><p>The donation is the check-up. It measures progress and starts a new cycle.</p></div>
   <div class="card"><h4>All the time</h4><p>Where their blood went and who it helped, without revealing the patient.</p></div>
 </div>
@@ -103,13 +106,13 @@ footer{margin-top:60px;font-size:13px;color:var(--faint)}
 <h2 id="donors">The demo donors</h2>
 <p>Pick who you are in <b>Viewing as</b> at the top of every screen. Choosing one means using the app as that donor. <b>You (new donor)</b> comes first and is where a first visit opens: it stands for you, a new user (shared by everyone trying the demo). The demo starts on <b>Saturday 10 Oct 2026, 8 am</b>. All data is synthetic.</p>
 <div class="grid">
-  <div class="card"><div class="who"><span class="av" style="background:var(--ai-soft);color:var(--ai)">N</span><h4>New donor · just joined</h4></div><p>A new user with no records at all: no donations, results, Circles, insurer or Plan. Home greets them by your Google first name ("Hello" with sign-in off), and Drop's chat starts the Intro.</p></div>
-  <div class="card"><div class="who"><span class="av" style="background:var(--ai-soft);color:var(--ai)">A</span><h4>Arjun · rising BP</h4></div><p>Donated 3 Oct, BP 148/94 (third rise: 132 → 136 → 148). Opens with "Watch my impact story" above Drop's chat; his results arrive the next day. <b>The main demo.</b></p></div>
-  <div class="card"><div class="who"><span class="av" style="background:var(--good-soft);color:var(--good)">M</span><h4>Meera · turned away</h4></div><p>Hb 11.8, below the 12.5 needed. Three months into her Plan. Her comeback: upload a report showing Hb 12.6 → she can donate again.</p></div>
+  <div class="card"><div class="who"><span class="av" style="background:var(--ai-soft);color:var(--ai)">N</span><h4>New donor · just joined</h4></div><p>A new user with no records at all: no donations, results, Circles, insurer or Plan. Home greets them by your Google first name ("Hello" with sign-in off or as a guest), and Drop's chat starts the Intro.</p></div>
+  <div class="card"><div class="who"><span class="av" style="background:var(--ai-soft);color:var(--ai)">A</span><h4>Arjun · rising BP</h4></div><p>Donated 3 Oct, BP 148/94 (up at each of his last four donations: 126 → 132 → 136 → 148). Opens with "Watch my impact story" above Drop's chat; his results arrive the next day and make the Goal <i>BP, blood sugar and cholesterol</i> (target BP under 130/80). <b>The main demo.</b></p></div>
+  <div class="card"><div class="who"><span class="av" style="background:var(--good-soft);color:var(--good)">M</span><h4>Meera · turned away</h4></div><p>Hb 11.8, below the 12.5 needed; ferritin 8. Her Goal is <i>Haemoglobin and iron</i>. Three months into her Plan. Her comeback: upload a report showing Hb 12.6 → she can donate again.</p></div>
   <div class="card"><div class="who"><span class="av" style="background:var(--warn-soft);color:var(--warn)">A</span><h4>Ananya · healthy O−</h4></div><p>All results normal. O− is short at her blood centre, so she opens on Saturday slots. Monthly report only: Drop stays quiet.</p></div>
-  <div class="card"><div class="who"><span class="av" style="background:var(--bad-soft);color:var(--bad)">V</span><h4>Vikram · urgent</h4></div><p>BP 184/118 on 3 Oct. His urgent card always sits first, can't be hidden and can only wait an hour.</p></div>
-  <div class="card"><div class="who"><span class="av" style="background:var(--soft);color:var(--muted)">K</span><h4>Karthik · calm</h4></div><p>Can donate from 3 Nov. No cards today: this is what a quiet Home looks like.</p></div>
-  <div class="card"><div class="who"><span class="av" style="background:var(--brand-soft);color:var(--brand)">R</span><h4>Rohan · Hindi</h4></div><p>Prefers Hindi, so Drop writes his cards in Hindi. He can donate now.</p></div>
+  <div class="card"><div class="who"><span class="av" style="background:var(--bad-soft);color:var(--bad)">V</span><h4>Vikram · urgent</h4></div><p>BP 184/118 on 3 Oct. His urgent card always sits first, can't be hidden and can only wait an hour. His Goal is urgent: it can't be stopped, and Drop suggests no exercise until a doctor has seen him.</p></div>
+  <div class="card"><div class="who"><span class="av" style="background:var(--soft);color:var(--muted)">K</span><h4>Karthik · calm</h4></div><p>Prediabetes (HbA1c 6.1%). Can donate from 3 Nov. No cards today: this is what a quiet Home looks like.</p></div>
+  <div class="card"><div class="who"><span class="av" style="background:var(--brand-soft);color:var(--brand)">R</span><h4>Rohan · Hindi</h4></div><p>Prefers Hindi, so his donation-slots card is in Hindi. He can donate now. One unit from June was withheld for safety, with no reason shown.</p></div>
 </div>
 
 <h2 id="intro">The New donor's Intro, Choices and Your data</h2>
@@ -133,6 +136,24 @@ footer{margin-top:60px;font-size:13px;color:var(--faint)}
 <p><b>Choices</b> are the donor's three sharing switches. The insurer switch shows its live effect ("On: your cover is ₹6 lakh. Off: it stays at ₹5 lakh") and says no insurer receives anything in the demo; with the leaderboard switch off you still see yourself ("Only you see yourself here"); with the totals switch off you are left out of every Circle total and the leaderboard ("1 member not counted"). They can be changed in the Intro, Your data, Health cover and Community: all the same switches.</p>
 <p><b>Your data</b> (account menu) lists everything kept about you: with your Google account (profile, sign-in history, donation preferences, bookings), in your own Google account (Calendar events, Gmail, access), with the demo donor (Choices, memories, readings, values read from lab reports), Gemini, server logs and this browser. Each item has a Delete button with a 6-second Undo, or says when it deletes itself. <b>Delete my account</b> removes the profile, sign-ins, preferences and bookings (optionally their Calendar events), clears the browser and signs you out; type DELETE to confirm. With sign-in off it clears the in-memory copies. The privacy policy (<code>/privacy</code>) is a mock that says the same things.</p>
 
+<h2 id="goals">Goals, Habits and Chats</h2>
+<p>A <b>Goal</b> is one health problem the donor is working on, made from their results by fixed rules (<code>backend/src/domain/goals.js</code>). Neither the AI nor the donor sets grouping, the target or the order.</p>
+<table>
+<tr><th>Rule</th><th>What it does</th></tr>
+<tr><td>Groups</td><td><b>Lifestyle</b> (BP, cholesterol, blood sugar, weight) and <b>iron</b> (haemoglobin, ferritin). A group makes a Goal only with a moderate or worse finding; its watch findings then join it. Watch-only groups and a raised liver enzyme go under <b>Keep an eye on</b>.</td></tr>
+<tr><td>Name</td><td>What it covers, most serious first, up to three: "BP, blood sugar and cholesterol", "Haemoglobin and iron".</td></tr>
+<tr><td>Target</td><td>One, set by the most serious finding: BP under 130/80; HbA1c under 5.7%; LDL under 130 and triglycerides under 150; Hb 12.5 (women) or 13.0 (men) with ferritin 15; diabetes range: a doctor's check within 30 days.</td></tr>
+<tr><td>Order</td><td>Urgent, high, moderate; on a tie, the one that stops donation, then the older. At most two are active; the rest are <b>Up next</b>.</td></tr>
+<tr><td>States</td><td>Active, Up next, done (back to watch or better), stopped. An urgent Goal can't be stopped. A done Goal reopens if its findings come back.</td></tr>
+<tr><td>Write-up</td><td>"Why it matters" and 2–3 steps tagged Movement, Food, See a doctor or Add a reading, each citing a protocol or guidance from <code>data/ontology</code>. Rules, not AI, written once when the Goal is made or changes. An urgent BP Goal has no Movement step.</td></tr>
+</table>
+<p><b>My health</b> shows Habits (Movement, Food, Mind), This week, up to two Goal cards, Up next, the Health score with Your Chats with Drop, Keep an eye on, From your doctor (not built), Check-ups, the lab report reader, Trends and Readings. A Goal card has its trend in words, a chart against the target line (your readings are hollow points), <b>Open</b> and <b>Add a reading</b>.</p>
+<p><b>Chats.</b> On Home, Drop's chat is the General Chat. Elsewhere, <b>Ask Drop</b> opens a side sheet with chips for General, each Goal, Movement, Food, Mind and Past Cycles. A Goal's Chat pins where you are, the target and this week. Its ⋯ menu has Add a reading, Book a check-up, Stop this Goal (not for an urgent Goal), What Drop remembers, and Simplify my plan (disabled until Week plans). Done and stopped Goals' Chats are read-only; a stopped Goal has <b>Start again</b>. In a Goal's Chat, Drop suggests only that Goal's steps and says saving a Week plan is coming. Week plans, Your day, stored Chats and Past Cycles aren't built yet.</p>
+
+<h2 id="impact">Stories and Badges</h2>
+<p>A <b>Story</b> is a few tap-through slides about one part of a donation reaching a patient, or plasma becoming medicines. Drop's impact Card plays it once; My impact replays it from <b>Watch the story</b> on any eligible part. Patients' details appear only when at least 5 patients share them; anything held back is left out and a line says "Some details stay private so no one can be identified." The last slide is a postcard image with <b>Download image</b>, <b>Copy image</b> and <b>Share…</b> (where the browser can share files). The weekly report and the Intro's Story can't be shared.</p>
+<p><b>Badges</b> (8: First patient, 5 patients, 10 patients, Regular donor, Nothing wasted, All five parts, Plasma to medicine, Helped a child) are worked out from the donor's own data. My impact shows the shelf ("Badges · n of 8"): earned ones in gold with the month, unearned ones with a progress ring and "· 8 so far". Home shows four. Earning one never sends a Card: it shows in the next Story or report, on Drop's line on My impact, and with a <b>New</b> tag until opened. Full rules: <a href="../wayfinder/story-and-badge/spec.md">Story and Badge spec</a>.</p>
+
 <h2 id="how">How Drop decides what to show</h2>
 <div class="flow">
 <svg viewBox="0 0 760 335" role="img" aria-labelledby="flowt flowd">
@@ -150,7 +171,7 @@ footer{margin-top:60px;font-size:13px;color:var(--faint)}
 <text class="sub" x="454" y="70">Urgent first</text><text class="sub" x="454" y="90">At most 3 shown</text><text class="sub" x="454" y="110">One main button</text><text class="sub" x="454" y="130">Form inside if needed</text>
 <rect class="box" x="620" y="20" width="130" height="160" rx="12"/>
 <text x="634" y="46" font-weight="600">Saved to</text>
-<text class="sub" x="634" y="70">Health (readings)</text><text class="sub" x="634" y="90">Plan (goals, reminders)</text><text class="sub" x="634" y="110">Bookings</text><text class="sub" x="634" y="130">Memory (preferences)</text>
+<text class="sub" x="634" y="70">Health (readings)</text><text class="sub" x="634" y="90">Plan (Goals, reminders)</text><text class="sub" x="634" y="110">Bookings</text><text class="sub" x="634" y="130">Memory (preferences)</text>
 <path class="arrow" d="M180 100H222"/><path class="arrow" d="M395 100H437"/><path class="arrow" d="M580 100H617"/>
 <rect class="box ai" x="420" y="214" width="180" height="62" rx="12"/>
 <text x="434" y="238" font-weight="600">AI (Gemini)</text><text class="sub" x="434" y="258">Rewrites the wording only</text>
@@ -165,7 +186,7 @@ footer{margin-top:60px;font-size:13px;color:var(--faint)}
 <table>
 <tr><th>Rule</th><th>What it does</th></tr>
 <tr><td>Message budget</td><td>At most <b>1 new card a day</b>. Donors with a health goal: <b>2 a week</b> plus a <b>weekly report</b> on Sunday afternoon. Healthy donors: <b>1 a week</b> plus a <b>monthly report</b>.</td></tr>
-<tr><td>Priority</td><td>When two arrive the same day: urgent → results → donating → check-in / Plan → goal reached → impact. Other blood used, circle news and activity only go into the report.</td></tr>
+<tr><td>Priority</td><td>When two arrive the same day: urgent → results → donating → check-in → goal reached → impact. Other blood used and activity only go into the report.</td></tr>
 <tr><td>Outside the budget</td><td>Urgent cards; cards the donor asked for (slots after "Book a check-up"); follow-ups to something they did ("How did the check-up go?"); their own reminders.</td></tr>
 <tr><td>Quiet hours</td><td>Nothing new from 9 pm to 8 am. Waits until morning. Exceptions: urgent cards and the donor's own reminders.</td></tr>
 <tr><td>Snooze</td><td>⋯ or "Not now": 1 hour, tonight (7 pm), tomorrow, next week, or hide until the app is opened again. Snoozed 3 times → folds into the next report.</td></tr>
@@ -173,32 +194,33 @@ footer{margin-top:60px;font-size:13px;color:var(--faint)}
 <tr><td>Unanswered</td><td>A card left for 7 days folds into the next report ("Still waiting: …" with a button to answer it).</td></tr>
 <tr><td>Impact</td><td>Only the first unit from a donation that reaches a patient gets its own card; the rest go in the report and the story.</td></tr>
 <tr><td>Reminders</td><td>Only ones the donor asked for. Taken / Skipped. Ignored → "no answer" next day, no nagging, no streaks.</td></tr>
-<tr><td>Memory</td><td>Preferences and life context only (days that suit, work, area, language, food). Never health facts, religion, caste, income, family health or anything about recipients. Max 20, deletable, a newer one replaces a contradicting one.</td></tr>
+<tr><td>Memory</td><td>From chat, only a stated schedule or language preference ("Saturdays suit you", "Evenings suit you", "Hindi suits you"). Never health facts, medicines, religion, caste, income, family health or anything about recipients. Seeded personas also start with a little life context. Max 20, deletable, a newer one replaces a contradicting one.</td></tr>
 <tr><td>Bookings</td><td>"Try demo donation booking" (or "Book my first donation") opens the booking steps inside Drop's chat on Home and ends with a check-in pass. Booked check-ups and donations show under "Coming up" on Home with Change and Cancel, any time. Undo on a receipt only lasts until time moves on.</td></tr>
-<tr><td>Cycle</td><td>The conversation is per donation cycle; the Plan and memory carry over.</td></tr>
+<tr><td>Cycle</td><td>The conversation is per donation cycle; the Plan, Goals and memory carry over.</td></tr>
 </table>
 
 <h2 id="cards">Card types</h2>
 <table>
 <tr><th>Card</th><th>When</th><th>What's inside</th><th>Answer goes to</th></tr>
-<tr><td>Results</td><td>Results arrive; Plan ready; goal reached</td><td>Book a free check-up, Explain my results, Save my Plan</td><td>Health, Plan</td></tr>
-<tr><td>Urgent</td><td>Urgent finding</td><td>Care slots today, Call the clinic</td><td>Bookings</td></tr>
-<tr><td>Check-in</td><td>Every 2 weeks on a goal; after a check-up</td><td>BP number boxes (wheels on touch screens); Hb lab report; "Started a tablet"</td><td>Health, Plan</td></tr>
+<tr><td>Results</td><td>Results arrive</td><td>With a Goal: <b>Open</b> <i>Goal name</i> (its Chat), Try demo check-up slots, Explain my results. Without: Got it</td><td>Health</td></tr>
+<tr><td>Goal reached</td><td>A reading or report meets the target</td><td>Hb: Try demo slots / Later. BP: Nice ("your next donation will confirm it")</td><td>Plan</td></tr>
+<tr><td>Urgent</td><td>Urgent finding</td><td>Demo care times today or tomorrow, I will seek real care</td><td>Bookings</td></tr>
+<tr><td>Check-in</td><td>Every 2 weeks while the first active Goal targets BP or Hb; the day after a check-up</td><td>BP number boxes (wheels on touch screens); Hb lab report; "Started a tablet"</td><td>Health, Plan</td></tr>
 <tr><td>Slots</td><td>Check-up, or donating (3 weeks before they can)</td><td>Time chips</td><td>Bookings</td></tr>
 <tr><td>Reminder</td><td>Offer to set one; then daily</td><td>Time choice; Taken / Skipped</td><td>Plan</td></tr>
 <tr><td>Impact</td><td>Their blood reached a patient</td><td>A "Watch my impact story" chip above Drop's chat on Home</td><td>Impact</td></tr>
-<tr><td>Weekly report</td><td>Sunday afternoon (monthly for healthy donors)</td><td>A "Watch my week" chip (a tap-through story); waiting items</td><td>—</td></tr>
+<tr><td>Weekly report</td><td>Sunday afternoon (monthly for healthy donors)</td><td>A "Watch my week" chip (a private tap-through story, with new Badges); waiting items</td><td>—</td></tr>
 <tr><td>Chart</td><td>In chat: "How is my BP doing?"</td><td>A small trend chart</td><td>—</td></tr>
 </table>
 
 <h2 id="ai">Where the AI comes in</h2>
 <div class="grid">
-  <div class="card"><h4>Card wording</h4><p>Gemini rewrites up to 3 open cards in the donor's language. If it drops any number, the card keeps the rule wording. If the card's content changes, it is rewritten.</p></div>
-  <div class="card"><h4>Drop's chat</h4><p>On Home the chat sits under Drop's cards; on other screens it opens from "Ask Drop". It answers in two short sentences plus at most one card: a chart, check-up slots or a reminder. It reads its memory and the Plan every turn, and can switch its language when asked.</p></div>
+  <div class="card"><h4>Card wording</h4><p>Gemini is asked to rephrase up to 3 open cards, but because cards carry triage and eligibility, a rewrite is used only if it matches the rule wording word for word. In practice cards keep their rule wording; only the slots card has a Hindi version.</p></div>
+  <div class="card"><h4>Drop's chat</h4><p>On Home the chat sits under Drop's cards; on other screens "Ask Drop" opens the side sheet. An agent with 18 tools answers in two short sentences plus at most one card: a chart, check-up slots or a reminder. It reads its memory, the Plan and each Goal's steps every turn, knows which Chat it is in, saves BP readings, and can switch its language when asked.</p></div>
   <div class="card"><h4>Lab reports</h4><p>Reads a photo of a lab report (Meera's sample report) and the donor confirms before saving.</p></div>
   <div class="card"><h4>The Intro</h4><p>Translates each step's words and buttons the first time they are shown in a language, keeping every number. The steps themselves are scripted.</p></div>
 </div>
-<div class="callout ai">With the AI switched off, everything still works: cards use rule wording and the chat answers common questions (results, BP, impact, donating, cover, check-up, memory) from rules.</div>
+<div class="callout ai">With the AI switched off, everything still works: cards use rule wording and the chat answers common questions (results, BP, iron, impact, donating, cover, check-up, memory, language, the Intro step) from rules, marked "AI offline: answered by rules". Goal write-ups are rules either way.</div>
 
 <h2 id="run">Run it locally</h2>
 <pre>git checkout main
@@ -206,7 +228,7 @@ footer{margin-top:60px;font-size:13px;color:var(--faint)}
 <p>In the repo's <code>.env</code>:</p>
 <table>
 <tr><th>Setting</th><th>Use</th></tr>
-<tr><td><code>AUTH_DISABLED=true</code></td><td>Skips Google sign-in locally.</td></tr>
+<tr><td><code>AUTH_DISABLED=true</code>, <code>NODE_ENV=development</code></td><td>Skips Google sign-in locally. On the live site, use <b>Continue as guest</b> instead.</td></tr>
 <tr><td><code>GOOGLE_CLOUD_PROJECT</code></td><td>Your project, for Gemini on Vertex AI. Leave empty to test with the AI off.</td></tr>
 <tr><td><code>LLM_RATE_LIMIT_TOKENS_PER_DAY</code></td><td>Daily AI budget (50,000 by default). A long test session can use it up; raise it locally if cards fall back to rule wording.</td></tr>
 </table>
@@ -219,7 +241,8 @@ footer{margin-top:60px;font-size:13px;color:var(--faint)}
 <tr><td>Demo bar (yellow, top of Home)</td><td>Shows the demo date and time. <b>+ few hours</b> (8 am → 2 pm → 7 pm → 9 pm), <b>+1 day</b>, <b>+1 week</b>, <b>Next event</b> (the next card for the donor you're viewing), <b>Reset</b> (also clears Drop's chat and brings the New donor's Intro back), <b>ⓘ</b> (what the bar is). Tap the date to hide the bar.</td></tr>
 <tr><td>What Drop knows</td><td>Side panel with the engine's real state: budget used, what's on Home and whether it counted, what's waiting and why, snoozed and folded cards, what's coming up, a log of what just happened, Plan and memory.</td></tr>
 <tr><td>Viewing as</td><td>Top of every screen (beside the demo bar on Home). "You (new donor)" first, then the demo donors. Switching keeps the same demo date. Your data and, for the New donor, Replay intro are in the account menu (bottom left).</td></tr>
-<tr><td>Language</td><td>Next to Drop on Home: English or the donor's own language (Arjun: ಕನ್ನಡ; the New donor: whatever they chose in the Intro).</td></tr>
+<tr><td>AI console</td><td>Open <code>/#ai</code>: model, Verified or not, calls and tokens today, and the last 50 model calls.</td></tr>
+<tr><td>Language</td><td>Next to Drop on Home: English and the donor's own language as buttons (Arjun: ಕನ್ನಡ; the New donor: whatever they chose in the Intro), the rest under More. The chat and the Intro follow it.</td></tr>
 </table>
 
 <h2 id="tests">Test scripts</h2>
@@ -230,8 +253,11 @@ footer{margin-top:60px;font-size:13px;color:var(--faint)}
 <h2 id="limits">Not built yet</h2>
 <table>
 <tr><th>Item</th><th>Status</th></tr>
-<tr><td>Guided tour for judges</td><td>Planned (the tour panel; "What Drop knows" is done).</td></tr>
-<tr><td>Judge access without sign-in</td><td>Needs Sandeep (sign-in change).</td></tr>
+<tr><td>Week plans, Your day, Simplify my plan</td><td>Agreed in CONTEXT.md. Habits and This week are empty shells; the chat says saving a Week plan is coming.</td></tr>
+<tr><td>From your doctor (prescriptions)</td><td>Placeholder on My health ("Nothing added yet").</td></tr>
+<tr><td>Stored Chats and Past Cycles</td><td>Chats live in the browser for the visit; Past Cycles shows "No past Cycles yet".</td></tr>
+<tr><td>AI-written Goal write-ups</td><td>Waiting on team decision D1 (Google Cloud's "no clinical purposes" term); the rules version runs.</td></tr>
+<tr><td>Guided tour for judges</td><td>Planned (the tour panel; "What Drop knows" is done). Judges can use <b>Continue as guest</b>.</td></tr>
 <tr><td>Donation preferences with the demo donor</td><td>Parked for a review with Sandeep: they stay with the Google account, as booking reads them today.</td></tr>
 <tr><td>Download a copy of your data</td><td>Not built; the privacy policy says to email for a copy.</td></tr>
 <tr><td>Drop's state in Firestore</td><td>After the demo; today it is in memory with Reset.</td></tr>
@@ -244,50 +270,64 @@ footer{margin-top:60px;font-size:13px;color:var(--faint)}
 <table class="files">
 <tr><th>File</th><th>What it does</th></tr>
 <tr><td><code>backend/src/domain/drop.js</code></td><td>The rules engine: events → cards, budget, snooze, memory, answers, undo.</td></tr>
+<tr><td><code>backend/src/domain/goals.js</code>, <code>goalWriteup.js</code></td><td>Goals from findings: groups, names, targets, order, states; the rules write-up with evidence.</td></tr>
+<tr><td><code>backend/src/domain/story.js</code>, <code>badges.js</code></td><td>A unit's Story and postcard; the 8 Badges.</td></tr>
 <tr><td><code>backend/src/domain/screenLines.js</code></td><td>Drop's one line on each screen.</td></tr>
-<tr><td><code>backend/src/ai/dropWriter.js</code></td><td>AI wording of open cards, with the number check.</td></tr>
-<tr><td><code>backend/src/ai/copilot.js</code>, <code>tools.js</code></td><td>Drop's chat and its tools (chart, slots, reminder, remember, log a reading).</td></tr>
+<tr><td><code>backend/src/ai/dropWriter.js</code></td><td>AI wording of open cards (only accepted when identical to the rules).</td></tr>
+<tr><td><code>backend/src/ai/copilot.js</code>, <code>agent.js</code>, <code>tools.js</code></td><td>Drop's chat, the tool loop and its 19 tools (18 offered to the chat: chart, slots, reminder, remember, log a reading, language, navigate…).</td></tr>
 <tr><td><code>backend/src/routes/drop.js</code>, <code>demo.js</code></td><td>The Drop API and the demo clock.</td></tr>
 <tr><td><code>backend/src/domain/intro.js</code>, <code>routes/intro.js</code>, <code>ai/introWriter.js</code></td><td>The Intro: its steps, state, answers, replay, and translation.</td></tr>
-<tr><td><code>backend/src/auth/accountData.js</code>, <code>routes/auth.js</code></td><td>Your data: what the Google account keeps, and deleting it.</td></tr>
+<tr><td><code>backend/src/auth/</code>, <code>routes/auth.js</code></td><td>Google sign-in, guest sessions, Your data: what the Google account keeps, and deleting it.</td></tr>
 <tr><td><code>data/demo/</code></td><td>The New donor, Arjun's 3 Oct donation and each demo donor's starting state.</td></tr>
-<tr><td><code>frontend/src/components/drop/</code></td><td>Cards, story viewer, lab report upload, memory list, screen line, Health sections, What Drop knows.</td></tr>
-<tr><td><code>frontend/src/components/Copilot.tsx</code></td><td>Drop's chat (inline on Home, a panel elsewhere).</td></tr>
+<tr><td><code>frontend/src/components/drop/</code></td><td>Cards, the chat side sheet (<code>ChatSheet.tsx</code>), story viewer, lab report upload, BP reading, memory list, screen line, Health sections, What Drop knows.</td></tr>
+<tr><td><code>frontend/src/components/impact/</code>, <code>share/</code></td><td>Badge shelf and Home preview, donation calendar, concerns; share images and share buttons.</td></tr>
+<tr><td><code>frontend/src/components/Copilot.tsx</code></td><td>Drop's chat (inline on Home, inside the side sheet elsewhere), one conversation per Chat.</td></tr>
 <tr><td><code>frontend/src/components/intro/</code></td><td>The Intro thread, its pictures and the tile highlight.</td></tr>
 <tr><td><code>frontend/src/pages/YourData.tsx</code>, <code>components/Choices.tsx</code></td><td>Your data, Delete my account, and the Choices switches used everywhere.</td></tr>
 <tr><td><code>backend/test/</code></td><td>Tests for every rule above, the Intro, Choices, empty states and Your data (<code>cd backend &amp;&amp; npm test</code>).</td></tr>
-<tr><td><code>CONTEXT.md</code></td><td>The shared words: Donor, Persona, Drop, Plan, Intro, Choices, Circle, Card, Cycle, Message budget, Check-in, Reminder, Weekly report, Story.</td></tr>
+<tr><td><code>CONTEXT.md</code></td><td>The shared words: Donor, Persona, Drop, Plan, Goal, Habit, Week plan, Intro, Choices, Circle, Chat, Card, Cycle, Event, Message budget, Check-in, Reminder, Weekly report, Story, Badge.</td></tr>
 <tr><td><code>docs/changes/mihir-bhatt.md</code></td><td>Every commit: what changed, why, and how to revert it.</td></tr>
 </table>
 
-<footer>TraceDrop · Drop guide · synthetic data only · 14 Oct 2026</footer>
+<footer>TraceDrop · Drop guide · synthetic data only · 16 Oct 2026</footer>
 </main>
 </div>
 
 <script>
 const SCRIPTS = [
-  { id: 'arjun-results', title: 'Arjun: results to a free check-up', why: 'The main demo. Drop notices a trend and books care.', steps: [
-    ['Reset, then pick Arjun Rao in Viewing as (top).', 'A "Watch my impact story" chip above Drop\'s chat: his platelets helped a child.'],
-    ['Click +1 day.', 'Sun 11 Oct. A Results card on top: BP 148/94, third rise (132, 136, 148).'],
+  { id: 'arjun-results', title: 'Arjun: his story, his results and a demo check-up', why: 'The main demo. Drop tells him where his blood went, notices a trend and offers care.', steps: [
+    ['Reset, then pick Arjun Rao in Viewing as (top).', 'A "Watch my impact story" chip above Drop\'s chat. The Badges tile shows 4 of his badges (6 of 8 earned).'],
+    ['Click the chip and step through with →.', 'Four slides ("On 3 October 2026 you gave blood at Whitefield Community Blood Bank…", "…Some details stay private so no one can be identified."), then the postcard with Download image and Copy image.'],
+    ['Press Esc. Click +1 day.', 'Sun 11 Oct. A Results card on top: BP 148/94, up for the third donation in a row (132, 136, 148), and "Your Goal: BP, blood sugar and cholesterol, on My health". Main button: Open BP, blood sugar and cholesterol.'],
     ['Click "Explain my results".', 'Drop answers in Home\'s chat in about two sentences.'],
-    ['Click "Book a free check-up".', 'A Free check-up card with Saturday slots (his memory says Saturdays suit him). No receipt: the slots card is the answer.'],
-    ['Click "Weekday evenings instead".', 'A line "Remembered: weekday evenings suit you (replaces …)" with Undo; the slots change to weekday 18:30.'],
-    ['Pick a slot.', 'Receipt "Booked … · Ayushman Arogya Mandir" with Undo, and the visit under "Coming up" with Change and Cancel.'],
-    ['Click + few hours, then Change on the booking.', 'Undo has gone (time moved on), but Change still works: the booking is removed and a new Free check-up card appears. Cancel removes it without new slots.'],
+    ['Click "Try demo check-up slots".', 'A Demo check-up card with fictional Dr. Kavya Rao and Saturday slots (his memory says Saturdays suit him). No receipt: the slots card is the answer.'],
+    ['Click "Weekday evenings instead".', 'A line "Remembered: weekday evenings suit you (replaces "Saturdays suit you")" with Undo; the slots change to Tue/Thu 18:30 with Dr. Arvind Shetty.'],
+    ['Pick a slot.', 'Receipt "Booked … in this demo only … No clinic reservation was made." with Undo, and the visit under "Coming up" with Change and Cancel.'],
+    ['Click + few hours, then Change on the booking.', 'Undo has gone (time moved on), but Change still works: the booking is removed and a new Demo check-up card appears. Cancel removes it without new slots.'],
   ]},
-  { id: 'arjun-goal', title: 'Arjun: Plan, BP check-in and goal', why: 'The follow-up between donations, and how it leads back to donating.', steps: [
-    ['Reset, Arjun, then click Next event three times (results, then Sunday\'s report, then the Plan).', 'Mon 12 Oct: a "Your Plan" card (BP under 135/85, 150 minutes of walking a week).'],
-    ['Click "Save my Plan". Open My health.', 'Health shows Your Plan with the goal, weekly walking and the next check-in date.'],
-    ['Back on Home, click Next event until a "Check-in · BP goal" card appears (about two weeks on).', 'Two number boxes filled with 148 / 94.'],
-    ['Type 132 and 84, press Enter.', 'Receipt "132/84 saved to Health".'],
-    ['Click +1 day.', 'A "Goal reached" card. The header now says "Donate in N days" and Next donation shows 1 Jan 2027.'],
-    ['Open My health.', 'Drop\'s line: "BP 132/84 on …, down from 148". The BP chart includes 132/84. "Readings you added" lists it with Delete.'],
+  { id: 'arjun-goal', title: 'Arjun: his Goal, a BP check-in and back to donating', why: 'The follow-up between donations, and how it leads back to donating.', steps: [
+    ['Reset, Arjun, +1 day. Click "Open BP, blood sugar and cholesterol" on the Results card.', 'The side sheet opens on that Goal\'s Chat: "Your Goal · active", a pinned line (where you are 148/94, target BP under 130/80, this week: Nothing planned yet) and three questions.'],
+    ['Click "What could I do this week?".', 'Drop suggests one or two of the Goal\'s steps (walks, less salt) and says saving a Week plan is coming. It never says it saved anything.'],
+    ['Close the sheet. Open My health.', 'Habits, This week, then the Goal card: "Your next donation waits on this", why it matters, three tagged steps (Movement: brisk walks; Food: less salt; See a doctor within 3 weeks), and the trend "Up at each of your last 4 donations: 126/78 → 148/94" with a chart against the 130 line. Keep an eye on lists Liver enzyme raised.'],
+    ['Open "Where these steps come from".', 'Each step\'s evidence (e.g. "Aerobic Exercise: 5-7 mmHg systolic (ICMR Guidelines, ACC/AHA 2017)", "Protocol BP-G1: …") and a note for your doctor marked "From fixed rules, not AI".'],
+    ['Back on Home, click Next event until a "Check-in · BP goal" card appears (Sun 25 Oct).', 'Two number boxes filled with 148 / 94.'],
+    ['Type 128 and 78, press Enter.', 'Receipt "128/78 saved to Health".'],
+    ['Click +1 day.', 'A "Goal reached" card: "BP 128/78. You reached your target of under 130/80. Your next donation will confirm it." The header says "Donate in 67 days".'],
+    ['Open My health.', 'Drop\'s line: "BP 128/78 on 25 Oct, down from 148. Target: BP under 130/80." The reading is a hollow point on the Goal\'s chart, and the Health score is unchanged.'],
+  ]},
+  { id: 'chats', title: 'Chats over the app: Goals, Habits, stop and start again', why: 'Every Goal and Habit has its own Chat, and the rules for each state hold.', steps: [
+    ['Reset, Karthik Menon, open My impact, then click the Ask Drop button (bottom right).', 'The side sheet on the General Chat. Chips: General, Blood sugar, BP and cholesterol, Movement, Food, Mind, Past Cycles.'],
+    ['Click the Goal chip, then ⋯ → Stop this Goal.', 'A line "You stopped Blood sugar, BP and cholesterol on Sat 10 Oct…". The Chat is read-only with Start again at its foot.'],
+    ['Click Start again.', '"Blood sugar, BP and cholesterol is back on." The input returns.'],
+    ['Click Past Cycles.', '"No past Cycles yet".'],
+    ['Switch to Vikram Gowda, open the side sheet on his Goal, open ⋯.', 'Stop this Goal is disabled: "An urgent Goal can\'t be stopped". Simplify my plan is disabled: "Comes with Week plans".'],
+    ['In his Movement chip, ask: Help me plan this week\'s movement.', 'Drop says to see a doctor first and suggests no exercise until a doctor has seen him (it may offer less salt instead).'],
   ]},
   { id: 'budget', title: 'The message budget and What Drop knows', why: 'Shows that Drop holds back instead of piling up messages.', steps: [
     ['Reset, Arjun, click +1 day, then open "What Drop knows" on the demo bar.', 'New cards today 1 of 1; this week 2 of 2; Results and Impact both "counted".'],
-    ['Click "Book a free check-up" on the Results card.', 'The new Free check-up card shows "outside budget" in the panel.'],
-    ['Click +1 week.', 'A Weekly report card. The panel log shows what was sent and what was folded in.'],
-    ['Click the "Watch my week" chip above Drop\'s chat and step through with →. On the last slide click Share.', 'A tap-through story; Share opens the share sheet or WhatsApp with the text.'],
+    ['Click "Try demo check-up slots" on the Results card.', 'The new Demo check-up card shows "outside budget" in the panel.'],
+    ['Click +1 week.', 'Sun 18 Oct: a Weekly report card. The panel log shows what was sent and what was folded in.'],
+    ['Click the "Watch my week" chip above Drop\'s chat and step through with →.', 'A private tap-through story ("Active minutes: … (simulated)", "I have helped 8 patients so far.", …). No share buttons on any slide.'],
   ]},
   { id: 'snooze', title: 'Snooze, hide and quiet hours', why: 'Drop never nags.', steps: [
     ['Reset, Arjun, +1 day. On the Results card click ⋯.', 'A menu: In 1 hour, Tonight (7 pm), Tomorrow morning, Next week, Hide for now.'],
@@ -297,31 +337,42 @@ const SCRIPTS = [
     ['On a card choose ⋯ → Hide for now, then switch to another donor and back.', 'The hidden card is back (hidden lasts until the app is opened again).'],
   ]},
   { id: 'meera', title: 'Meera: back to donating', why: 'Health work that leads straight back to the donation chair.', steps: [
-    ['Reset, pick Meera Iyer.', 'A Check-in · Hb goal card and her own 2 pm reminder later in the day.'],
-    ['Click "Add a report", then "Use a sample report".', 'The sample report appears; Drop finds Haemoglobin 12.6 on 8 Oct (read by the AI, or the known value if AI is off).'],
-    ['Click Save.', 'A "Goal reached" card: you can donate again. Next donation on the right shows Today.'],
-    ['Click Undo on the receipt.', 'The result is removed and she is on hold again.'],
+    ['Reset, pick Meera Iyer.', 'A Check-in · Hb goal card ("…I\'ll update your Goal (Hb 12.5 or more). Last: 11.8."). On My health, her Goal is Haemoglobin and iron.'],
+    ['Click + few hours.', 'Her own 2 pm Reminder appears: "Jaggery and lemon after lunch", with Taken / Skipped.'],
+    ['On the Check-in, click "Add a report", then "Use a sample report".', 'The sample report appears; Drop finds Haemoglobin 12.6 g/dL on 2026-10-08 ("Read by the AI from the photo", or the known value if the AI is off).'],
+    ['Click Save.', 'A "Goal reached" card: "Hb 12.6. You did it: that\'s above 12.5, so you can donate again." Next donation on the right shows that she can donate now.'],
+    ['Click Undo on the receipt.', 'The result is removed, the Check-in is back and she is on hold again.'],
   ]},
   { id: 'vikram', title: 'Vikram: urgent always first', why: 'Safety beats every other rule.', steps: [
-    ['Reset, pick Vikram Gowda.', 'An Urgent card with a red edge: 184/118, see a doctor today, care slots and Call the clinic.'],
-    ['Click ⋯ on it.', 'Only "In 1 hour" is enabled; the note says urgent cards can only wait an hour.'],
+    ['Reset, pick Vikram Gowda.', 'An Urgent card with a red edge: 184/118, "Please seek real medical care today", demo times and "I will seek real care".'],
+    ['Click ⋯ on it.', 'Only "In 1 hour" is enabled; Hide for now is disabled.'],
     ['Choose In 1 hour, then + few hours.', 'The urgent card is back on top.'],
+    ['Open My health.', 'His Goal (BP, blood sugar and cholesterol) is marked Urgent. Steps: See a doctor today, Less salt, Add a BP reading after you have seen the doctor. No Movement step.'],
+  ]},
+  { id: 'impact', title: 'My impact: Stories, Badges and privacy', why: 'Every part of a donation has a journey; patients stay anonymous.', steps: [
+    ['Reset, Arjun, open My impact.', 'Drop\'s line names his 3 Oct donation. The Badge shelf: "Badges · 6 of 8"; 10 patients shows a ring and "Reach 10 patients · 8 so far"; All five parts "· 3 of 5 so far".'],
+    ['Click an earned Badge.', 'It opens alone as a share image with Download image and Copy image.'],
+    ['In My donations, pick 3 Oct on the calendar.', 'Three parts: platelets transfused (with Watch the story), red cells and plasma at the centre. Patient details are generalised, with a privacy note.'],
+    ['Pick an older donation and open a unit that reached a patient.', 'An age band, the treatment and a hospital type in a district, with the month only, and Watch the story.'],
+    ['Open "Who benefited".', 'Blood centre, hospitals, labs, government and society, with drill-downs; money values marked as estimates.'],
+    ['Switch to Rohan Verma, My impact, pick his June donation.', 'One unit "kept out of the supply as a safety precaution", with no reason and no Story.'],
   ]},
   { id: 'chat', title: 'Drop\'s chat', why: 'Short answers with at most one card, and memory you can see.', steps: [
     ['As Arjun on Home, type in Drop\'s chat: How is my BP doing?', 'Two sentences and a small BP chart.'],
     ['Say: Saturdays don\'t work for me any more, weekday evenings are better.', '"Got it" and a Remembered line with Undo. "What I remember" shows the change.'],
-    ['Say: My BP at the pharmacy today was 138/88.', 'A receipt "138/88 saved to Health"; it appears in Health.'],
-    ['Say: Remember that I take metformin.', 'Drop does not store it (health facts go in the Plan, not memory).'],
-    ['Say: Book me a free check-up.', 'A slots card in the chat; the same card also appears on Home.'],
+    ['Say: My BP at the pharmacy today was 138/88.', 'A receipt "138/88 saved to Health"; it appears on My health.'],
+    ['Say: Remember that I take metformin.', 'Drop does not store it (only schedule and language preferences are remembered).'],
+    ['Say: Book me a check-up.', 'A Demo check-up card in the chat; the same card also appears on Home.'],
+    ['Say: Talk to me in Kannada. Then: Why can\'t I donate?', 'A "Language: ಕನ್ನಡ" line, then an answer in Kannada about his BP hold.'],
   ]},
   { id: 'lang', title: 'Languages', why: 'Drop writes in the donor\'s language.', steps: [
-    ['Reset, Arjun, +1 day, click ಕನ್ನಡ next to Drop.', 'After a few seconds both cards and their buttons are in Kannada, with the same numbers and dates.'],
+    ['Reset, Arjun, +1 day, click ಕನ್ನಡ next to Drop. Ask Drop: How is my BP doing?', 'Drop answers in Kannada. The cards keep their English rule wording (a card is reworded only if the result matches the rules word for word).'],
     ['Click English.', 'Back to English.'],
-    ['Pick Rohan Verma.', 'His card is in Hindi; with the AI on, its time chips are too.'],
+    ['Pick Rohan Verma.', 'His donation-slots card is in Hindi (labelled रक्तदान); the time chips stay as dates.'],
   ]},
   { id: 'lines', title: 'Drop\'s line on each screen', why: 'One true sentence per screen, never filler.', steps: [
-    ['As Arjun open My health, My impact, Donate, Health cover and Community.', 'Each starts with a purple Drop line about that screen.'],
-    ['Click the line on any screen.', 'Drop\'s panel opens with that sentence and 2–3 questions to ask.'],
+    ['As Arjun open My health, My impact, Donate, Health cover and Community.', 'Each starts with a purple Drop line about that screen (Health cover: "5 more health points would raise your cover to ₹6 lakh, same premium.").'],
+    ['Click the line on any screen.', 'The side sheet opens on the General Chat with that sentence and 2–3 questions to ask.'],
     ['Click × on a line.', 'It stays hidden on that screen for the rest of the demo day.'],
     ['On My health, click "Hide from my app" on a blood-centre result.', 'It moves under "Show 1 hidden result". Eligibility does not change.'],
   ]},
@@ -358,7 +409,7 @@ const SCRIPTS = [
     ['Reset.', 'All of Arjun\'s switches are back on.'],
   ]},
   { id: 'empty', title: 'New donor: every screen without records', why: 'A new user sees friendly empty states, never an error.', steps: [
-    ['Reset, New donor, Skip the intro.', 'Tiles: your first donation will show here; after your first donation; no demo visit booked; no cover linked yet; book your first donation. No Your circles tile.'],
+    ['Reset, New donor, Skip the intro.', 'Tiles: your first donation will show here; after your first donation; no demo visit booked; no cover linked yet; book your first donation. No Your badges or Your circles tile.'],
     ['Open My impact, My health, Health cover, Community and Donate.', 'One short message on each ("No donations yet…", "No results yet…", "No health cover linked yet…", "You\'re not in a Circle yet…"), and "Try booking your first donation (demo)" on Donate.'],
     ['Ask Drop: Explain my latest results.', 'Drop says there are no results yet and your first donation includes a free health check.'],
   ]},
@@ -381,6 +432,11 @@ const SCRIPTS = [
     ['Ask Drop: How is my BP doing?', 'A rule-based answer with the BP chart, marked "AI offline: answered by rules".'],
     ['Meera: Add a report → Use a sample report → Save.', 'Works with the sample\'s known value.'],
     ['Reset, New donor: click English, Show me, then type: what\'s this?', 'A rule answer naming the step ("We\'re on step 3 of 8…"), marked "AI offline: answered by rules".'],
+  ]},
+  { id: 'guest', title: 'Guest sign-in (live site)', why: 'Judges and visitors can try the demo without a Google account.', steps: [
+    ['Open the live site in a private window and click Continue as guest.', 'The app opens on You (new donor); Home says "Hello".'],
+    ['Open Your data.', 'Name "Guest", "Browsing without Google sign-in", no sign-in history.'],
+    ['Book a donation from Home and finish the steps without connecting Calendar.', 'The pass appears; Your data lists the booking. Nothing is written to Firestore.'],
   ]},
 ];
 
