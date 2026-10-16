@@ -114,17 +114,17 @@ export default function Home({ donorId, go, version, refresh, clientId, user }: 
           </button>
 
           <button className={tile('checkup')} style={{ textAlign: 'left' }} onClick={() => (checkup ? go('checkups') : bookCheckup())}>
-            <div className="row between"><span className="stat-label">Demo doctor check-up</span><Icon name="doctor" className="faint" /></div>
+            <div className="row between"><span className="stat-label">Doctor check-up</span><Icon name="doctor" className="faint" /></div>
             {checkup ? (
               <>
                 <div className="bold mt-8">{fmtVisitDay(checkup.date)} · {checkup.time}</div>
-                <div className="small muted mt-8">Fictional {checkup.doctor ? `${checkup.doctor} · ` : ''}{checkup.clinic || checkup.place}</div>
-                <div className="tiny faint mt-8">Demo only · no clinic reserved. Example address: {checkup.address}</div>
+                <div className="small muted mt-8">{checkup.doctor ? `${checkup.doctor} · ` : ''}{checkup.clinic || checkup.place}</div>
+                {checkup.address && <div className="tiny faint mt-8">{checkup.address}</div>}
               </>
             ) : (
               <>
-                <div className="bold mt-8">No demo visit booked</div>
-                <div className="small muted mt-8">Try fictional clinic times; no real appointment is made.</div>
+                <div className="bold mt-8">No visit booked</div>
+                <div className="small muted mt-8">Tap to book a check-up slot.</div>
               </>
             )}
           </button>
