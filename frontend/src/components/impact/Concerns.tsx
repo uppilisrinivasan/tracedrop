@@ -38,10 +38,9 @@ export function ConcernForm({ donorId, unit, onDone, onCancel }: { donorId: stri
         {CATEGORIES.map((c) => <button key={c.id} className="chip" aria-pressed={category === c.id} onClick={() => setCategory(c.id)}>{c.label}</button>)}
       </div>
       <textarea className="input mt-8" rows={3} maxLength={1000} value={details} onChange={(e) => setDetails(e.target.value)} placeholder="What happened? (optional)" aria-label="Details" />
-      <div className="tiny muted mt-8">Demo only: this concern stays in this app session. Nothing is sent to a Medical Officer, blood centre or authority. Advance the demo clock to see an example reply and try escalation; for a real concern, contact the centre or relevant authority directly.</div>
       {error && <ErrorNote error={error} />}
       <div className="row mt-8">
-        <button className="btn btn-primary btn-sm" disabled={busy} onClick={submit}><Icon name="flag" size={14} /> Save demo concern</button>
+        <button className="btn btn-primary btn-sm" disabled={busy} onClick={submit}><Icon name="flag" size={14} /> Save concern</button>
         <button className="btn btn-sm" onClick={onCancel}>Cancel</button>
       </div>
     </div>
@@ -58,7 +57,7 @@ export function ConcernList({ donorId, concerns, onChange }: { donorId: string; 
   }
 
   return (
-    <Section title={<><Icon name="flag" size={18} /> Demo concerns</>} sub="Saved only in this session. Example owners, replies, deadlines and escalations are simulated; no organisation is contacted." collapsible>
+    <Section title={<><Icon name="flag" size={18} /> Your concerns</>} sub="Follow status, replies and escalation here." collapsible>
       <div className="stack" style={{ gap: 12 }}>
         {concerns.map((c) => (
           <div key={c.id} className="concern">
@@ -80,7 +79,7 @@ export function ConcernList({ donorId, concerns, onChange }: { donorId: string; 
               <div className="row wrap mt-8">
                 {c.canEscalate && <button className="btn btn-sm btn-primary" onClick={() => act(c, 'escalate')}>{c.answered ? 'Not satisfied: ' : ''}Try demo escalation to {c.nextOwner}</button>}
                 {!c.canEscalate && c.nextOwner && <span className="tiny muted">Demo escalation unlocks after {fmtDate(c.dueOn)} if no example reply appears.</span>}
-                <button className="btn btn-sm" onClick={() => act(c, 'resolve')}>Close demo concern</button>
+                <button className="btn btn-sm" onClick={() => act(c, 'resolve')}>Close concern</button>
               </div>
             )}
           </div>

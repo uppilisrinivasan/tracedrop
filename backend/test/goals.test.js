@@ -220,7 +220,7 @@ test("Arjun's results Card opens his Goal's Chat; there is no Save my Plan, and 
   assert.equal(results.main.value, 'goal');
   assert.equal(results.main.open.goalId, 'lifestyle');
   assert.match(results.main.open.text, /^BP, blood sugar and cholesterol\. Target: BP under 130\/80\. Up at each of your last 4 donations: 126\/78 → 148\/94\.$/);
-  assert.deepEqual(results.chips.map((c) => c.label), ['Try demo check-up slots', 'Explain my results']);
+  assert.deepEqual(results.chips.map((c) => c.label), ['Try check-up slots', 'Explain my results']);
   assert.ok(drop._state('D-001').plan.nextCheckin, 'the Plan and its first Check-in come with the results');
   drop.answer('D-001', results.id, 'goal');
   assert.equal(drop.view('D-001').receipts[0].receipt, 'Results seen · opened BP, blood sugar and cholesterol');

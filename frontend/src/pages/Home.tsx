@@ -72,7 +72,7 @@ export default function Home({ donorId, go, version, refresh, clientId, user }: 
           </div>
         </div>
         <button className="btn btn-primary" onClick={() => (daysTo != null ? startBooking() : go('donate'))}>
-          <Icon name="calendar" /> {firstTime ? 'Book my first donation' : daysTo != null ? 'Try demo donation booking' : 'Donation status'}
+          <Icon name="calendar" /> {firstTime ? 'Book my first donation' : daysTo != null ? 'Try donation booking' : 'Donation status'}
         </button>
       </div>
 
@@ -167,18 +167,8 @@ export default function Home({ donorId, go, version, refresh, clientId, user }: 
               </div>
             </div>
           )}
-          <AIStatusLine ai={data.ai} />
         </div>
       </div>
-    </div>
-  );
-}
-
-export function AIStatusLine({ ai }: { ai: { live: boolean; model: string; reason: string | null; tokensUsedToday: number; dailyTokenBudget: number } }) {
-  return (
-    <div className="tiny faint row wrap" style={{ gap: 6 }}>
-      <span style={{ width: 8, height: 8, borderRadius: 9, background: ai.live ? 'var(--good)' : 'var(--warn)', display: 'inline-block' }} />
-      {ai.live ? `AI live · ${ai.model} · ${ai.tokensUsedToday.toLocaleString()} / ${ai.dailyTokenBudget.toLocaleString()} tokens today` : `AI offline (${ai.reason}) — rule-based fallbacks active`}
     </div>
   );
 }

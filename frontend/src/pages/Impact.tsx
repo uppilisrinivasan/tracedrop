@@ -263,7 +263,7 @@ function UnitDetail({ donorId, unit, onConcern, onWatch }: { donorId: string; un
         )}
         {concernOpen && (
           <ConcernForm donorId={donorId} unit={unit} onCancel={() => setConcernOpen(false)}
-            onDone={(c) => { setConcernOpen(false); setConcernSent(`Demo concern ${c.id} saved in this session; no officer contacted. Example response date: ${fmtDate(c.dueOn)}. Follow it under "Your concerns" below.`); onConcern(); }} />
+            onDone={(c) => { setConcernOpen(false); setConcernSent(`Concern ${c.id} saved. Expected response by ${fmtDate(c.dueOn)}. Follow it under "Your concerns" below.`); onConcern(); }} />
         )}
       </div>
     </div>

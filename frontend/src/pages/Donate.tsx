@@ -110,7 +110,7 @@ export default function Donate({ donorId, go, version, refresh, clientId }: Page
         </Section>
       ))}
 
-      <Section title={el.lastDonationDate ? 'Try a demo donation booking' : 'Try booking your first donation (demo)'} sub={el.eligibleNow ? 'Choose an example centre and time. No real slot is reserved.' : el.nextEligibleDate ? `Demo eligibility starts ${fmtDate(el.nextEligibleDate)}.` : 'Donation is paused in this demo.'}>
+      <Section title={el.lastDonationDate ? 'Try a donation booking' : 'Try booking your first donation'} sub={el.eligibleNow ? 'Choose a centre and time. No real slot is reserved.' : el.nextEligibleDate ? `Eligibility starts ${fmtDate(el.nextEligibleDate)}.` : 'Donation is paused for now.'}>
         {el.blockers.length > 0 && (
           <div className="callout callout-warn small">
             <Icon name="info" size={16} />
@@ -118,9 +118,9 @@ export default function Donate({ donorId, go, version, refresh, clientId }: Page
           </div>
         )}
         {!el.blockers.length && (booked.length
-          ? <p className="small muted">A demo donation booking is already saved. Cancel it above to choose another example time.</p>
+          ? <p className="small muted">A donation booking is already saved. Cancel it above to choose another time.</p>
           : <BookingFlow donorId={donorId} clientId={clientId} onBooked={() => appts.reload()} />)}
-        <button className="btn btn-ghost btn-sm mt-12" onClick={() => setShowAll((open) => !open)}>{showAll ? 'Hide example slots' : 'Browse example slots'}</button>
+        <button className="btn btn-ghost btn-sm mt-12" onClick={() => setShowAll((open) => !open)}>{showAll ? 'Hide all slots' : 'Browse all slots'}</button>
         {showAll && (
           <div className="grid grid-3 mt-12" style={{ gap: 10 }}>
             {data.slots.map((s) => (

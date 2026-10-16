@@ -353,7 +353,7 @@ function CheckupsSection({ donorId, view, onChange }: { donorId: string; view: D
       <div className="stack mt-12" style={{ gap: 10 }}>
         {checkups.map((b) => <Checkup key={b.id} booking={b} busy={busy} onChange={() => cancel(b.id, true)} onCancel={() => cancel(b.id, false)} />)}
       </div>
-      <button className="btn btn-sm mt-12" onClick={() => bookCheckup()}><Icon name="calendar" size={14} /> Book a demo check-up</button>
+      <button className="btn btn-sm mt-12" onClick={() => bookCheckup()}><Icon name="calendar" size={14} /> Book a check-up</button>
       {error && <ErrorNote error={error} />}
     </section>
   );

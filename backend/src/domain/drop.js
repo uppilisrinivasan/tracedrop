@@ -515,17 +515,17 @@ function words(st, c) {
       if (!acts.length) return { text: `Your results from ${fmt(visit.date)} are in. All in the healthy range${others.length ? `, apart from ${others.join(' and ')} to watch` : ''}. Nothing to do.`, main: { label: 'Got it', value: 'ok' } };
       const results = `Your results from ${fmt(visit.date)} are in. BP ${visit.vitals.systolic}/${visit.vitals.diastolic}${rising ? `, up for the third donation in a row (${series.join(', ')})` : ''}. ${acts.length > 1 ? `Also: ${acts.filter((f) => f.concept !== 'hypertension').map((f) => lcFirst(f.title)).join(', ')}. ` : ''}`;
       const live = activeGoals(st);
-      const book = { label: 'Try demo check-up slots', value: 'book' };
+      const book = { label: 'Try check-up slots', value: 'book' };
       const explain = { label: 'Explain my results', value: 'explain', ask: 'Can you explain my latest results?' };
       // The button opens the Goal's Chat in the side sheet
       if (live.length) {
         return {
-          text: `${results}${live.length > 1 ? 'Your Goals' : 'Your Goal'}: ${live.map((g) => g.name).join(' and ')}, on My health. Worth discussing with a real clinician; demo check-up slots contact no clinic.`,
+          text: `${results}${live.length > 1 ? 'Your Goals' : 'Your Goal'}: ${live.map((g) => g.name).join(' and ')}, on My health. Worth discussing with a real clinician; check-up slots contact no clinic.`,
           main: { label: `Open ${live[0].name}`, value: 'goal', open: goalChat(st, live[0]) },
           chips: [book, explain],
         };
       }
-      return { text: `${results}Worth discussing with a real clinician. Want to try demo check-up slots? No clinic will be contacted.`, main: book, chips: [explain] };
+      return { text: `${results}Worth discussing with a real clinician. Want to try check-up slots? No clinic will be contacted.`, main: book, chips: [explain] };
     }
     case 'results:goal': {
       if (d.marker === 'hb') return { text: `Hb ${d.value}. You did it: that's above ${d.target}, so you can donate again.`, main: { label: 'Try demo slots', value: 'book' }, out: { label: 'Later', value: 'ok' } };
