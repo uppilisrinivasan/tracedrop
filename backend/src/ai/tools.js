@@ -1,5 +1,5 @@
 /**
- * Tools the TraceDrop agents can call. Each tool reads from the deterministic
+ * Tools the Pratidaan agents can call. Each tool reads from the deterministic
  * domain layer, so every number an agent states is grounded in real data and
  * shows up in the agent trace. Tools are scoped to the signed-in donor; no
  * tool can read another donor's records or any recipient identity.

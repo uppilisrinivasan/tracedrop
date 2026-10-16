@@ -1,4 +1,4 @@
-# TraceDrop
+# Pratidaan
 
 A platform for voluntary blood donors in India. The donor sees where every part of their blood went and who it helped, without learning who; each donation's free lab panel becomes a health follow-up between donations; and good health can raise their insurance cover. What is built and what isn't yet is in [docs/02-product.md](docs/02-product.md).
 
@@ -13,7 +13,7 @@ One of the fixed demo Donors (e.g. Arjun, Meera, Ananya) chosen in **Viewing as*
 _Avoid_: Test user, demo account
 
 **Drop**:
-TraceDrop's AI assistant. It speaks to the Donor first, acts on their behalf and remembers what they said.
+Pratidaan's AI assistant. It speaks to the Donor first, acts on their behalf and remembers what they said.
 _Avoid_: Copilot, chatbot, coach, bot
 
 **Plan**:
@@ -37,7 +37,7 @@ The diagnoses and advice copied from the Donor's prescriptions and confirmed by 
 _Avoid_: Doctor's notes, medical record, prescription data
 
 **Intro**:
-Drop's scripted first conversation with a newly registered Donor, in Home's chat: what TraceDrop is, their blood's journey, health between donations, their data, their Choices and booking preferences. Replayable; can be skipped.
+Drop's scripted first conversation with a newly registered Donor, in Home's chat: what Pratidaan is, their blood's journey, health between donations, their data, their Choices and booking preferences. Replayable; can be skipped.
 _Avoid_: Onboarding wizard, tutorial, tour
 
 ## Sharing

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { api, type AuthUser } from './api';
 import { Icon } from './ui';
 import { LegalLinks } from './Legal';
+import { APP_NAME, APP_NAME_DEVANAGARI, APP_TAGLINE } from './brand';
 
 interface CredentialResponse { credential: string }
 interface GoogleAccounts {
@@ -65,8 +66,10 @@ export default function Login({ clientId, sessionMinutes, onSignedIn }: {
   return (
     <div className="login">
       <div className="login-card">
-        <div className="brand"><span className="brand-mark"><Icon name="drop" size={18} stroke={2.4} /></span>TraceDrop</div>
-        <h1>Welcome to TraceDrop</h1>
+        <div className="brand"><span className="brand-mark"><Icon name="drop" size={18} stroke={2.4} /></span>{APP_NAME}</div>
+        <p className="login-script" lang="hi">{APP_NAME_DEVANAGARI}</p>
+        <p className="login-tagline">{APP_TAGLINE}</p>
+        <h1>Welcome to {APP_NAME}</h1>
         <p className="muted">Sign in with Google to save preferences and bookings to your account, or continue as a guest to explore the demo. Sessions last {sessionLength(sessionMinutes)}.</p>
         {clientId ? <div ref={host} className="login-google" /> : <p className="login-error">Google sign-in is not configured.</p>}
         <div className="login-or"><span>or</span></div>

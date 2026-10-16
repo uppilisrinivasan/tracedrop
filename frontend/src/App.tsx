@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api, type AuthUser } from './api';
+import { APP_NAME } from './brand';
 import { Icon } from './ui';
 import ChatSheet from './components/drop/ChatSheet';
 import { introChanged } from './components/intro/Intro';
@@ -100,7 +101,7 @@ export default function App({ user, clientId, onSignOut }: { user: AuthUser; cli
   return (
     <div className="shell">
       <aside className="sidebar">
-        <div className="brand"><span className="brand-mark"><Icon name="drop" size={18} stroke={2.4} /></span>TraceDrop</div>
+        <div className="brand"><span className="brand-mark"><Icon name="drop" size={18} stroke={2.4} /></span>{APP_NAME}</div>
         {NAV.map((n) => (
           <button key={n.id} className={`nav-item ${screen === n.id || (n.id === 'health' && (screen === 'plan' || screen === 'labs' || screen === 'checkups')) ? 'active' : ''}`} onClick={() => go(n.id)}>
             <Icon name={n.icon} /> {n.label}
@@ -113,7 +114,7 @@ export default function App({ user, clientId, onSignOut }: { user: AuthUser; cli
 
       <main className="main">
         <div className="mobile-top">
-          <div className="brand" style={{ padding: 0 }}><span className="brand-mark"><Icon name="drop" size={18} stroke={2.4} /></span>TraceDrop</div>
+          <div className="brand" style={{ padding: 0 }}><span className="brand-mark"><Icon name="drop" size={18} stroke={2.4} /></span>{APP_NAME}</div>
           <AccountMenu user={user} donorLabel={donorLabel} onSignOut={onSignOut} onReplayIntro={replayIntro} onYourData={() => go('data')} compact />
         </div>
         <div className="topbar">

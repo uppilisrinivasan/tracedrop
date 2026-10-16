@@ -4,7 +4,7 @@
  * Donors already get tests done elsewhere — every lab in India prints them
  * differently ("Hb", "Haemoglobin (Cyanmeth)", "HGB"; mg/dL vs mmol/L;
  * scanned photos). This turns any report (pasted text or an image) into
- * structured results mapped to TraceDrop's LOINC-coded markers, converting
+ * structured results mapped to Pratidaan's LOINC-coded markers, converting
  * units, so they join the donor's health timeline and feed the same rules,
  * score and cover engine as donation-sample results.
  *

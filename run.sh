@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run TraceDrop locally without Docker.
+# Run Pratidaan locally without Docker.
 #
 #   ./run.sh            install deps (first run) and start backend + frontend
 #   ./run.sh --install  reinstall dependencies from lockfiles before starting

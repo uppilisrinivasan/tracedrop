@@ -1,5 +1,5 @@
 /**
- * "Your data" (account menu): everything TraceDrop keeps about you, where it is, how long
+ * "Your data" (account menu): everything Pratidaan keeps about you, where it is, how long
  * it is kept and how to delete it. Choices first, then one card per place, then "Delete my
  * account". A single delete takes the row away at once and is sent to the server when its
  * 6-second Undo closes. Rewritten from the prototype's variant A ("where it lives").
@@ -41,7 +41,7 @@ const fmtWhen = (iso: string) => new Date(iso).toLocaleDateString('en-GB', { day
 function browserKeys() {
   try { return Object.keys(localStorage).filter((k) => k.startsWith(BROWSER_PREFIX)); } catch { return []; }
 }
-/** Clear what this browser saved for TraceDrop (the viewed donor, Drop lines you hid). */
+/** Clear what this browser saved for Pratidaan (the viewed donor, Drop lines you hid). */
 export function clearBrowserData() {
   try { browserKeys().forEach((k) => localStorage.removeItem(k)); } catch { /* storage unavailable */ }
 }
@@ -185,9 +185,9 @@ export default function YourData({ donorId, version, clientId, user, donorName, 
   // ---- In your own Google account
   const events = a.bookings.filter((b) => b.calendar && b.status !== 'cancelled').length;
   const inGoogleRows: Row[] = [
-    { id: 'calendar', what: 'Calendar events TraceDrop added', detail: events ? `${events} event${events === 1 ? '' : 's'}, for bookings made with Google Calendar connected. Deleting a booking, or your account, removes them (Google asks for Calendar access once more).` : 'None: no booking was made with Google Calendar connected', kept: events ? 'Until removed' : undefined, fate: events ? 'booking' : 'nothing' },
-    { id: 'gmail', what: 'Booking confirmation emails', detail: 'Sent from your Gmail to yourself, so they are in Sent and Inbox. TraceDrop can send mail for you, but not read or delete it.', kept: 'Until you delete them', link: { label: 'Open Gmail', href: 'https://mail.google.com' } },
-    { id: 'access', what: "TraceDrop's access to your Google account", detail: 'Sign-in, and the Calendar and send-email permissions you allowed', kept: 'Until you remove it', link: { label: 'Google Account settings', href: 'https://myaccount.google.com/connections' } },
+    { id: 'calendar', what: 'Calendar events Pratidaan added', detail: events ? `${events} event${events === 1 ? '' : 's'}, for bookings made with Google Calendar connected. Deleting a booking, or your account, removes them (Google asks for Calendar access once more).` : 'None: no booking was made with Google Calendar connected', kept: events ? 'Until removed' : undefined, fate: events ? 'booking' : 'nothing' },
+    { id: 'gmail', what: 'Booking confirmation emails', detail: 'Sent from your Gmail to yourself, so they are in Sent and Inbox. Pratidaan can send mail for you, but not read or delete it.', kept: 'Until you delete them', link: { label: 'Open Gmail', href: 'https://mail.google.com' } },
+    { id: 'access', what: "Pratidaan's access to your Google account", detail: 'Sign-in, and the Calendar and send-email permissions you allowed', kept: 'Until you remove it', link: { label: 'Google Account settings', href: 'https://myaccount.google.com/connections' } },
   ];
 
   // ---- The demo donor (shared, in server memory)
@@ -223,7 +223,7 @@ export default function YourData({ donorId, version, clientId, user, donorName, 
       <div className="page-head">
         <div>
           <div className="page-title">Your data</div>
-          <div className="page-sub">Everything TraceDrop keeps about you, where it is, and how to delete it.</div>
+          <div className="page-sub">Everything Pratidaan keeps about you, where it is, and how to delete it.</div>
         </div>
       </div>
       <div className="yd-facts">
@@ -242,7 +242,7 @@ export default function YourData({ donorId, version, clientId, user, donorName, 
       <Group icon="lock" title="With your Google account" where={a.local ? "This computer's server memory (sign-in is off)" : 'Google Cloud database (Firestore)'}
         rows={visible(googleRows)} onRemove={remove} busy={busy} />
       <Group icon="globe" title="In your own Google account" where="Your Google Calendar, Gmail and account settings" rows={visible(inGoogleRows)} onRemove={remove} busy={busy} />
-      <Group icon="drop" title={`Demo donor you're viewing: ${donorName}`} where="TraceDrop's server memory, shared"
+      <Group icon="drop" title={`Demo donor you're viewing: ${donorName}`} where="Pratidaan's server memory, shared"
         note={overview.data?.donor.newUser
           ? 'Everyone trying the demo shares the New donor and sees and changes the same things, and all of this resets when the demo restarts. In the real app this would be yours alone.'
           : `${donorName} is made up. Everyone trying the demo sees and changes the same ${donorName}, and all of this resets when the demo restarts. In the real app this would be yours alone.`}
@@ -296,7 +296,7 @@ function DeleteAccount({ user, account, clientId, donorName, onDeleted }: { user
       <div className="card-title" style={{ color: 'var(--bad)' }}>Delete my account</div>
       {!open ? (
         <div className="row between wrap" style={{ gap: 12 }}>
-          <span className="small muted">Removes everything TraceDrop keeps with your Google account{user.local ? '' : ' and signs you out'}.</span>
+          <span className="small muted">Removes everything Pratidaan keeps with your Google account{user.local ? '' : ' and signs you out'}.</span>
           <button className="btn yd-danger-btn" onClick={() => setOpen(true)}>Delete my account…</button>
         </div>
       ) : (
@@ -326,7 +326,7 @@ function DeleteAccount({ user, account, clientId, donorName, onDeleted }: { user
               <h4><Icon name="globe" size={14} /> You delete it yourself</h4>
               <ul>
                 <li>Confirmation emails in your Gmail</li>
-                <li>TraceDrop's access, in your Google Account settings</li>
+                <li>Pratidaan's access, in your Google Account settings</li>
               </ul>
               <p className="tiny muted">The demo donor {donorName} is shared by everyone trying the demo, so its records and choices stay.</p>
             </div>
@@ -362,7 +362,7 @@ export function AccountDeletedView({ result, onDone }: { result: AccountDeleted;
         )}
         {result.calendarFailed > 0 && <p className="small" style={{ color: 'var(--warn)' }}>{result.calendarFailed} Calendar event{result.calendarFailed === 1 ? '' : 's'} could not be removed. You can delete {result.calendarFailed === 1 ? 'it' : 'them'} in Google Calendar.</p>}
         <p className="tiny muted">Still to go on their own: copies at Google's Gemini AI within 24 hours (up to 90 days if flagged for an abuse check) and server logs within 30 days. Confirmation emails in your Gmail stay until you delete them.</p>
-        <button className="btn btn-primary" onClick={onDone}>{result.local ? 'Back to TraceDrop' : 'Back to sign in'}</button>
+        <button className="btn btn-primary" onClick={onDone}>{result.local ? 'Back to Pratidaan' : 'Back to sign in'}</button>
       </div>
     </div>
   );

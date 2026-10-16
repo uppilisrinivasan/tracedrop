@@ -91,7 +91,7 @@ export default function DropFeed({ donorId, version, refresh, calmLine, storiesI
       <div className="drop-head">
         <button className="drop-who" onClick={() => setMemoryOpen(true)} aria-label="Drop: see what Drop remembers">
           <span className="drop-avatar"><Icon name="drop" size={18} stroke={2.2} /></span>
-          <span><b>Drop</b><br /><span className="tiny muted">Your TraceDrop assistant</span></span>
+          <span><b>Drop</b><br /><span className="tiny muted">Your Pratidaan assistant</span></span>
         </button>
         {/* Every donor can change Drop's language: English and their own as buttons (plus the one in use), the rest under More */}
         <div className="drop-lang" role="group" aria-label="Drop's language">

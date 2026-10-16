@@ -8,7 +8,7 @@ const PREP = 'Eat a meal 3–4 hours before, sleep at least 6 hours, drink water
 
 function details(a: Appointment) {
   return [
-    'TraceDrop demo donation slot — not a centre reservation',
+    'Pratidaan demo donation slot — not a centre reservation',
     `${fmtDate(a.date)} at ${a.time}`,
     `${a.centre}, ${a.district}`,
     a.checkInCode ? `Demo check-in code (not valid at a centre): ${a.checkInCode}` : null,
@@ -22,9 +22,9 @@ const icsTime = (ms: number) => new Date(ms).toISOString().replace(/[-:]/g, '').
 function icsFile(a: Appointment) {
   const start = Date.parse(`${a.date}T${a.time}:00+05:30`);
   const lines = [
-    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//TraceDrop//Booking//EN', 'BEGIN:VEVENT',
-    `UID:${a.id}@tracedrop`, `DTSTAMP:${icsTime(Date.now())}`, `DTSTART:${icsTime(start)}`, `DTEND:${icsTime(start + 45 * 60000)}`,
-    `SUMMARY:TraceDrop demo slot at ${a.centre}`, `LOCATION:${a.centre}\\, ${a.district}`,
+    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Pratidaan//Booking//EN', 'BEGIN:VEVENT',
+    `UID:${a.id}@pratidaan`, `DTSTAMP:${icsTime(Date.now())}`, `DTSTART:${icsTime(start)}`, `DTEND:${icsTime(start + 45 * 60000)}`,
+    `SUMMARY:Pratidaan demo slot at ${a.centre}`, `LOCATION:${a.centre}\\, ${a.district}`,
     `DESCRIPTION:${details(a).replace(/\n/g, '\\n').replace(/,/g, '\\,')}`,
     'BEGIN:VALARM', 'TRIGGER:-P1D', 'ACTION:DISPLAY', 'DESCRIPTION:Blood donation tomorrow', 'END:VALARM',
     'END:VEVENT', 'END:VCALENDAR',
@@ -42,7 +42,7 @@ export default function AppointmentPass({ appointment: a, compact }: { appointme
 
   const text = details(a);
   const whatsapp = `https://wa.me/?text=${encodeURIComponent(text)}`;
-  const mail = `mailto:?subject=${encodeURIComponent('My TraceDrop donation appointment')}&body=${encodeURIComponent(text)}`;
+  const mail = `mailto:?subject=${encodeURIComponent('My Pratidaan donation appointment')}&body=${encodeURIComponent(text)}`;
 
   function download() {
     const url = URL.createObjectURL(icsFile(a));

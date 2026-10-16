@@ -45,7 +45,7 @@ if (fs.existsSync(FRONTEND_DIST)) {
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
   const ai = llm.status();
-  console.log(`TraceDrop API on http://localhost:${PORT}/api`);
+  console.log(`Pratidaan API on http://localhost:${PORT}/api`);
   console.log(envLoaded ? `Config: ${ENV_FILE}` : `Config: no .env at ${ENV_FILE} — using shell environment only`);
   console.log(ai.live
     ? `AI: ${ai.model} via ${ai.endpoint} (budget ${ai.dailyTokenBudget} tokens/day, ${ai.rateLimitRps} req/s)`

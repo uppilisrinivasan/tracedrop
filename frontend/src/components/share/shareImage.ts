@@ -7,6 +7,7 @@
  * Neither image ever shows age band, sex, place, outcome, name or blood group.
  */
 import type { Badge, Postcard, StoryLast } from '../../api';
+import { APP_NAME } from '../../brand';
 
 const W = 1080;
 const H = 1920;
@@ -110,10 +111,10 @@ function icon(ctx: Ctx, d: string, cx: number, cy: number, size: number, fill: s
   ctx.restore();
 }
 
-/** The TraceDrop mark (drop and word), centred on cx. */
+/** The product mark (drop and word), centred on cx. */
 function mark(ctx: Ctx, cx: number, cy: number, color: string) {
   font(ctx, `800 36px ${SANS}`, '-0.36px');
-  const word = ctx.measureText('TraceDrop').width;
+  const word = ctx.measureText(APP_NAME).width;
   const drop = 41;
   const gap = 13;
   const x = cx - (drop + gap + word) / 2;
@@ -121,7 +122,7 @@ function mark(ctx: Ctx, cx: number, cy: number, color: string) {
   ctx.fillStyle = color;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
-  ctx.fillText('TraceDrop', x + drop + gap, cy + 1);
+  ctx.fillText(APP_NAME, x + drop + gap, cy + 1);
 }
 
 /** Gold foil: a conic gradient round (cx, cy), or a linear one where conic gradients aren't supported. */

@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { api } from '../api';
 import { AIBadge, ErrorNote, Icon, Loading, Section, useLoad } from '../ui';
 
-/** Where TraceDrop uses AI, why rules alone can't do it, and live usage. */
+/** Where Pratidaan uses AI, why rules alone can't do it, and live usage. */
 const FEATURES = [
   { name: 'Drop copilot', kind: 'Agent', where: 'Chat button on every screen',
     why: 'Donors ask open questions that span impact, health and cover ("why didn\'t my cover go up?"). An agent decides which records to pull, combines them, answers in the donor\'s language and can navigate the app.' },
@@ -36,7 +36,7 @@ export default function AIConsole() {
       <div className="page-head">
         <div>
           <div className="page-title">AI console</div>
-          <div className="page-sub">Where TraceDrop uses generative and agentic AI, why it's needed there, and live usage.</div>
+          <div className="page-sub">Where Pratidaan uses generative and agentic AI, why it's needed there, and live usage.</div>
         </div>
         <span className={`pill ${s.live ? 'pill-good' : 'pill-warn'}`}>{s.live ? `Verified · ${s.model}` : `Not verified · ${s.reason}`}</span>
       </div>

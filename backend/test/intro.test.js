@@ -58,7 +58,7 @@ test('eight steps, scripted in English, with an example journey and an example r
   const results = steps[3].pictureData;
   assert.equal(results.label, 'Example');
   assert.ok(results.rows.some((r) => r.value === '148/94' && r.status === 'A bit high'));
-  assert.deepEqual(steps[7].buttons.map((b) => b.label), ['Book my first donation', 'Start using TraceDrop']);
+  assert.deepEqual(steps[7].buttons.map((b) => b.label), ['Book my first donation', 'Start using Pratidaan']);
 });
 
 test("language and Choices land on the donor and in Drop's view", async () => {
@@ -144,9 +144,9 @@ test('Reset makes the New donor new again, with their language and Choices back 
 
 test('questions asked during the Intro are kept with it', async () => {
   await intro.answer('D-NEW', 1, 'en', { user });
-  intro.noteQuestion('D-NEW', "What's this?", 'TraceDrop follows your blood.');
-  assert.deepEqual(intro.status('D-NEW').questions, [{ q: "What's this?", a: 'TraceDrop follows your blood.', step: 2 }]);
-  assert.match(intro.explain('D-NEW'), /step 2 of 8, "What TraceDrop is"/);
+  intro.noteQuestion('D-NEW', "What's this?", 'Pratidaan follows your blood.');
+  assert.deepEqual(intro.status('D-NEW').questions, [{ q: "What's this?", a: 'Pratidaan follows your blood.', step: 2 }]);
+  assert.match(intro.explain('D-NEW'), /step 2 of 8, "What Pratidaan is"/);
   const { fallback } = require('../src/ai/copilot');
   assert.match(fallback('D-NEW', "what's this?").reply, /step 2 of 8/, 'with the AI off, "what\'s this?" gets the step');
 });

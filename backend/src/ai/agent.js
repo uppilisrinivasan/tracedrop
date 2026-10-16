@@ -1,5 +1,5 @@
 /**
- * Manual tool-use loop shared by TraceDrop's agents.
+ * Manual tool-use loop shared by Pratidaan's agents.
  *
  * Runs Gemini with a donor-scoped tool set until it stops calling tools,
  * executing tool calls in parallel and returning the final text, the full

@@ -345,7 +345,7 @@ export default function Copilot({ donorId, go, clientId, inline = false, top, fi
   }
 
   return (
-    <div className={inline ? 'chat chat-inline' : 'chat chat-sheet'} role="region" aria-label={inline ? 'Drop, your TraceDrop assistant' : 'Chat with Drop'}>
+    <div className={inline ? 'chat chat-inline' : 'chat chat-sheet'} role="region" aria-label={inline ? 'Drop, your Pratidaan assistant' : 'Chat with Drop'}>
       {introLive && <IntroBar intro={intro} />}
       <div className="chat-body" ref={body}>
         {top}

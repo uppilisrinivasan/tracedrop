@@ -1,4 +1,4 @@
-/** Typed client for the TraceDrop API. */
+/** Typed client for the Pratidaan API. */
 
 export type Severity = 'urgent' | 'high' | 'moderate' | 'watch';
 

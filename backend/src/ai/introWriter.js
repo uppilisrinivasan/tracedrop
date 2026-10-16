@@ -33,10 +33,10 @@ const SCHEMA = {
 };
 
 function system(language) {
-  return `You translate the words of Drop, the warm, plain-spoken assistant in TraceDrop, an app for voluntary blood donors in India, into ${LANGUAGE_NAMES[language]}.
+  return `You translate the words of Drop, the warm, plain-spoken assistant in Pratidaan, an app for voluntary blood donors in India, into ${LANGUAGE_NAMES[language]}.
 Rules:
 - Translate each item's text; return every id once.
-- Keep every number as digits, and keep dates, "ml", BP, Hb, TraceDrop, Drop and Gemini as they are.
+- Keep every number as digits, and keep dates, "ml", BP, Hb, Pratidaan, Drop and Gemini as they are.
 - Keep anything in curly braces exactly as it is, e.g. {first}, {title}, {n}, {total}, {date}.
 - Button labels stay short (1-5 words). Use everyday words a person would say, not formal ones.`;
 }

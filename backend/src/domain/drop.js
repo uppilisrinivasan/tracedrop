@@ -436,7 +436,7 @@ const CLINIC = {
   day: { doctor: 'Dr. Kavya Rao', speciality: 'General physician' },
   evening: { doctor: 'Dr. Arvind Shetty', speciality: 'Family medicine' },
 };
-const BRING = ['TraceDrop on your phone, or your donor ID', 'Any recent lab reports', 'A list of medicines you take'];
+const BRING = ['Pratidaan on your phone, or your donor ID', 'Any recent lab reports', 'A list of medicines you take'];
 
 /** Who to see, where, and why, for a check-up slot. */
 function careDetails(st, time) {

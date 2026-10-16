@@ -44,10 +44,10 @@ function script() {
   const d = exampleDonation();
   const parts = exampleParts(d);
   return [
-    { id: 'language', title: 'Language', text: ["Hi, I'm Drop, your TraceDrop assistant. Which language should I use?"],
+    { id: 'language', title: 'Language', text: ["Hi, I'm Drop, your Pratidaan assistant. Which language should I use?"],
       buttons: LANGUAGES.map(([code, label]) => ({ label, value: code, primary: code === 'en' })) },
-    { id: 'hello', title: 'What TraceDrop is',
-      text: ['TraceDrop follows the blood you give all the way to the patient, and helps you stay well until you can give again.', "Here's how it works. It takes about a minute."],
+    { id: 'hello', title: 'What Pratidaan is',
+      text: ['Pratidaan follows the blood you give all the way to the patient, and helps you stay well until you can give again.', "Here's how it works. It takes about a minute."],
       buttons: [{ label: 'Show me', value: 'next', primary: true }] },
     { id: 'journey', title: "Your blood's journey", picture: 'journey',
       text: [`Here's an example: someone gave ${d.volumeMl} ml on ${fmt(d.date)}. It was split into ${count(parts)} parts, and each one goes its own way.`],
@@ -58,7 +58,7 @@ function script() {
       after: ['If something needs watching, like blood pressure, we make a small Plan together. No food logging and no daily nagging: at most one new card a day, and reminders only when you ask for them.'],
       buttons: [{ label: 'Got it', value: 'next', primary: true }] },
     { id: 'data', title: 'Your data', picture: 'data',
-      text: ['Here is what TraceDrop keeps about you, and where.'],
+      text: ['Here is what Pratidaan keeps about you, and where.'],
       after: ['You can see and delete any of it in Your data, in the account menu.'],
       buttons: [{ label: 'Got it', value: 'next', primary: true }, { label: 'Open Your data', value: 'open-data' }] },
     { id: 'choices', title: 'Your choices', picture: 'choices',
@@ -69,7 +69,7 @@ function script() {
       buttons: [{ label: 'Save', value: 'save', primary: true }, { label: 'Skip for now', value: 'skip' }] },
     { id: 'done', title: 'All set', picture: 'summary',
       text: ["You're all set, {first}. You can book your first donation whenever you're ready, and I'm here if you have a question."],
-      buttons: [{ label: 'Book my first donation', value: 'book', primary: true }, { label: 'Start using TraceDrop', value: 'finish' }] },
+      buttons: [{ label: 'Book my first donation', value: 'book', primary: true }, { label: 'Start using Pratidaan', value: 'finish' }] },
   ];
 }
 

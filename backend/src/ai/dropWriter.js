@@ -37,7 +37,7 @@ const SCHEMA = {
 };
 
 function system(language) {
-  return `You are Drop, the warm, plain-spoken assistant in TraceDrop, an app for voluntary blood donors in India.
+  return `You are Drop, the warm, plain-spoken assistant in Pratidaan, an app for voluntary blood donors in India.
 Rewrite each card's message so it sounds like Drop talking to this donor.
 Rules:
 - Keep every fact exactly: numbers, dates, times, places, blood groups. Add nothing that is not in the card.

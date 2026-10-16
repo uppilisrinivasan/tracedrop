@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { api, setUnauthorizedHandler, type AuthUser } from './api';
 import App from './App';
 import Login from './Login';
+import { APP_NAME } from './brand';
 
 type Phase = 'loading' | 'in' | 'out';
 
@@ -54,7 +55,7 @@ export default function AuthGate() {
   }, [user, signOut]);
 
   if (phase === 'loading') {
-    return <div className="login"><p className="muted">TraceDrop</p></div>;
+    return <div className="login"><p className="muted">{APP_NAME}</p></div>;
   }
   if (phase === 'out' || !user) {
     return <Login clientId={clientId} sessionMinutes={sessionMinutes} onSignedIn={signedIn} />;

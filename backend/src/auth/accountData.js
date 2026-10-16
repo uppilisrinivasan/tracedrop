@@ -1,5 +1,5 @@
 /**
- * What TraceDrop keeps about the signed-in Google account, and deleting it ("Your data").
+ * What Pratidaan keeps about the signed-in Google account, and deleting it ("Your data").
  * In Firestore: the user record (name, email, photo, sign-in count, donation preferences),
  * one sign-in record per sign-in, and every booking. With sign-in off (a laptop) there is
  * only the server's in-memory copy of the preferences and bookings.
@@ -122,7 +122,7 @@ async function deleteBooking(user, id, { accessToken } = {}) {
 
 /**
  * Delete the account: every booking (cancelling upcoming ones first, and removing the
- * Calendar events TraceDrop added when asked), every sign-in record, and the user record
+ * Calendar events Pratidaan added when asked), every sign-in record, and the user record
  * with its donation preferences. With sign-in off this clears the in-memory copies.
  */
 async function deleteAccount(user, { accessToken, removeCalendar } = {}) {

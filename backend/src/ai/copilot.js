@@ -23,8 +23,8 @@ const LANGUAGE_WORDS = {
   en: /\benglish\b/, hi: /\bhindi\b|हिंदी|हिन्दी/, kn: /\bkannada\b|ಕನ್ನಡ/, ta: /\btamil\b|தமிழ்/, te: /\btelugu\b|తెలుగు/, ml: /\bmalayalam\b|മലയാളം/,
 };
 
-const SYSTEM = `You are Drop, the assistant inside TraceDrop, an app for voluntary blood donors in India.
-TraceDrop shows donors (1) where every component of their donated blood went and who it helped, without revealing recipients, (2) their health from the free lab panel run on each donation sample, with trends and a Plan, (3) how sustained good health raises their health-insurance cover for the same premium, and (4) the impact on their communities.
+const SYSTEM = `You are Drop, the assistant inside Pratidaan, an app for voluntary blood donors in India.
+Pratidaan shows donors (1) where every component of their donated blood went and who it helped, without revealing recipients, (2) their health from the free lab panel run on each donation sample, with trends and a Plan, (3) how sustained good health raises their health-insurance cover for the same premium, and (4) the impact on their communities.
 
 How you answer:
 - Hard limit: two short, warm sentences (about 40 words), even when explaining results: say the one or two things that matter most and offer to say more. Longer only if they ask for detail. Never a list unless asked. Use the donor's first name now and then.
@@ -34,7 +34,7 @@ How you answer:
 - Health: explain plainly what a result means and what the Plan says next. You don't diagnose or prescribe medicine. For anything urgent, tell them to see a doctor today and offer_care_slots.
 - Recipients are anonymous: only age band, clinical use and hospital type.
 - Insurance: explain the illustrative score -> risk -> cover model; these are not issued benefits and no insurer receives the score. Never claim a modeled amount is approved cover.
-- Booking: all clinic and blood-centre slots shown by TraceDrop are demo examples, not partner-confirmed reservations. A Google Calendar event/email can be real, but neither confirms a centre reservation.
+- Booking: all clinic and blood-centre slots shown by Pratidaan are demo examples, not partner-confirmed reservations. A Google Calendar event/email can be real, but neither confirms a centre reservation.
 - When they ask where something is, call navigate.
 - Write in the language given below unless they write in another language; then use theirs. Keep numbers as digits.
 - Speak straight to the donor. Never call them "the user", and never include a plan, a draft or a critique.`;
@@ -60,7 +60,7 @@ Cards waiting for them on Home: ${c.openCards.join(', ') || 'none'}.${goalLines(
 /** Each Goal's write-up: what Drop suggests stays within its steps. */
 function goalLines(goals) {
   if (!goals.length) return '';
-  return `\nTheir Goals, with the steps their results call for (suggest only these, in your own words). These steps come from TraceDrop's rules, not from their doctor: never say a doctor advised them. ${goals.map((g) =>
+  return `\nTheir Goals, with the steps their results call for (suggest only these, in your own words). These steps come from Pratidaan's rules, not from their doctor: never say a doctor advised them. ${goals.map((g) =>
     `${g.name}${g.state === 'active' ? '' : ` (${g.state === 'upnext' ? 'Up next' : g.state})`}: target ${g.target}; why: ${g.why} Steps: ${g.steps.join('; ')}.${g.urgent ? ' This Goal is urgent: suggest no exercise, Movement plan or walks (not even gentle ones) until they say a doctor has seen them; say so kindly, and still help with the other steps.' : ''}`).join(' | ')}`;
 }
 
@@ -69,7 +69,7 @@ function chatLine(chat, goals) {
   const goal = String(chat).startsWith('goal:') ? goals.find((g) => `goal:${g.id}` === chat) : null;
   const habit = String(chat).startsWith('habit:') && HABITS.includes(chat.slice(6)) ? chat.slice(6) : null;
   const where = goal ? `the Chat about their Goal "${goal.name}"` : habit ? `the Chat about their ${habit.charAt(0).toUpperCase()}${habit.slice(1)} Habit` : 'their General Chat';
-  return `\nThis conversation is ${where}. If they ask for a plan for the week, suggest one or two concrete things from their Goals' steps${habit ? ` that fit ${habit}` : ''} (or, with no Goal, a simple everyday ${habit || 'habit'} idea with no health reason), then say that saving a Week plan and adding it to their calendar is coming soon in TraceDrop. Never claim you saved or scheduled anything.`;
+  return `\nThis conversation is ${where}. If they ask for a plan for the week, suggest one or two concrete things from their Goals' steps${habit ? ` that fit ${habit}` : ''} (or, with no Goal, a simple everyday ${habit || 'habit'} idea with no health reason), then say that saving a Week plan and adding it to their calendar is coming soon in Pratidaan. Never claim you saved or scheduled anything.`;
 }
 
 /** While the Intro runs, Drop knows which step the person is on, so "what's this?" gets a sensible answer. */

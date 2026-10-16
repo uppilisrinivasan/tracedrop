@@ -1,7 +1,7 @@
 {
   "name": "tracedrop-backend",
   "version": "2.0.0",
-  "description": "TraceDrop API: donor impact tracing, health analytics, health-linked cover and AI agents",
+  "description": "Pratidaan API: donor impact tracing, health analytics, health-linked cover and AI agents",
   "main": "src/server.js",
   "private": true,
   "scripts": {

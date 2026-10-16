@@ -1,4 +1,4 @@
-name: Deploy TraceDrop to Cloud Run
+name: Deploy Pratidaan to Cloud Run
 
 on:
   push:
@@ -13,14 +13,14 @@ permissions:
   id-token: write
 
 concurrency:
-  group: tracedrop-production
+  group: pratidaan-production
   cancel-in-progress: false
 
 env:
   PROJECT_ID: project-6055aa98-bf59-48b5-a50
   REGION: asia-south1
   REPOSITORY: tracedrop
-  SERVICE: tracedrop
+  SERVICE: pratidaan
   RUNTIME_SERVICE_ACCOUNT: tracedrop-run@project-6055aa98-bf59-48b5-a50.iam.gserviceaccount.com
   GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
   SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
@@ -83,3 +83,9 @@ jobs:
           URL="$(gcloud run services describe "${SERVICE}" --project "${PROJECT_ID}" --region "${REGION}" --format='value(status.url)')"
           curl --fail --show-error --retry 5 --retry-delay 3 "${URL}/api/health"
           echo "Deployed: ${URL}"
+      - name: Remove legacy tracedrop Cloud Run service
+        run: |
+          gcloud run services delete tracedrop \
+            --project "${PROJECT_ID}" \
+            --region "${REGION}" \
+            --quiet 2>/dev/null || echo "Legacy tracedrop service already removed or not present."

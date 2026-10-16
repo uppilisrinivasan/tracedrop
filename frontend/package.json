@@ -1,7 +1,7 @@
 {
   "name": "tracedrop-frontend",
   "version": "1.0.0",
-  "description": "TraceDrop consumer health platform - Frontend",
+  "description": "Pratidaan consumer health platform - Frontend",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
