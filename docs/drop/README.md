@@ -15,4 +15,3 @@ Open **[index.html](index.html)** in a browser: download it, or open it from you
 Related:
 - [CONTEXT.md](../../CONTEXT.md): the shared vocabulary
 - [docs/02-product.md](../02-product.md) and [docs/03-architecture.md](../03-architecture.md): the whole product and the build
-- [docs/changes/mihir-bhatt.md](../changes/mihir-bhatt.md): every change to Drop, with how to revert it

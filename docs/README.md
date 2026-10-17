@@ -35,7 +35,6 @@ Every doc describes the build on `main` as of 16 Oct 2026 unless it says otherwi
 | Doc | What it covers |
 |---|---|
 | [drop/index.html](drop/index.html) ([README](drop/README.md)) | Team guide to Drop, with 20 test scripts and tick boxes |
-| [changes/mihir-bhatt.md](changes/mihir-bhatt.md) | One entry per commit on Drop, the Intro, Goals and Badges: what, why, files and how to revert. A historical log, kept as written. |
 | [wayfinder/story-and-badge/](wayfinder/story-and-badge/spec.md) | The design record for Stories and Badges: map, spec, build plan, decision tickets (all closed and built) |
 
 ## What was removed, and why

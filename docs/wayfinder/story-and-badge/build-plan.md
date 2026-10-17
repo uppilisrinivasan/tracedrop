@@ -5,7 +5,6 @@ Five steps that build [spec.md](spec.md). Each step is one session and one commi
 ## Ground rules for every step
 
 - **Branch:** `feature/story-and-badge`, cut from `main`. Merge `main` in at the start of each day.
-- **Change log:** every commit adds an entry to `docs/changes/mihir-bhatt.md` in the same commit: date, what and why, files, how to revert.
 - **Done means checked:** `cd backend && npm test` passes, `cd frontend && npm run type-check` passes, and the step is clicked through in the running app at 1280 and 1440 px, as Arjun (D-001) and Ananya (D-003).
 - **Desktop now, touch later:** targets at least 44px, nothing hover-only, Esc closes the Story viewer.
 - **Files others may touch** (say so before editing): `frontend/src/components/Copilot.tsx`, `frontend/src/styles.css`.
