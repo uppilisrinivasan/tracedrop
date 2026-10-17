@@ -102,7 +102,7 @@ In the repository, open **Settings → Secrets and variables → Actions**.
 ## Checking a deployment
 
 1. Open the repository's **Actions** tab and watch **Deploy Pratidaan to Cloud Run**. It prints the URL after the health check passes (currently `https://pratidaan-25mgkruoeq-el.a.run.app`).
-2. Open `<Cloud Run URL>/judge` for judge instructions, sample questions, guardrails and architecture.
+2. Send judges [docs/05-submission/judge-instructions.html](../05-submission/judge-instructions.html) with your submission email (sample questions, guardrails, architecture).
 3. Open the URL in a private window. Sign in with Google, or click **Continue as guest**.
 4. Pick Arjun in **Viewing as**, then exercise:
    - Drop's chat ("How is my BP doing?");

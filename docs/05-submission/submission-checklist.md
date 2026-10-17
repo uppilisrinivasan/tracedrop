@@ -13,7 +13,7 @@ Requirements from the competition brief (H2S × Google Cloud Gen AI hackathon). 
 | Item | Requirement | Ours | Status |
 |---|---|---|---|
 | **Theme** | State it clearly | Sustainability & Social Impact | [ ] |
-| **Functional prototype** | Built with Gemini or Gemma (or Agent Platform, Antigravity, AI Studio); deployed on Cloud Run or Firebase | Gemini 3.1 Flash-Lite on Vertex AI; **Cloud Run** service `pratidaan` (not Firebase Hosting): https://pratidaan-25mgkruoeq-el.a.run.app · `/judge` | [ ] **Continue as guest** works; OAuth origins include live URL; AI console "Verified" |
+| **Functional prototype** | Built with Gemini or Gemma (or Agent Platform, Antigravity, AI Studio); deployed on Cloud Run or Firebase | Gemini 3.1 Flash-Lite on Vertex AI; **Cloud Run** service `pratidaan`: https://pratidaan-533106233193.asia-south1.run.app · judge HTML attached to email | [ ] **Continue as guest** works; OAuth origins include live URL; AI console "Verified" |
 | **Video** | About 3 minutes or less; public YouTube, Vimeo or Drive link | [demo-video-script.md](demo-video-script.md) | [ ] Public, under 3:00 |
 | **Proposal deck (PDF)** | Vision, impact, problem alignment, who benefits, feasibility, scalability | [pitch-deck.pdf](../04-pitch/pitch-deck.pdf) (from [pitch-deck.html](../04-pitch/pitch-deck.html)) | [ ] Team name, members and video link filled in; PDF re-exported |
 | **GitHub repo** | Public | Public repo linked in hackathon submission (MIT, synthetic-data notice in README) | [ ] README, [LICENSE](../../LICENSE) (MIT) |
@@ -42,7 +42,7 @@ Requirements from the competition brief (H2S × Google Cloud Gen AI hackathon). 
 - [ ] The latest **Deploy Pratidaan to Cloud Run** run on `main` is green, and `/api/health` answers.
 - [ ] Judging capacity: deploy uses up to 4 Cloud Run instances (concurrency 20) and 500k tokens / 2k calls per instance per day. Check the AI console on the morning of judging.
 - [ ] Write-up states **Cloud Firestore** only — no Firebase Auth, Hosting, or other Firebase products.
-- [ ] Guardrails documented: pre-LLM checks, prompt appendix on every Gemini call, post-LLM sanitize — [03-architecture.md](../03-architecture.md) and [/judge](../05-submission/judge-instructions.html) (served at `<Cloud Run URL>/judge`).
+- [ ] Guardrails documented: pre-LLM checks, prompt appendix on every Gemini call, post-LLM sanitize — [03-architecture.md](../03-architecture.md) and [judge-instructions.html](judge-instructions.html) (email attachment for judges).
 - [ ] A Google Cloud budget alert is set on the project.
 
 ## Special prizes to target

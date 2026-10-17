@@ -26,11 +26,6 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString(), version: '2.0.0', ai: llm.status(), agentPlatform: agentPlatform.status() });
 });
 
-const JUDGE_HTML = path.join(__dirname, '../../docs/05-submission/judge-instructions.html');
-if (fs.existsSync(JUDGE_HTML)) {
-  app.get('/judge', (req, res) => res.sendFile(JUDGE_HTML));
-}
-
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/donors/:donorId/drop', requireAuth, require('./routes/drop'));
 app.use('/api/donors/:donorId/intro', requireAuth, require('./routes/intro'));

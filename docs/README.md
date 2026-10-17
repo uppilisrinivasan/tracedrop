@@ -18,7 +18,7 @@ Every doc describes the build on `main` as of 16 Oct 2026 unless it says otherwi
 | [04-pitch/pitch-narrative.md](04-pitch/pitch-narrative.md) | The 3-minute script, message house, judge Q&A, and the numbers to keep consistent |
 | [04-pitch/pitch-deck.html](04-pitch/pitch-deck.html), [pitch-deck.pdf](04-pitch/pitch-deck.pdf) | The 8-slide deck; re-export the PDF with the command in the checklist |
 | [05-submission/submission-checklist.md](05-submission/submission-checklist.md) | Requirements, what to fill in, quality gates |
-| [05-submission/judge-instructions.html](05-submission/judge-instructions.html) | Judge page (also at `<Cloud Run URL>/judge`): login, sample questions, **guardrails**, architecture |
+| [05-submission/judge-instructions.html](05-submission/judge-instructions.html) | Judge email attachment (open in browser): login, sample questions, **guardrails**, architecture — not hosted on Cloud Run |
 | [05-submission/demo-video-script.md](05-submission/demo-video-script.md) | The video, beat by beat, checked against the build |
 
 ## Running and deploying

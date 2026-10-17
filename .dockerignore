@@ -15,10 +15,7 @@ yarn-error.log*
 .gitignore
 .gitattributes
 README.md
-docs/*
-!docs/05-submission
-docs/05-submission/*
-!docs/05-submission/judge-instructions.html
+docs/
 images/
 .github/
 .npm-cache/

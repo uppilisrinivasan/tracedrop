@@ -4,7 +4,7 @@
 
 Pratidaan is an app for voluntary blood donors in India. A donation is split into parts (red cells, platelets, plasma) that reach different patients. Pratidaan follows each part and tells the donor when it helps someone, without ever revealing who. The same donation's sample doubles as a health check. Drop, Pratidaan's assistant, uses it to keep the donor well until they can give again, and a good health record can raise their health-insurance cover. Those are the reasons a donor comes back.
 
-- **Live prototype:** https://pratidaan-25mgkruoeq-el.a.run.app (Cloud Run **`pratidaan`**, asia-south1; judge guide at `/judge`). Sign in with Google or **Continue as guest**.
+- **Live prototype:** https://pratidaan-533106233193.asia-south1.run.app (Cloud Run **`pratidaan`**, asia-south1). Sign in with Google or **Continue as guest**. Judge briefing: attach [docs/05-submission/judge-instructions.html](docs/05-submission/judge-instructions.html) to your submission email (not served in the app).
 - **Licence:** [MIT](LICENSE)
 - **Theme:** Sustainability & Social Impact (H2S × Google Cloud Gen AI hackathon)
 - **Data:** entirely synthetic: 300 donors, 657 donation visits, 1,627 blood components and 8,541 lab results, generated with seed 42. Institutions, insurers and people are fictional. Nothing is sent to a blood centre, clinic or insurer.

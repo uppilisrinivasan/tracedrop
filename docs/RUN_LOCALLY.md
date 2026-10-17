@@ -77,7 +77,7 @@ At start-up the backend logs:
 
 As Arjun, ask Drop "How is my BP doing?". Then open the AI console at http://localhost:5173/#ai: it shows "Verified · gemini-3.1-flash-lite", the call, its latency and tokens.
 
-**AI guardrails:** `backend/src/ai/guardrails.js` applies (1) regex pre-checks on chat input, (2) the same safety rules appended to every Gemini system prompt via `llm.js` (`guardrailKind`: `chat`, `donor_copy`, `translation`, `extraction`), and (3) post-check on Drop replies. Details: [03-architecture.md](03-architecture.md) and the judge page at `/judge` when deployed.
+**AI guardrails:** `backend/src/ai/guardrails.js` applies (1) regex pre-checks on chat input, (2) the same safety rules appended to every Gemini system prompt via `llm.js` (`guardrailKind`: `chat`, `donor_copy`, `translation`, `extraction`), and (3) post-check on Drop replies. Details: [03-architecture.md](03-architecture.md) and [05-submission/judge-instructions.html](05-submission/judge-instructions.html) (for judges via email, not in-app).
 
 A credentials problem shows up on that first call, in the backend log, as `[llm]`. The usual fixes:
 

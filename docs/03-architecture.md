@@ -379,7 +379,7 @@ Known limits: demo donors are shared by everyone using the prototype, and their 
   6. Curl `/api/health`.
 
   Setup steps are in [CLOUD_RUN_VERTEX_SETUP.md](CLOUD_RUN_VERTEX_SETUP.md).
-- **Live URL:** https://pratidaan-25mgkruoeq-el.a.run.app (judge instructions: `/judge`)
+- **Live URL:** https://pratidaan-533106233193.asia-south1.run.app (judge briefing: [05-submission/judge-instructions.html](05-submission/judge-instructions.html), emailed to judges)
 - **Firebase:** this project does **not** use Firebase (Auth, Hosting, Realtime DB, etc.). Persistence is **Cloud Firestore** via `@google-cloud/firestore` only.
 - **Local:**
   - `./run.sh`: the API with `node --watch` on 8080 and Vite on 5173, which proxies `/api`.
