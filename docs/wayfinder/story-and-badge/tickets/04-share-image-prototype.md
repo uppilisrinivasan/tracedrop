@@ -9,7 +9,7 @@ blocked_by: [02-unit-story-content]
 ## Question
 
 What do the two 1080×1920 share images look like, side by side, using real data from a demo Donor?
-- **Summary postcard:** the component tile, headline, context line (or the component's role), month, a large "{N} patients helped by my blood", and the TraceDrop mark. Start from the layout agreed in [What a component's Story says](02-unit-story-content.md).
+- **Summary postcard:** the component tile, headline, context line (or the component's role), month, a large "{N} patients helped by my blood", and the Pratidaan mark. Start from the layout agreed in [What a component's Story says](02-unit-story-content.md).
 - **Badge medallion:** a foil ring with the tier number, the name, a one-line rule, the earned month and "N of 8".
 
 They should look like one family but read differently at a glance. Also settle: the greyed-out unearned state on the shelf, and how both read as a Story's last slide, the same image the donor shares.
@@ -25,7 +25,7 @@ Data used: the postcard is D-001 Arjun's 3 Oct 2026 platelets (context generalis
    - a round postmark with the short month ("OCT 2026 · TRACEDROP")
    - the headline in a serif (Fraunces), then the context line or the component's role, then the month in italics
    - a dashed rule, then the large "{N} patients helped by my blood"
-   - the TraceDrop mark below the card, in the component's colour.
+   - the Pratidaan mark below the card, in the component's colour.
 2. **Badge:** a dark red felt background, a striped ribbon and a gold loop, then the medal: a foil ring around a red enamel centre showing the tier number. Below it: the name, the one-line rule in "my" ("My blood has reached ten patients"), "Earned {month}", a row of 8 pins (filled when earned, hollow when not) with "N of 8 Badges", and the mark in gold.
 3. **One family that reads differently:** both images share Fraunces with Inter, gold foil, dark red and the mark. At a glance the postcard is a light rectangle and the Badge is a dark hanging medal. Gold foil only ever means a Badge.
 4. **Shelf:** small medals (about 76px) in the Badge style. An unearned Badge is greyscale at about 40% opacity, with its name greyed and its rule plus progress shown ("Reach 10 patients · 8 so far", "All five parts used · 3 of 5 so far"). A new Badge gets a "New" tag on a warm highlight.

@@ -56,7 +56,7 @@ async function translate(language, texts) {
   if (unique.length && llm.available(3000)) {
     try {
       const call = llm.json({
-        feature: 'intro_translate', system: system(language), maxTokens: 3000, effort: 'low', outputSchema: SCHEMA,
+        feature: 'intro_translate', system: system(language), maxTokens: 3000, effort: 'low', outputSchema: SCHEMA, guardrailKind: 'translation',
         messages: [{ role: 'user', content: JSON.stringify(unique.map((text, i) => ({ id: String(i), text })), null, 1) }],
       });
       const result = await Promise.race([call, new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), TIMEOUT_MS))]);

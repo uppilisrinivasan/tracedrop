@@ -21,6 +21,7 @@ COPY backend/src ./backend/src
 COPY data/synthetic ./data/synthetic
 COPY data/ontology ./data/ontology
 COPY data/demo ./data/demo
+COPY docs/05-submission/judge-instructions.html ./docs/05-submission/judge-instructions.html
 COPY --from=frontend /app/frontend/dist ./frontend/dist
 
 ENV NODE_ENV=production PORT=8080

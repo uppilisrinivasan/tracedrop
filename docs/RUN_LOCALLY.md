@@ -1,4 +1,4 @@
-# Run TraceDrop locally
+# Run Pratidaan locally
 
 The app runs on your laptop, with or without Gemini.
 
@@ -77,6 +77,8 @@ At start-up the backend logs:
 
 As Arjun, ask Drop "How is my BP doing?". Then open the AI console at http://localhost:5173/#ai: it shows "Verified · gemini-3.1-flash-lite", the call, its latency and tokens.
 
+**AI guardrails:** `backend/src/ai/guardrails.js` applies (1) regex pre-checks on chat input, (2) the same safety rules appended to every Gemini system prompt via `llm.js` (`guardrailKind`: `chat`, `donor_copy`, `translation`, `extraction`), and (3) post-check on Drop replies. Details: [03-architecture.md](03-architecture.md) and the judge page at `/judge` when deployed.
+
 A credentials problem shows up on that first call, in the backend log, as `[llm]`. The usual fixes:
 
 - If the message says credentials are unavailable, run `gcloud auth application-default login` again.
@@ -100,7 +102,7 @@ Skip this for normal work. To try the login page against the real project:
 A Google sign-in writes to the same Firestore `users`, `accessEvents` and `appointments` collections as production, so your `gcloud` login must be able to write to Firestore. **Continue as guest** on the login page gives the same demo with no Google account: preferences and bookings stay in server memory, nothing goes to Firestore, and the session lasts a day.
 
 **Booking with Google Calendar:**
-- Connecting Calendar is a separate consent from sign-in. TraceDrop asks only to read free/busy time, create events on calendars you own, and send the confirmation through Gmail.
+- Connecting Calendar is a separate consent from sign-in. Pratidaan asks only to read free/busy time, create events on calendars you own, and send the confirmation through Gmail.
 - The access token stays in the page until you reload it, and is never stored.
 - Until Google verifies the app, only accounts listed as test users can grant these scopes.
 - Enable the APIs once:
@@ -112,6 +114,6 @@ A Google sign-in writes to the same Firestore `users`, `accessEvents` and `appoi
 ## Tests
 
 ```sh
-cd backend && npm test            # 152 tests, no network or Google Cloud needed
+cd backend && npm test            # 158 tests, no network or Google Cloud needed
 cd frontend && npm run type-check
 ```

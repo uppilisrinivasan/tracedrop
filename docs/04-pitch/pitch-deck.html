@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TraceDrop Pitch Deck</title>
+<title>Pratidaan Pitch Deck</title>
 <style>
   :root {
     --surface: #fcfcfb;
@@ -120,11 +120,11 @@
   <div class="fill" style="display:flex;flex-direction:column;justify-content:center;">
     <div class="drop" aria-hidden="true"></div>
     <div class="eyebrow">H2S × Google Cloud Gen AI Hackathon 2026 · Sustainability &amp; Social Impact</div>
-    <h1 style="font-size:58px;">TraceDrop</h1>
+    <h1 style="font-size:58px;">Pratidaan</h1>
     <p class="lede" style="font-size:28px;max-width:9.5in;">Give blood. See every life it touches.</p>
     <p class="lede" style="margin-top:12px;font-size:20px;max-width:10in;">The donor's app: every part of your donation followed to the patient it helped, your free health check turned into a light follow-up until you can give again, and health-insurance cover that rises as you stay well.</p>
   </div>
-  <div class="foot"><span>Team [name] · [members]</span><span>Prototype: tracedrop-25mgkruoeq-el.a.run.app · Repo: github.com/uppilisrinivasan/tracedrop</span></div>
+  <div class="foot"><span>Team Pratidaan · Mihir Bhatt · Uppili Srinivasan · Sandeep Samant</span><span>Prototype: pratidaan-25mgkruoeq-el.a.run.app · Source: GitHub (hackathon submission)</span></div>
 </section>
 
 <!-- 2. Arjun -->
@@ -176,7 +176,7 @@
       </div>
     </div>
   </div>
-  <div class="foot"><span>TraceDrop</span><span>2</span></div>
+  <div class="foot"><span>Pratidaan</span><span>2</span></div>
 </section>
 
 <!-- 3. The problem -->
@@ -207,12 +207,12 @@
       <div class="src">NFHS-5; Custer 2007</div>
     </div>
   </div>
-  <div class="foot"><span>TraceDrop</span><span>3</span></div>
+  <div class="foot"><span>Pratidaan</span><span>3</span></div>
 </section>
 
 <!-- 4. The solution -->
 <section class="slide">
-  <div class="eyebrow">TraceDrop · the donor at the centre</div>
+  <div class="eyebrow">Pratidaan · the donor at the centre</div>
   <h2>Three reasons to give again, in one app, with one assistant: Drop.</h2>
   <div class="grid g3" style="margin-top:6px;">
     <div class="card" style="border-top:4px solid #e34948;">
@@ -249,7 +249,7 @@
   <div class="card warm" style="margin-top:16px;">
     <p style="margin:0;"><b>Around the donor:</b> what their blood meant for the blood centre, hospitals, labs and public health · a network-wide ecosystem view · guided booking with a Google Calendar event · <b>Your data</b>, which lists and deletes everything kept.</p>
   </div>
-  <div class="foot"><span>TraceDrop</span><span>4</span></div>
+  <div class="foot"><span>Pratidaan</span><span>4</span></div>
 </section>
 
 <!-- 5. Demo -->
@@ -273,7 +273,7 @@
       <p>BP 184/118. One urgent Card, always first, can't be hidden, only waits an hour: see a doctor today. His Goal suggests no exercise until a doctor has seen him.</p>
     </div>
   </div>
-  <div class="foot"><span>Live: tracedrop-25mgkruoeq-el.a.run.app · sign in with Google or continue as guest</span><span>5</span></div>
+  <div class="foot"><span>Live: pratidaan-25mgkruoeq-el.a.run.app · sign in with Google or continue as guest</span><span>5</span></div>
 </section>
 
 <!-- 6. Architecture -->
@@ -288,7 +288,7 @@
       <div class="box"><b>Google Sign-In · Calendar · Gmail</b><span class="muted">booking event and confirmation in the donor's own account</span></div>
       <h3 style="margin-top:12px;">Data</h3>
       <div class="box"><b>Synthetic world</b><span class="muted">300 donors · 657 visits · 1,627 components · seed 42</span></div>
-      <div class="box"><b>Firestore</b><span class="muted">accounts, sign-ins, preferences, bookings</span></div>
+      <div class="box"><b>Cloud Firestore</b><span class="muted">accounts, sign-ins, preferences, bookings (not Firebase Auth or Hosting)</span></div>
     </div>
     <div class="lane">
       <h3>Gemini 3.1 Flash-Lite · Vertex AI</h3>
@@ -298,14 +298,14 @@
       <div class="box"><b>Gateway</b><span class="muted">rate limit · daily budgets · traces · output re-validated · rule fallback for every feature</span></div>
     </div>
     <div class="lane">
-      <h3>Deterministic engines · 152 tests</h3>
+      <h3>Deterministic engines · 156 tests</h3>
       <div class="box fixed"><b>Findings, score, eligibility</b><span class="muted">ACC/AHA 2017 and ICMR thresholds; NBTC gaps</span></div>
       <div class="box fixed"><b>Drop's Cards and Goals</b><span class="muted">Message budget, quiet hours, urgent first; targets and cited steps</span></div>
       <div class="box fixed"><b>Cover ladder</b><span class="muted">risk from score → headroom at the same premium</span></div>
       <div class="box fixed"><b>Recipient privacy</b><span class="muted">k = 5 generalisation, month-rounded dates</span></div>
     </div>
   </div>
-  <div class="foot"><span>Google stack: Gemini 3.1 Flash-Lite on Vertex AI · Cloud Run · Artifact Registry · Workload Identity Federation · Firestore · Sign-In, Calendar, Gmail APIs</span><span>6</span></div>
+  <div class="foot"><span>Google stack: Gemini on Vertex AI · Cloud Run · Artifact Registry · WIF · Cloud Firestore · OAuth Sign-In, Calendar, Gmail APIs (no Firebase product)</span><span>6</span></div>
 </section>
 
 <!-- 7. Impact and scale -->
@@ -358,7 +358,7 @@
     <h1 style="font-size:52px;">Give blood.<br>See every life it touches.</h1>
     <p class="lede" style="margin-top:18px;font-size:20px;max-width:10in;">When donors see what their gift did, stay healthy enough to give, and gain from staying well, they come back. When they come back, patients have blood.</p>
   </div>
-  <div class="foot"><span>Team [name] · [contact]</span><span>tracedrop-25mgkruoeq-el.a.run.app · github.com/uppilisrinivasan/tracedrop · [video link]</span></div>
+  <div class="foot"><span>Mihir Bhatt · Uppili Srinivasan · Sandeep Samant</span><span>pratidaan-25mgkruoeq-el.a.run.app · Demo video: submission portal</span></div>
 </section>
 
 </body>

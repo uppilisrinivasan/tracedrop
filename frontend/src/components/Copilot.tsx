@@ -131,6 +131,20 @@ export default function Copilot({ donorId, go, clientId, inline = false, top, fi
   const [turns, setTurns] = useState<Turn[]>(() => conversations.get(key)?.turns || []);
   const [history, setHistory] = useState<unknown[] | null>(() => conversations.get(key)?.history || null);
   useEffect(() => { conversations.set(key, { turns, history }); }, [key, turns, history]);
+  useEffect(() => {
+    let alive = true;
+    api.chatActive(donorId, chat).then((active) => {
+      if (!alive || conversations.get(key)?.turns.length) return;
+      const fromServer = active.turns.flatMap((t) => [
+        { role: 'user' as const, text: t.user },
+        { role: 'ai' as const, text: t.assistant },
+      ]);
+      if (fromServer.length) setTurns(fromServer);
+      if (active.history?.length) { historyRef.current = active.history; setHistory(active.history); }
+    }).catch(() => {});
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, donorId, chat]);
   const historyRef = useRef<unknown[] | null>(history);
   function recordLocal(userText: string, reply: string) {
     const updated = [...(historyRef.current || []), { role: 'user', content: userText }, { role: 'assistant', content: reply }];

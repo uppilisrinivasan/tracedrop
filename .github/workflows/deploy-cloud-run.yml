@@ -24,6 +24,8 @@ env:
   RUNTIME_SERVICE_ACCOUNT: tracedrop-run@project-6055aa98-bf59-48b5-a50.iam.gserviceaccount.com
   GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
   SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
+  AGENT_ENGINE_NAME: ${{ vars.AGENT_ENGINE_NAME }}
+  AGENT_ENGINE_LOCATION: ${{ vars.AGENT_ENGINE_LOCATION }}
 
 jobs:
   deploy:
@@ -71,11 +73,11 @@ jobs:
             --service-account "${RUNTIME_SERVICE_ACCOUNT}" \
             --cpu 1 \
             --memory 512Mi \
-            --min-instances 0 \
-            --max-instances 1 \
-            --concurrency 1 \
+            --min-instances 1 \
+            --max-instances 4 \
+            --concurrency 20 \
             --timeout 180 \
-            --set-env-vars "GOOGLE_CLOUD_PROJECT=${PROJECT_ID},VERTEX_LOCATION=global,LLM_MODEL=gemini-3.1-flash-lite,LLM_RATE_LIMIT_RPS=2,LLM_RATE_LIMIT_TOKENS_PER_DAY=50000,LLM_MAX_CALLS_PER_DAY=200,GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID},SESSION_SECRET=${SESSION_SECRET}" \
+            --set-env-vars "GOOGLE_CLOUD_PROJECT=${PROJECT_ID},VERTEX_LOCATION=global,LLM_MODEL=gemini-3.1-flash-lite,LLM_RATE_LIMIT_RPS=10,LLM_RATE_LIMIT_TOKENS_PER_DAY=500000,LLM_MAX_CALLS_PER_DAY=2000,GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID},SESSION_SECRET=${SESSION_SECRET},AGENT_ENGINE_NAME=${AGENT_ENGINE_NAME},AGENT_ENGINE_LOCATION=${AGENT_ENGINE_LOCATION:-us-central1}" \
             --allow-unauthenticated \
             --quiet
       - name: Check deployed service

@@ -68,7 +68,7 @@ async function write(donorId) {
     main: words.main?.label, out: words.out?.label, chips: (words.chips || []).map((c) => c.label),
   }));
   const call = llm.json({
-    feature: 'drop_cards', system: system(language), maxTokens: 1500, effort: 'low', outputSchema: SCHEMA,
+    feature: 'drop_cards', system: system(language), maxTokens: 1500, effort: 'low', outputSchema: SCHEMA, guardrailKind: 'donor_copy',
     messages: [{ role: 'user', content: `Donor's first name: ${donor.newUser ? 'not known, use no name' : donor.name.split(' ')[0]}.\nCards:\n${JSON.stringify(input, null, 1)}` }],
   });
   const result = await Promise.race([call, new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), TIMEOUT_MS))]);

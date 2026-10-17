@@ -20,6 +20,7 @@ const labReader = require('../ai/labReader');
 const concerns = require('../domain/concerns');
 const insights = require('../ai/insights');
 const intro = require('../domain/intro');
+const chatCycles = require('../domain/chatCycles');
 const { componentStory } = require('../domain/story');
 
 const router = express.Router();
@@ -178,6 +179,21 @@ router.post('/:donorId/appointments/:appointmentId/checkin', async (req, res) =>
 });
 
 // ---- GenAI / agentic features
+router.get('/:donorId/chat/active', (req, res) => {
+  const chat = typeof req.query.chat === 'string' ? req.query.chat.slice(0, 40) : 'general';
+  ok(res, chatCycles.activeChat(req.donor.id, chat));
+});
+
+router.get('/:donorId/chat/cycles', (req, res) => {
+  ok(res, { cycles: chatCycles.listPast(req.donor.id) });
+});
+
+router.get('/:donorId/chat/cycles/:cycleId', (req, res) => {
+  const c = chatCycles.getPast(req.donor.id, req.params.cycleId);
+  if (!c) return fail(res, 404, 'Cycle not found');
+  ok(res, c);
+});
+
 router.post('/:donorId/copilot', async (req, res) => {
   const { message, history, chat } = req.body;
   if (!message || typeof message !== 'string') return fail(res, 400, 'message is required');

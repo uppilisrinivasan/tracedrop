@@ -10,6 +10,7 @@ const impact = require('../domain/impact');
 const health = require('../domain/health');
 const cover = require('../domain/cover');
 const llm = require('../ai/llm');
+const agentPlatform = require('../ai/agentPlatform');
 
 const router = express.Router();
 
@@ -68,5 +69,6 @@ router.get('/network', (req, res) => res.json({ success: true, data: network() }
 
 router.get('/ai/status', (req, res) => res.json({ success: true, data: llm.status() }));
 router.get('/ai/traces', (req, res) => res.json({ success: true, data: llm.traces().slice(0, 50) }));
+router.get('/agent/status', (req, res) => res.json({ success: true, data: agentPlatform.status() }));
 
 module.exports = router;

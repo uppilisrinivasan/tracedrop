@@ -79,7 +79,7 @@ async function extract({ donorId, text, image }) {
   }
   content.push({ type: 'text', text: text ? `Lab report text:\n\n${text}` : 'Extract the results from this lab report image.' });
 
-  const parsed = await llm.json({ feature: 'lab_reader', system: SYSTEM, messages: [{ role: 'user', content }], maxTokens: 3000, effort: 'low', outputSchema: SCHEMA });
+  const parsed = await llm.json({ feature: 'lab_reader', system: SYSTEM, messages: [{ role: 'user', content }], maxTokens: 3000, effort: 'low', outputSchema: SCHEMA, guardrailKind: 'extraction' });
   return validate(donorId, parsed);
 }
 

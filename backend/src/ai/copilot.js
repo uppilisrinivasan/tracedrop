@@ -14,6 +14,9 @@ const screenLines = require('../domain/screenLines');
 const llm = require('./llm');
 const { runAgent } = require('./agent');
 const tools = require('./tools');
+const guardrails = require('./guardrails');
+const chatCycles = require('../domain/chatCycles');
+const agentPlatform = require('./agentPlatform');
 
 // Slots are offered as a Card (offer_care_slots), never listed as text
 const CHAT_TOOLS = tools.definitions().map((d) => d.name).filter((n) => n !== 'find_care_slots');
@@ -85,8 +88,26 @@ const NOTE_TO_SELF = /^(the user\b|okay, the user\b|i should\b|plan:|tool_code|`
 const isNote = (text) => NOTE_TO_SELF.test(text) || /\bthe user('s)?\b/i.test(text) || /^(given|therefore|so|based on)\b[^.]*\bI (should|will|need to)\b/i.test(text) || /^I will (inform|tell|advise|explain)\b/i.test(text);
 
 async function chat({ donorId, history, message, userName, chat: chatId }) {
-  const prior = Array.isArray(history) ? history.filter((turn) => turn && ['user', 'assistant'].includes(turn.role) &&
-    (typeof turn.content === 'string' || Array.isArray(turn.content))).slice(-20) : [];
+  const chatKey = typeof chatId === 'string' ? chatId.slice(0, 40) : 'general';
+  const guard = guardrails.check(message);
+  if (guard.block) {
+    let actions = [];
+    if (guard.suggestCheckup) {
+      const card = drop.offerCard(donorId, 'care_slots');
+      actions = [{ type: 'card', cardId: card.id }];
+    }
+    const server = chatCycles.activeChat(donorId, chatKey);
+    const prior = Array.isArray(history) && history.length ? history.slice(-20) : (server.history || []).slice(-20);
+    chatCycles.recordTurn(donorId, chatKey, { userText: message, assistantText: guard.reply, history: prior });
+    agentPlatform.appendEvent(donorId, { role: 'user', text: message }).catch(() => {});
+    agentPlatform.appendEvent(donorId, { role: 'assistant', text: guard.reply }).catch(() => {});
+    return { reply: guard.reply, steps: [], actions, history: prior, answeredByRules: true, guardrail: true };
+  }
+
+  const server = chatCycles.activeChat(donorId, chatKey);
+  const prior = Array.isArray(history) && history.length ? history.filter((turn) => turn && ['user', 'assistant'].includes(turn.role) &&
+    (typeof turn.content === 'string' || Array.isArray(turn.content))).slice(-20)
+    : (server.history || []).filter((turn) => turn && ['user', 'assistant'].includes(turn.role)).slice(-20);
   const messages = [...prior, { role: 'user', content: message }];
   const system = `${SYSTEM}\n\n${context(donorId, userName, chatId)}`;
   const run = (sys, toolNames) => runAgent({ feature: 'copilot', system: sys, messages, donorId, toolNames, maxTokens: 2500, effort: 'low' });
@@ -107,10 +128,24 @@ async function chat({ donorId, history, message, userName, chat: chatId }) {
     const rules = fallback(donorId, message);
     const existing = result.actions;
     const actions = [...existing, ...rules.actions.filter((a) => !existing.some((b) => b.type === a.type && b.marker === a.marker && b.cardId === a.cardId))];
-    return { reply: existing.some((a) => ['memory', 'receipt', 'card'].includes(a.type)) ? defaultReply(existing) : rules.reply,
-      steps: result.steps, actions, history: null, answeredByRules: true, offline: true, reason: 'AI response incomplete' };
+    const reply = existing.some((a) => ['memory', 'receipt', 'card'].includes(a.type)) ? defaultReply(existing) : rules.reply;
+    chatCycles.recordTurn(donorId, chatKey, { userText: message, assistantText: reply, history: prior });
+    return { reply, steps: result.steps, actions, history: prior, answeredByRules: true, offline: true, reason: 'AI response incomplete' };
   }
-  return { reply: result.text, steps: result.steps, actions: result.actions, history: result.messages };
+  let reply = result.text;
+  let actions = result.actions;
+  const safe = guardrails.sanitizeReply(reply);
+  reply = safe.reply;
+  if (safe.suggestCheckup) {
+    const card = drop.offerCard(donorId, 'care_slots');
+    actions = [...actions.filter((a) => a.type !== 'card'), { type: 'card', cardId: card.id }];
+  }
+  chatCycles.recordTurn(donorId, chatKey, { userText: message, assistantText: reply, history: result.messages });
+  agentPlatform.appendEvent(donorId, { role: 'user', text: message }).catch(() => {});
+  agentPlatform.appendEvent(donorId, { role: 'assistant', text: reply }).catch(() => {});
+  const mem = drop.view(donorId).memory.map((x) => x.text);
+  if (mem.length) agentPlatform.syncMemoryFromDrop(donorId, mem).catch(() => {});
+  return { reply, steps: result.steps, actions, history: result.messages };
 }
 
 /** When the model ends after a tool call without words, say what happened. */
@@ -169,7 +204,7 @@ function fallback(donorId, message) {
   if (/donate|eligible|hold/.test(m)) return out(screenLines.line(donorId, 'donate').text);
   if (/check-?up|doctor|book/.test(m)) {
     const card = drop.offerCard(donorId, 'care_slots');
-    return out('These are simulated check-up times for the demo, not clinic-confirmed appointments. Please contact a real care provider to arrange a visit.', [{ type: 'card', cardId: card.id }]);
+    return out('These check-up times are examples in Pratidaan — tap one to book in the app, then confirm with a real clinic.', [{ type: 'card', cardId: card.id }]);
   }
   const step = intro.explain(donorId);
   if (step) return out(step);

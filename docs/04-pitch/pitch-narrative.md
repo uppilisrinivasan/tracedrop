@@ -1,4 +1,4 @@
-# TraceDrop pitch narrative
+# Pratidaan pitch narrative
 
 **For the deck, the live pitch and the finale Q&A.** About 3 minutes. Each block maps to a slide in [pitch-deck.html](pitch-deck.html). Everything said here is in the live prototype or marked as a target; nothing is claimed that the build doesn't do.
 
@@ -19,14 +19,14 @@
 - "India collects 1.57 crore units a year. The safest supply is donors who come back."
 - "Three things push them away. The gift disappears into silence. The free health check in every donation goes nowhere: only 29% of adults with high BP know it. And turned-away donors hear 'come back later' with no path back. Deferred first-time donors return at about half the normal rate."
 
-**4. TraceDrop (30 s, slide 4).**
-- "TraceDrop is the donor's app. Three things."
+**4. Pratidaan (30 s, slide 4).**
+- "Pratidaan is the donor's app. Three things."
 - "One: see every life your blood touches. We follow every part to the patient it helped, and keep the patient anonymous. When it lands, Drop, our assistant, plays you a short story you can share."
 - "Two: stay well until you can give again. Your donation's results become one Goal, with one target and a few steps. Drop checks in every two weeks and tells you the day you can donate again."
 - "Three: better cover for staying healthy. Like a credit limit, your health-insurance cover can rise at the same premium as your health score holds, only with your consent, and only the score is shared."
 
 **5. Demo (45 s, slide 5; live).**
-- "Arjun opens TraceDrop. Drop has a story: his platelets from 3 October have reached a patient. Some details stay private so no one can be identified. He shares the postcard."
+- "Arjun opens Pratidaan. Drop has a story: his platelets from 3 October have reached a patient. Some details stay private so no one can be identified. He shares the postcard."
 - "Next day his results land: BP up for the fourth donation in a row. One Goal, BP under 130/80. Three steps, each with its source: brisk walks, less salt, see a doctor within three weeks. And his donations wait until it comes down."
 - "He asks Drop in Kannada: 'why can't I donate?' Drop looks it up and answers in two sentences, with his BP chart."
 - "Two weeks later Drop asks for a reading. 128/78. Goal reached, and the date he can give again appears: 1 January."
@@ -43,13 +43,13 @@
 - "The donor pays nothing."
 
 **8. Close (10 s, slide 8).**
-"Give blood. See every life it touches. TraceDrop."
+"Give blood. See every life it touches. Pratidaan."
 
 ## Message house
 
 | Layer | Message |
 |---|---|
-| **Headline** | Give blood. See every life it touches. TraceDrop gives donors three reasons to come back: impact, health and cover. |
+| **Headline** | Give blood. See every life it touches. Pratidaan gives donors three reasons to come back: impact, health and cover. |
 | **Pillar 1: the gift made visible** | Every part of every donation followed to an anonymised patient; Stories, a shareable postcard, Badges and Circles. |
 | **Pillar 2: health between donations** | The donation's own results become one Goal with one target and cited steps; Drop follows up lightly and shows the way back to donating. |
 | **Pillar 3: cover that rises with health** | A transparent, consent-based model: lower risk creates room for more cover at the same premium. |

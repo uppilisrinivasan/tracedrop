@@ -4,7 +4,8 @@
 
 Pratidaan is an app for voluntary blood donors in India. A donation is split into parts (red cells, platelets, plasma) that reach different patients. Pratidaan follows each part and tells the donor when it helps someone, without ever revealing who. The same donation's sample doubles as a health check. Drop, Pratidaan's assistant, uses it to keep the donor well until they can give again, and a good health record can raise their health-insurance cover. Those are the reasons a donor comes back.
 
-- **Live prototype:** Cloud Run service **`pratidaan`** in `asia-south1` (URL printed in the GitHub Actions deploy log; sign in with Google or **Continue as guest**)
+- **Live prototype:** https://pratidaan-25mgkruoeq-el.a.run.app (Cloud Run **`pratidaan`**, asia-south1; judge guide at `/judge`). Sign in with Google or **Continue as guest**.
+- **Licence:** [MIT](LICENSE)
 - **Theme:** Sustainability & Social Impact (H2S × Google Cloud Gen AI hackathon)
 - **Data:** entirely synthetic: 300 donors, 657 donation visits, 1,627 blood components and 8,541 lab results, generated with seed 42. Institutions, insurers and people are fictional. Nothing is sent to a blood centre, clinic or insurer.
 
@@ -90,12 +91,12 @@ backend/src/
 data/               synthetic world (generate.py), demo overlay and seed, clinical protocols
 ```
 
-One container serves the API and the built app. GitHub Actions tests, builds and deploys every push to `main` to Cloud Run service **`pratidaan`** (asia-south1). Full details are in [docs/03-architecture.md](docs/03-architecture.md).
+One container serves the API and the built app. GitHub Actions tests, builds and deploys every push to `main` to Cloud Run service **`pratidaan`** (asia-south1). Signed-in account data uses **Cloud Firestore** only — not Firebase Auth, Hosting, or other Firebase products. Full details are in [docs/03-architecture.md](docs/03-architecture.md).
 
 ## Tests
 
 ```bash
-cd backend && npm test        # 152 tests: findings, eligibility, cover, privacy, Drop's rules, Goals,
+cd backend && npm test        # 156 tests: findings, eligibility, cover, privacy, Drop's rules, Goals,
                               # Intro, Badges, booking, sign-in, Your data, AI output checks
 cd frontend && npm run type-check
 ```

@@ -7,6 +7,8 @@
 const express = require('express');
 const store = require('../data/store');
 const drop = require('../domain/drop');
+const chatCycles = require('../domain/chatCycles');
+const agentPlatform = require('../ai/agentPlatform');
 
 const router = express.Router();
 const MAX_STEPS = 4 * 60; // two months, in parts of a day
@@ -36,6 +38,8 @@ router.post('/next', (req, res) => {
 });
 
 router.post('/reset', (req, res) => {
+  chatCycles.archiveCurrentCycle();
+  agentPlatform.onDemoReset();
   store.resetDemo();
   ok(res, store.clock());
 });

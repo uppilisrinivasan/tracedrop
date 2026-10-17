@@ -24,7 +24,7 @@ async function runAgent({ feature, system, messages, donorId, toolNames, maxToke
   for (let i = 0; i < MAX_STEPS; i += 1) {
     let response;
     try {
-      response = await llm.call({ feature, system, messages: convo, tools: toolDefs, maxTokens, effort, outputSchema });
+      response = await llm.call({ feature, system, messages: convo, tools: toolDefs, maxTokens, effort, outputSchema, guardrailKind: 'chat' });
     } catch (error) {
       // Gemini Flash-Lite occasionally emits a malformed tool call; one retry almost always succeeds
       if (/MALFORMED_FUNCTION_CALL/.test(error.message) && !retriedMalformed) {

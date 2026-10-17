@@ -1,4 +1,4 @@
-# TraceDrop: problem brief
+# Pratidaan: problem brief
 
 **Theme:** Sustainability & Social Impact ("supporting communities", "more informed and sustainable decisions")
 **Framed:** 8 Oct 2026 · **Reframed to match the build:** 16 Oct 2026
@@ -9,7 +9,7 @@
 - [submission kit](05-submission/)
 
 > **Give blood. See every life it touches.**
-> TraceDrop shows each donor where every part of their blood went and who it helped, without revealing who. It turns the free health check in every donation into a light follow-up between donations, and it lets good health raise the donor's insurance cover. Each of these is a reason to give again.
+> Pratidaan shows each donor where every part of their blood went and who it helped, without revealing who. It turns the free health check in every donation into a light follow-up between donations, and it lets good health raise the donor's insurance cover. Each of these is a reason to give again.
 
 ## 1. The problem
 
@@ -49,13 +49,13 @@ Why him:
 
 **Meera, 28,** is the second persona. She has been turned away twice for low haemoglobin (11.8; she needs 12.5). Her path back to donating runs through iron-rich food and a blood test.
 
-## 3. What TraceDrop does
+## 3. What Pratidaan does
 
 The donor is at the centre. Everything else is built around what they get.
 
 **1. See every life your blood touches.** Each part of each donation is followed from collection to the patient. The donor sees what it was used for and the type of hospital. They see the patient's age band and sex only if at least five patients share that description; otherwise the details are generalised. When a part reaches someone, Drop sends a short **Story** that ends on a postcard the donor can share. **Badges** mark milestones ("5 patients", "Nothing wasted", "Helped a child"). Families, workplaces and friends see their combined impact as **Circles**.
 
-**2. Stay well between donations.** The donation's own results are explained in plain words. A finding worth acting on becomes a **Goal** with one target ("BP under 130/80") and two or three steps, each citing the guidance it comes from. **Drop**, TraceDrop's assistant, checks in every two weeks, offers a check-up, sets reminders the donor asks for, and says exactly when they can donate again. It sends at most one new Card a day and is silent at night. Urgent findings skip all of that and say: see a doctor today.
+**2. Stay well between donations.** The donation's own results are explained in plain words. A finding worth acting on becomes a **Goal** with one target ("BP under 130/80") and two or three steps, each citing the guidance it comes from. **Drop**, Pratidaan's assistant, checks in every two weeks, offers a check-up, sets reminders the donor asks for, and says exactly when they can donate again. It sends at most one new Card a day and is silent at night. Urgent findings skip all of that and say: see a doctor today.
 
 **3. Better cover for staying healthy.** Like a credit limit that rises with good repayment, health-insurance cover steps up at the same premium (₹5 lakh → 6 → 7 → 8) when the health score shows lower risk. The donor must consent, the insurer sees only the score, and the maths is transparent. (Illustrative in the prototype.)
 
@@ -97,9 +97,9 @@ Every piece exists somewhere: impact feedback (Sweden), results (Japan), records
 
 ## 6. The 10x
 
-**Primary dimension: continuity.** Today each donation starts from zero and ends in silence. With TraceDrop, every donation adds to one record the donor can see, and the next donation becomes the next check-up.
+**Primary dimension: continuity.** Today each donation starts from zero and ends in silence. With Pratidaan, every donation adds to one record the donor can see, and the next donation becomes the next check-up.
 
-| Measure | Today | With TraceDrop | Where shown |
+| Measure | Today | With Pratidaan | Where shown |
 |---|---|---|---|
 | Donors who learn what their blood did | Almost none in India | Every donor: every part traced to an anonymised patient | Prototype |
 | Donors who leave knowing what their numbers mean and what to do | About none | Every donor: plain-language results; a Goal with one target and cited steps | Prototype |
@@ -111,7 +111,7 @@ The prototype shows the experience. It doesn't measure outcomes. **No outcome fi
 
 ## 7. Why Gen AI, and where it stops
 
-Most of TraceDrop is deliberately ordinary code:
+Most of Pratidaan is deliberately ordinary code:
 
 - Every Card, Goal, target, threshold and cover step comes from fixed rules, unit-tested, so the same history always gives the same result.
 - A model never decides anything about safety, eligibility, money or privacy.
@@ -147,7 +147,7 @@ Gen AI does the three jobs rules can't:
 - **Drop's memory is narrow.** It holds only stated schedule and language preferences, never health facts, medicines, religion, caste or income.
 - **No inducement to donate.**
   - Indian rules prohibit paying donors in cash or kind (Drugs and Cosmetics Rules, Rule 122EA), and care must never depend on donating.
-  - In TraceDrop, a deferred donor gets the same follow-up, and health checks are never sold as a reason to give.
+  - In Pratidaan, a deferred donor gets the same follow-up, and health checks are never sold as a reason to give.
   - **Open risk:** the illustrative cover model counts donation visits as its "monitored visits" and shows a "regular blood donor" premium discount. A deployment must count any monitored health check and drop the donor discount unless regulators agree it is not an inducement. See open questions.
 - **Test-seeking.** Infection testing is never offered as a benefit. A pilot would track discard rates ([Tanzania 2026](https://pubmed.ncbi.nlm.nih.gov/42101332/)).
 - **Honest demo.** Slots, check-ups, the QR pass, cover and concerns are labelled as simulated or illustrative in the app, the Calendar event and the email. All donor data is synthetic.
@@ -204,9 +204,9 @@ Building it showed three things:
 
 ## 12. Fit with the judging criteria
 
-| Criterion | Weight | How TraceDrop answers it |
+| Criterion | Weight | How Pratidaan answers it |
 |---|---|---|
 | Technical Merit & Gen AI | 40% | An agent with 18 donor-scoped tools, multimodal lab reading and multilingual translation, all on Vertex AI behind a gateway with rate limits, budgets, traces and checked outputs. Deterministic engines for everything safety-critical, with 152 tests. Deployed on Cloud Run with CI/CD. |
-| Problem Alignment & Impact | 25% | Blood supply depends on donors returning. TraceDrop gives each donor three reasons to: impact, health and cover. Every baseline is sourced. |
+| Problem Alignment & Impact | 25% | Blood supply depends on donors returning. Pratidaan gives each donor three reasons to: impact, health and cover. Every baseline is sourced. |
 | Innovation & Creativity | 25% | The blood's journey, part by part, with privacy by construction. The donation as a recurring health check that leads back to donating. Health-linked cover that rises like a credit limit. |
 | User Experience | 10% | One assistant on every screen, at most one Card a day, a one-minute Intro in six languages, and "Your data" with real deletes. |

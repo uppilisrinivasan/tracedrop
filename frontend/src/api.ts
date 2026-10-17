@@ -344,6 +344,13 @@ export const api = {
     post<{ status: string; reasons: string[]; visitId: string; components: string[] }>(`/donors/${id}/appointments/${appointmentId}/checkin`, vitals),
   /** `chat` says which Chat the question was asked in (General, a Goal's or a Habit's) */
   copilot: (id: string, message: string, history: unknown[] | null, chat = 'general') => post<CopilotReply>(`/donors/${id}/copilot`, { message, history, chat }),
+  chatActive: (id: string, chat = 'general') => request<{ cycleId: string; turns: { at: string; user: string; assistant: string }[]; history: unknown[] | null }>(`/donors/${id}/chat/active?chat=${encodeURIComponent(chat)}`),
+  chatCycles: (id: string) => request<{ cycles: { id: string; label: string; startedOn: string; endedOn: string; chatCount: number; dropCount: number }[] }>(`/donors/${id}/chat/cycles`),
+  chatCycle: (id: string, cycleId: string) => request<{
+    id: string; label: string; startedOn: string; endedOn: string;
+    chats: Record<string, { turns: { at: string; user: string; assistant: string }[]; history: unknown[] | null }>;
+    dropEarlier: { id: string; label: string; receipt: string; on: string }[];
+  }>(`/donors/${id}/chat/cycles/${encodeURIComponent(cycleId)}`),
   extractLabs: (id: string, input: { text?: string; image?: string }) => post<Extraction>(`/donors/${id}/labs/extract`, input),
   saveLabs: (id: string, extraction: Extraction) => post<{ saved: number; date: string }>(`/donors/${id}/labs/save`, extraction),
   concerns: (id: string) => request<Concern[]>(`/donors/${id}/concerns`),

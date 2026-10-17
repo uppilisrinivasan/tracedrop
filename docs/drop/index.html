@@ -91,7 +91,7 @@ footer{margin-top:60px;font-size:13px;color:var(--faint)}
 <main>
 <span class="tag">Team guide · updated 16 Oct 2026 (Goals, Chats, Stories and Badges, guest sign-in)</span>
 <h1>Drop: how it works and how to test it</h1>
-<p class="lead">Drop is TraceDrop's assistant. It tells donors where their blood went, turns each donation's free lab panel into a light health follow-up between donations, and shows them the way back to donating, all through a few short cards instead of a tracker.</p>
+<p class="lead">Drop is Pratidaan's assistant. It tells donors where their blood went, turns each donation's free lab panel into a light health follow-up between donations, and shows them the way back to donating, all through a few short cards instead of a tracker.</p>
 <p>The whole product is described in <a href="../02-product.md">docs/02-product.md</a> and the build in <a href="../03-architecture.md">docs/03-architecture.md</a>. This page is for testing Drop.</p>
 
 <h2 id="why">Why Drop exists</h2>
@@ -120,13 +120,13 @@ footer{margin-top:60px;font-size:13px;color:var(--faint)}
 <table>
 <tr><th>#</th><th>Step</th><th>Drop shows</th><th>Lit up on Home</th></tr>
 <tr><td>1</td><td>Language</td><td>Six languages. The rest of the Intro follows the choice (the AI translates it; English with a note if it can't).</td><td>—</td></tr>
-<tr><td>2</td><td>What TraceDrop is</td><td>One message, "Show me".</td><td>—</td></tr>
+<tr><td>2</td><td>What Pratidaan is</td><td>One message, "Show me".</td><td>—</td></tr>
 <tr><td>3</td><td>Your blood's journey</td><td>An <b>Example</b> donation (the demo's 3 Oct one, no name) and where its three parts went; "Watch the story".</td><td>Your blood has helped</td></tr>
 <tr><td>4</td><td>Health between donations</td><td>An <b>Example</b> results card (Hb, platelets in range; BP 148/94 a bit high).</td><td>Health score, Demo doctor check-up</td></tr>
 <tr><td>5</td><td>Your data</td><td>What is kept and where (the same groups as Your data); "Open Your data".</td><td>The account chip pulses</td></tr>
 <tr><td>6</td><td>Your choices</td><td>The three Choices (insurer off, leaderboard on, totals on).</td><td>Illustrative health cover</td></tr>
 <tr><td>7</td><td>When you can donate</td><td>Days, time of day, where. Optional. Saved with the Google account and used whenever you book.</td><td>Next donation</td></tr>
-<tr><td>8</td><td>All set</td><td>"Book my first donation" (opens booking in the chat) or "Start using TraceDrop".</td><td>—</td></tr>
+<tr><td>8</td><td>All set</td><td>"Book my first donation" (opens booking in the chat) or "Start using Pratidaan".</td><td>—</td></tr>
 </table>
 <div class="grid">
   <div class="card"><h4>Questions and Skip</h4><p>Typed questions go to the AI and the answer appears in the thread, then "Carry on: {step}". Skip asks to confirm and keeps the defaults. Booking from Home's button mid-Intro opens the Donate screen.</p></div>
@@ -289,7 +289,7 @@ footer{margin-top:60px;font-size:13px;color:var(--faint)}
 <tr><td><code>docs/changes/mihir-bhatt.md</code></td><td>Every commit: what changed, why, and how to revert it.</td></tr>
 </table>
 
-<footer>TraceDrop · Drop guide · synthetic data only · 16 Oct 2026</footer>
+<footer>Pratidaan · Drop guide · synthetic data only · 16 Oct 2026</footer>
 </main>
 </div>
 
@@ -376,7 +376,7 @@ const SCRIPTS = [
     ['Click × on a line.', 'It stays hidden on that screen for the rest of the demo day.'],
     ['On My health, click "Hide from my app" on a blood-centre result.', 'It moves under "Show 1 hidden result". Eligibility does not change.'],
   ]},
-  { id: 'intro', title: 'New donor: the Intro, start to finish', why: 'A new user meets Drop: what TraceDrop is, their data, their Choices.', steps: [
+  { id: 'intro', title: 'New donor: the Intro, start to finish', why: 'A new user meets Drop: what Pratidaan is, their data, their Choices.', steps: [
     ['Reset. In Viewing as (top) pick You (new donor).', 'Home says Hello (your Google first name when signed in), "No donations yet" and plain empty tiles. Drop\'s chat shows "Getting started · 1 of 8" and six languages.'],
     ['Click English, then Show me.', 'Step 3: an Example donation from 3 Oct and its three parts. The "Your blood has helped" tile has a purple ring and moves to the top.'],
     ['Click Watch the story, step through, press Esc.', 'The story closes and Drop moves to step 4 with an Example results card; Health score and Demo doctor check-up are ringed.'],
@@ -389,7 +389,7 @@ const SCRIPTS = [
   { id: 'intro-skip', title: 'New donor: Skip, Welcome back, Replay and Reset', why: 'The Intro never traps anyone, and remembers where they were.', steps: [
     ['Reset, New donor. Click English, Show me, Next.', 'Step 4 of 8.'],
     ['Open My impact, then Home again.', 'The thread is still there (same visit).'],
-    ['Reload the page.', '"Done so far: Language · What TraceDrop is · Your blood\'s journey" and "Welcome back. We stopped at Health between donations (step 4 of 8)".'],
+    ['Reload the page.', '"Done so far: Language · What Pratidaan is · Your blood\'s journey" and "Welcome back. We stopped at Health between donations (step 4 of 8)".'],
     ['Click Skip intro, then Skip the intro.', 'One line: "Intro · skipped 10 Oct · Replay". Drop\'s normal suggestions are back. The insurer switch is still off (Your data).'],
     ['Account menu → Replay intro.', 'Back to step 1, with English highlighted. Skipping now changes nothing.'],
     ['Click Reset on the demo bar.', 'The Intro is back at step 1 and the chat is empty.'],
@@ -423,7 +423,7 @@ const SCRIPTS = [
   { id: 'delete-account', title: 'Delete my account', why: 'One button removes everything kept with the Google account.', steps: [
     ['Open Your data, click Delete my account….', 'Three lists: deleted straight away, deletes itself later, you delete it yourself. The red button is disabled.'],
     ['Type delete (any case).', 'The red Delete my account button is enabled. Esc or Keep my account closes the box.'],
-    ['Click Delete my account.', '"Your account is deleted" with what went and what still expires on its own; then Back to sign in (Back to TraceDrop with sign-in off). Your donation preferences and bookings are gone.'],
+    ['Click Delete my account.', '"Your account is deleted" with what went and what still expires on its own; then Back to sign in (Back to Pratidaan with sign-in off). Your donation preferences and bookings are gone.'],
     ['On the live site only, with a spare Google account: sign in, book with Calendar connected, then delete the account with the Calendar box ticked.', 'Google asks for Calendar access once; the event disappears from Google Calendar; signing in again starts a fresh account (Your data shows 1 sign-in).'],
   ]},
   { id: 'ai-off', title: 'With the AI switched off', why: 'The demo must never break.', steps: [

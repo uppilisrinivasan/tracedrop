@@ -70,7 +70,7 @@ Both images are 1080×1920 PNGs. The top 220px and bottom 260px hold no key cont
   - the context line, or the component's role if the context is generalised (plasma: "Albumin, immunoglobulin and clotting factor")
   - the month in italics
   - a dashed rule, then a large "{N} patients helped by my blood" (lifetime `patientsHelped`)
-  - the TraceDrop mark below the card, in the component's colour.
+  - the Pratidaan mark below the card, in the component's colour.
 - **Badge:** dark red felt background, a striped ribbon and a gold loop. Below them:
   - the medal: a foil ring with a red enamel centre holding the ring glyph
   - the name, the rule in "my", "Earned {month}"

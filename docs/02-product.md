@@ -1,10 +1,10 @@
-# TraceDrop: what the app does
+# Pratidaan: what the app does
 
 This describes the app as built on `main` (16 Oct 2026, commit `c547232`), screen by screen. How it is built is in [03-architecture.md](03-architecture.md). The words in **bold capitals** (Donor, Drop, Card, Goal, Story, Badge, Circle, Choices…) are defined in [CONTEXT.md](../CONTEXT.md).
 
 ## The idea in one paragraph
 
-A blood donation is split into parts that help different patients. TraceDrop follows each part and tells the donor when it reaches someone, so the gift has a face without breaking anyone's privacy. The same visit includes a free health check. TraceDrop's assistant, **Drop**, turns those results into a light follow-up between donations: one target per problem, a few concrete steps, a check-in every two weeks, and a clear date for when they can give again. A donor who stays healthy can see modelled health cover rise at the same premium. Each of these gives the donor a reason to return, and the blood supply depends on donors who return.
+A blood donation is split into parts that help different patients. Pratidaan follows each part and tells the donor when it reaches someone, so the gift has a face without breaking anyone's privacy. The same visit includes a free health check. Pratidaan's assistant, **Drop**, turns those results into a light follow-up between donations: one target per problem, a few concrete steps, a check-in every two weeks, and a clear date for when they can give again. A donor who stays healthy can see modelled health cover rise at the same premium. Each of these gives the donor a reason to return, and the blood supply depends on donors who return.
 
 ## Real, simulated and illustrative
 
@@ -125,13 +125,13 @@ Drop's scripted first conversation, in Home's chat. It works with the AI off, ta
 | # | Step | What it shows |
 |---|---|---|
 | 1 | Language | Six languages; the rest of the Intro follows the choice (translated by the AI, English with a note if it can't) |
-| 2 | What TraceDrop is | "Show me" |
+| 2 | What Pratidaan is | "Show me" |
 | 3 | Your blood's journey | An **Example** donation (Arjun's 3 Oct one, unnamed) and where its parts went; Watch the story |
 | 4 | Health between donations | An **Example** results card |
 | 5 | Your data | What is kept and where; Open Your data (the account chip pulses) |
 | 6 | Your choices | The three **Choices** (insurer sharing off, leaderboard on, totals on) |
 | 7 | When you can donate | Days, time of day and place, saved with the Google account and used whenever they book (optional) |
-| 8 | All set | **Book my first donation** or **Start using TraceDrop** |
+| 8 | All set | **Book my first donation** or **Start using Pratidaan** |
 
 A reload folds what was done into "Done so far" and Drop says "Welcome back". Finished or skipped, it folds into one line ("Intro · finished 10 Oct · Replay") with the questions asked. **Replay intro** is in the account menu, for the New donor only.
 
@@ -253,7 +253,7 @@ The findings, score and eligibility rules are listed in [03-architecture.md](03-
   - a QR code and check-in code, clearly marked demo;
   - WhatsApp details and Email details;
   - a calendar file with a reminder the day before.
-- **Connect Google Calendar** (separate consent from sign-in): TraceDrop reads free/busy, adds an event to the donor's calendar and emails the confirmation from their Gmail to themselves. The access token stays in the page and is never stored.
+- **Connect Google Calendar** (separate consent from sign-in): Pratidaan reads free/busy, adds an event to the donor's calendar and emails the confirmation from their Gmail to themselves. The access token stays in the page and is never stored.
 - **Simulate check-in** (demo only, on the booking day):
   - Enter vitals, or leave them blank to use the persona's pattern.
   - A deferral happens if Hb is below the minimum, BP is above 140/90 or weight is under 45 kg.

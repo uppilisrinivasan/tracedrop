@@ -1,4 +1,4 @@
-# TraceDrop: technical implementation
+# Pratidaan: technical implementation
 
 How the prototype on `main` is built (16 Oct 2026, commit `c547232`). What it does for the donor is in [02-product.md](02-product.md).
 
@@ -258,7 +258,7 @@ All model calls go through one gateway.
   - Auth via `google-auth-library`: the Cloud Run service account in production, Application Default Credentials on a laptop. No API key.
 - **Limits** (per process; they reset on restart):
   - a token bucket at `LLM_RATE_LIMIT_RPS` (2/s);
-  - daily caps of `LLM_RATE_LIMIT_TOKENS_PER_DAY` (50,000) and `LLM_MAX_CALLS_PER_DAY` (200).
+  - daily caps of `LLM_RATE_LIMIT_TOKENS_PER_DAY` and `LLM_MAX_CALLS_PER_DAY` (production deploy sets 500,000 and 2,000 for judging).
 - **Message format:** converts the app's message blocks (text, image, tool use, tool result) to Gemini parts. It sends Gemini's function-call `id` and thought signatures back, wraps list results as objects, and drops thought parts from replies.
 - **Structured output:**
   - without tools, `responseMimeType: application/json` plus `responseSchema`;
@@ -266,6 +266,17 @@ All model calls go through one gateway.
   - Either way, the result is re-validated locally against the app's schema (`validate()`). Provider-side constraints aren't trusted.
 - **Visible text:** `visibleReply()` strips planning notes ("Plan:", "Final Answer:") from text meant for the donor.
 - **Traces:** every call is recorded with feature, latency, tokens, cache reads and stop reason or error (last 200; `/api/ai/traces`). Failures raise `LLMUnavailable`, which every caller turns into its rule-based fallback.
+- **Safety prompts:** before each request, `guardrails.augmentSystem(system, guardrailKind)` appends shared scope and safety rules. Callers pass `guardrailKind` on `llm.call` / `llm.json` (`chat`, `donor_copy`, `translation`, `extraction`, or `none` to skip). Default is `donor_copy`.
+
+### Safety guardrails: `ai/guardrails.js`
+
+Donor-facing safety is enforced in three layers, with one module owning both the static checks and the prompt text so they stay consistent.
+
+1. **Pre-LLM (Drop chat):** `check(message)` runs regex on the user's text. It blocks diagnosis or prescription requests, off-topic asks (when unrelated to donation/health/Pratidaan), and emergency language, returning a fixed reply (and often a check-up Card) without calling Gemini.
+2. **In prompt (every Gemini call):** `augmentSystem()` appends a `guardrailKind`-specific block: stay on scope, never diagnose or prescribe, redirect emergencies to emergency services, use only given facts. Copilot uses `chat`; intro translation uses `translation`; lab extraction uses `extraction`; home insight and Card wording use `donor_copy` (same as the gateway default).
+3. **Post-LLM (Drop chat):** `sanitizeReply()` rewrites assistant text that looks like medicine advice. Copilot still applies its own system rules (two sentences, tools for facts, at most one Card, no invented labs).
+
+Tests live in `backend/test/guardrails.test.js`.
 
 ### Agent loop: `ai/agent.js`
 
@@ -297,6 +308,7 @@ A manual tool-use loop of up to 8 steps:
 - **History:** the last 20 turns, kept in the browser and sent back each time.
 - **Leaked notes:** a reply that reads as the model's own notes ("The user wants…", "I should…", tool code) gets one retry with no tools. If it still fails, rules answer.
 - **Fallback:** `fallback()` answers common questions from rules when the AI is unavailable.
+- **Guardrails:** `check()` on the user message before the agent runs; `sanitizeReply()` on the final text; agent calls use `guardrailKind: 'chat'` on the gateway (see `ai/guardrails.js`).
 
 ### Lab-report reader: `ai/labReader.js`
 
@@ -348,15 +360,7 @@ Every route except `/api/health` and `/api/auth/*` needs a session. Responses ar
   - every call checks that the Calendar account is the signed-in account.
 - **Web hardening:** Helmet headers (COOP `same-origin-allow-popups` for the Google popup), an 8 MB JSON limit for report photos, and a JSON 404 for unknown API routes.
 - **Recipient privacy:** k = 5 generalisation, month-rounded dates, withheld units with no reason, and share images that carry less than the app.
-- **AI guardrails:**
-  - donor-scoped tools with schema-validated arguments;
-  - structured output re-validated locally;
-  - memory limited to enumerated preferences;
-  - no diagnosis or medicine names; urgent → see a doctor;
-  - Card text that must match the rules;
-  - Intro translations that must keep every number;
-  - a reply filter for leaked reasoning;
-  - a rule fallback everywhere.
+- **AI guardrails:** see **Safety guardrails** above (`guardrails.js`: pre-check, prompt appendix on every call, post-check on chat); plus donor-scoped tools with schema-validated arguments; structured output re-validated locally; memory limited to enumerated preferences; Card text that must match the rules; Intro translations that must keep every number; `visibleReply()` for leaked reasoning; rule fallback on every feature that needs it.
 
 The deterministic decisions are covered by tests.
 - **Demo honesty:** cover, slots, check-ups, the QR pass, concerns and activity are labelled simulated or illustrative in the UI, the Calendar event and the email.
@@ -371,11 +375,12 @@ Known limits: demo donors are shared by everyone using the prototype, and their 
   2. Type-check and build the frontend.
   3. Authenticate to Google Cloud with Workload Identity Federation (no key file).
   4. Build and push the image to Artifact Registry (`asia-south1`).
-  5. Deploy that exact image to Cloud Run service `tracedrop`: 1 vCPU, 512 MiB, 0–1 instances, concurrency 1, 180 s timeout, runtime service account `tracedrop-run` (Vertex AI and Firestore access). The Gemini settings, `GOOGLE_CLIENT_ID` and `SESSION_SECRET` go in as environment variables.
+  5. Deploy that exact image to Cloud Run service **`pratidaan`**: 1 vCPU, 512 MiB, 1–4 instances, concurrency 20, 180 s timeout, runtime service account `tracedrop-run` (Vertex AI and Cloud Firestore access). The Gemini settings, `GOOGLE_CLIENT_ID` and `SESSION_SECRET` go in as environment variables. Limits are raised for parallel judging (see below).
   6. Curl `/api/health`.
 
   Setup steps are in [CLOUD_RUN_VERTEX_SETUP.md](CLOUD_RUN_VERTEX_SETUP.md).
-- **Live URL:** https://tracedrop-25mgkruoeq-el.a.run.app
+- **Live URL:** https://pratidaan-25mgkruoeq-el.a.run.app (judge instructions: `/judge`)
+- **Firebase:** this project does **not** use Firebase (Auth, Hosting, Realtime DB, etc.). Persistence is **Cloud Firestore** via `@google-cloud/firestore` only.
 - **Local:**
   - `./run.sh`: the API with `node --watch` on 8080 and Vite on 5173, which proxies `/api`.
   - `docker compose up --build`: everything on 8080.
@@ -389,7 +394,7 @@ Known limits: demo donors are shared by everyone using the prototype, and their 
 | `GOOGLE_CLOUD_PROJECT` | (empty) | Turns on Vertex AI; empty means rule-based fallbacks |
 | `VERTEX_LOCATION` | `global` | Vertex endpoint |
 | `LLM_MODEL` | `gemini-3.1-flash-lite` | Model for every AI feature |
-| `LLM_RATE_LIMIT_RPS` / `LLM_RATE_LIMIT_TOKENS_PER_DAY` / `LLM_MAX_CALLS_PER_DAY` | 2 / 50,000 / 200 | Per-process limits |
+| `LLM_RATE_LIMIT_RPS` / `LLM_RATE_LIMIT_TOKENS_PER_DAY` / `LLM_MAX_CALLS_PER_DAY` | 10 / 500,000 / 2,000 on Cloud Run (lower in `.env.example` for local dev) | Per-process limits |
 | `GOOGLE_CLIENT_ID` | (empty) | Google Sign-In and Calendar consent |
 | `SESSION_SECRET` | dev-only value outside production | Signs session cookies and check-in codes |
 | `AUTH_DISABLED` | false | Skip sign-in locally (ignored in production) |
@@ -400,7 +405,7 @@ Known limits: demo donors are shared by everyone using the prototype, and their 
 
 ## Tests
 
-`cd backend && npm test` runs 152 tests in 18 files with `node --test`, against the real modules and, where needed, the real routes on a local port.
+`cd backend && npm test` runs 156 tests with `node --test`, against the real modules and, where needed, the real routes on a local port.
 
 | File | Covers |
 |---|---|

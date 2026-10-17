@@ -10,7 +10,7 @@ An agreed spec for the two sharing features, Story (a moment) and Badge (the rec
 
 ## Notes
 
-- Domain: TraceDrop donor app. Use the terms in [CONTEXT.md](../../../CONTEXT.md) (Donor, Drop, Card, Story, Badge, Event, Cycle, Message budget, Circle).
+- Domain: Pratidaan donor app. Use the terms in [CONTEXT.md](../../../CONTEXT.md) (Donor, Drop, Card, Story, Badge, Event, Cycle, Message budget, Circle).
 - Skills every session should consult: `grilling` and `domain-modeling`. Use `prototype` for how the share images look.
 - Standing constraints:
   - Drop stays at the centre. Earning a Badge never sends a Card.

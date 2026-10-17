@@ -36,6 +36,9 @@ export default function ChatSheet({ donorId, go, clientId, screen }: { donorId: 
   const [memory, setMemory] = useState(false);
   const [reading, setReading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pastCycles, setPastCycles] = useState<{ id: string; label: string; endedOn: string; chatCount: number }[]>([]);
+  const [pastPick, setPastPick] = useState<string | null>(null);
+  const [pastDetail, setPastDetail] = useState<Awaited<ReturnType<typeof api.chatCycle>> | null>(null);
   const panel = useRef<HTMLDivElement>(null);
   const seq = useRef(0);
   const screenRef = useRef(screen);
@@ -81,7 +84,7 @@ export default function ChatSheet({ donorId, go, clientId, screen }: { donorId: 
     const onBook = offHome('book');
     const onCheckup = offHome('checkup');
     const onChanged = () => { if (sheet.open) reload(); };
-    const onReset = () => close();
+    const onReset = () => { setPastCycles([]); setPastPick(null); setPastDetail(null); close(); };
     window.addEventListener('drop:open', onOpen);
     window.addEventListener('drop:ask', onAsk);
     window.addEventListener('drop:book', onBook);
@@ -113,6 +116,16 @@ export default function ChatSheet({ donorId, go, clientId, screen }: { donorId: 
     return () => { window.removeEventListener('keydown', onKey); document.body.style.overflow = overflow; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, menu, memory]);
+
+  useEffect(() => {
+    if (chat !== 'past') return;
+    api.chatCycles(donorId).then((r) => setPastCycles(r.cycles)).catch(() => setPastCycles([]));
+  }, [donorId, chat]);
+
+  useEffect(() => {
+    if (!pastPick) { setPastDetail(null); return; }
+    api.chatCycle(donorId, pastPick).then(setPastDetail).catch(() => setPastDetail(null));
+  }, [donorId, pastPick]);
 
   // A Donor switching away closes the sheet
   useEffect(() => { if (open) close(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [donorId]);
@@ -219,11 +232,38 @@ export default function ChatSheet({ donorId, go, clientId, screen }: { donorId: 
         {error && <div className="callout callout-warn small sheet-error">{error}</div>}
 
         {chat === 'past' ? (
-          <div className="sheet-empty">
-            <Icon name="history" size={28} />
-            <b>No past Cycles yet</b>
-            <span className="small muted">Chats from earlier Cycles will show here, read-only. Chats aren't kept yet, so there's nothing from before this one.</span>
-          </div>
+          pastCycles.length === 0 ? (
+            <div className="sheet-empty">
+              <Icon name="history" size={28} />
+              <b>No past cycles yet</b>
+              <span className="small muted">When you use Reset on the demo bar, this cycle&apos;s chats and Drop receipts are saved here, read-only.</span>
+            </div>
+          ) : (
+            <div className="sheet-past" style={{ padding: 16, overflow: 'auto', flex: 1 }}>
+              <label className="small muted">Choose a cycle</label>
+              <select className="input" value={pastPick || ''} onChange={(e) => setPastPick(e.target.value || null)}>
+                <option value="">—</option>
+                {pastCycles.map((c) => <option key={c.id} value={c.id}>{c.label} · ended {c.endedOn}</option>)}
+              </select>
+              {pastDetail && Object.entries(pastDetail.chats).map(([key, bucket]) => (
+                <div key={key} style={{ marginTop: 16 }}>
+                  <b className="small">{key === 'general' ? 'General chat' : key}</b>
+                  {bucket.turns.map((t, i) => (
+                    <div key={i} className="drop-earlier" style={{ marginTop: 8 }}>
+                      <div><span><b>You:</b> {t.user}</span></div>
+                      <div><span><b>Drop:</b> {t.assistant}</span><span className="on">{t.at}</span></div>
+                    </div>
+                  ))}
+                </div>
+              ))}
+              {pastDetail && pastDetail.dropEarlier.length > 0 && (
+                <div style={{ marginTop: 16 }}>
+                  <b className="small">Drop · earlier that cycle</b>
+                  <div className="drop-earlier">{pastDetail.dropEarlier.map((e) => <div key={e.id}><span>{e.receipt}</span><span className="on">{e.on}</span></div>)}</div>
+                </div>
+              )}
+            </div>
+          )
         ) : (
           <Copilot key={`${donorId}|${chat}`} donorId={donorId} go={(s) => { close(); go(s); }} clientId={clientId}
             chat={chat} opener={opener} answers={answers} readOnly={readOnly}

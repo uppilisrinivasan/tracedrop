@@ -108,14 +108,16 @@ function normalise(raw) {
   usage: { input_tokens: raw.usageMetadata?.promptTokenCount || 0, output_tokens: raw.usageMetadata?.candidatesTokenCount || 0,
     cache_read_input_tokens: raw.usageMetadata?.cachedContentTokenCount || 0 } };
 }
-async function call({ feature, system, messages, tools, maxTokens = 4000, outputSchema }) {
+async function call({ feature, system, messages, tools, maxTokens = 4000, outputSchema, guardrailKind = 'donor_copy' }) {
   if (!available(maxTokens)) throw new LLMUnavailable(status().reason || 'AI budget unavailable');
   await acquire();
   usage.calls += 1;
   const started = Date.now();
   const jsonMode = Boolean(outputSchema) && !(tools && tools.length);
   const defs = declarations(tools, jsonMode ? null : outputSchema);
-  const body = { systemInstruction: { parts: [{ text: !outputSchema || jsonMode ? system : `${system}\n\nFinish by calling ${SUBMIT} with the final result.` }] },
+  const guardrails = require('./guardrails');
+  const baseSystem = guardrailKind === 'none' ? system : guardrails.augmentSystem(system, guardrailKind);
+  const body = { systemInstruction: { parts: [{ text: !outputSchema || jsonMode ? baseSystem : `${baseSystem}\n\nFinish by calling ${SUBMIT} with the final result.` }] },
     contents: toContents(messages), generationConfig: { maxOutputTokens: Math.min(maxTokens, 6000) } };
   if (jsonMode) {
     body.generationConfig.responseMimeType = 'application/json';

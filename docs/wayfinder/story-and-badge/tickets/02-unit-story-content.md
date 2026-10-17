@@ -29,6 +29,6 @@ Facts: 7 of D-001's 8 transfused units are generalised, and the demo Card's unit
    - Context line, or the component's role if the context is generalised (for plasma: "Albumin, immunoglobulin and clotting factor")
    - The month
    - A large "{N} patients helped by my blood" (lifetime `patientsHelped`)
-   - The TraceDrop mark
+   - The Pratidaan mark
    It never shows patient band, place or outcome.
 7. **If this moment earned a Badge,** the Badge replaces the summary postcard as the last slide and is what gets shared. The moment's postcard can still be shared later from that unit on My Impact.

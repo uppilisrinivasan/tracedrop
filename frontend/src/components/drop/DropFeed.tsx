@@ -34,6 +34,9 @@ export default function DropFeed({ donorId, version, refresh, calmLine, storiesI
   const [story, setStory] = useState<DropCard | null>(null);
   const [upload, setUpload] = useState<DropCard | null>(null);
   const [memoryOpen, setMemoryOpen] = useState(false);
+  const [pastOpen, setPastOpen] = useState(false);
+  const [pastCycles, setPastCycles] = useState<{ id: string; label: string; endedOn: string; dropCount: number }[]>([]);
+  const [pastDetail, setPastDetail] = useState<{ label: string; earlier: { id: string; receipt: string; on: string }[] } | null>(null);
 
   // Opening the app (or switching Persona) brings hidden Cards back
   useEffect(() => {
@@ -46,11 +49,14 @@ export default function DropFeed({ donorId, version, refresh, calmLine, storiesI
   useEffect(() => {
     const reload = () => api.drop(donorId).then(setView).catch(() => {});
     // After a demo Reset the Cards on screen no longer exist: drop them at once, then load the fresh ones
-    const reset = () => { setView(null); setShowAll(false); setEarlierOpen(false); reload(); };
+    const reset = () => { setView(null); setShowAll(false); setEarlierOpen(false); setPastOpen(false); setPastDetail(null); reload(); api.chatCycles(donorId).then((r) => setPastCycles(r.cycles.filter((c) => c.dropCount > 0))).catch(() => {}); };
     window.addEventListener('drop:changed', reload);
     window.addEventListener('demo:reset', reset);
     return () => { window.removeEventListener('drop:changed', reload); window.removeEventListener('demo:reset', reset); };
   }, [donorId]);
+  useEffect(() => {
+    api.chatCycles(donorId).then((r) => setPastCycles(r.cycles.filter((c) => c.dropCount > 0))).catch(() => setPastCycles([]));
+  }, [donorId, version]);
   useEffect(() => {
     if (!version) return;
     let alive = true;
@@ -162,6 +168,31 @@ export default function DropFeed({ donorId, version, refresh, calmLine, storiesI
           {earlierOpen && (
             <div className="drop-earlier">
               {view.earlier.map((e) => <div key={e.id}><span>{e.receipt}</span><span className="on">{e.on}</span></div>)}
+            </div>
+          )}
+        </>
+      )}
+      {pastCycles.length > 0 && (
+        <>
+          <button className="drop-earlier-toggle" aria-expanded={pastOpen} onClick={() => setPastOpen(!pastOpen)}>
+            <Icon name="history" size={14} /> Past cycles · {pastCycles.length}
+          </button>
+          {pastOpen && (
+            <div className="drop-earlier">
+              {pastCycles.map((c) => (
+                <button key={c.id} type="button" className="drop-link" style={{ textAlign: 'left', padding: '8px 12px' }} onClick={async () => {
+                  const full = await api.chatCycle(donorId, c.id);
+                  setPastDetail({ label: full.label, earlier: full.dropEarlier.map((e) => ({ id: e.id, receipt: e.receipt, on: e.on })) });
+                }}>
+                  {c.label} · ended {c.endedOn} · {c.dropCount} items
+                </button>
+              ))}
+              {pastDetail && (
+                <div style={{ marginTop: 8 }}>
+                  <div className="tiny muted">{pastDetail.label}</div>
+                  {pastDetail.earlier.map((e) => <div key={e.id}><span>{e.receipt}</span><span className="on">{e.on}</span></div>)}
+                </div>
+              )}
             </div>
           )}
         </>
