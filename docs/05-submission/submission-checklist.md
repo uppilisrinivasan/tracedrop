@@ -38,7 +38,8 @@ Requirements from the competition brief (H2S × Google Cloud Gen AI hackathon). 
 - [ ] Every number in the deck and video is in [pitch-narrative.md](../04-pitch/pitch-narrative.md) under "Numbers to keep consistent". None of the first plan's projected metrics appear.
 - [ ] Nothing in the deck, video or README claims what the prototype doesn't do: no WhatsApp, voice, doctor or counsellor console, FHIR store, BigQuery, Maps or real bookings.
 - [ ] The README states the data is synthetic and the prototype isn't for medical use. Cover, slots and check-ups are labelled illustrative or demo in the app.
-- [ ] `cd backend && npm test` passes (156 tests) and `cd frontend && npm run type-check` is clean. CI runs both on every deploy.
+- [ ] `cd backend && npm test` passes and `cd frontend && npm run type-check` is clean. CI runs both on every deploy.
+- [ ] Past Cycles: chat as a demo persona → **This cycle (live)**; **Reset** → archived cycle in Ask Drop → Past Cycles (in-memory on Cloud Run, not Firestore).
 - [ ] The latest **Deploy Pratidaan to Cloud Run** run on `main` is green, and `/api/health` answers.
 - [ ] Judging capacity: deploy uses up to 4 Cloud Run instances (concurrency 20) and 500k tokens / 2k calls per instance per day. Check the AI console on the morning of judging.
 - [ ] Write-up states **Cloud Firestore** only — no Firebase Auth, Hosting, or other Firebase products.
