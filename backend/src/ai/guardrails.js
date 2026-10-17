@@ -3,20 +3,26 @@
  * LLM call, and post-checks on assistant wording.
  */
 
-const OFF_TOPIC = /\b(stock|crypto|bitcoin|weather forecast|recipe|movie|cricket score|ipl|politics|election|write (me )?a (poem|essay|code|script)|homework|assignment)\b/i;
 const DIAGNOSE = /\b(diagnos(e|is)|prescri(be|ption)|what (medicine|tablet|drug|dose|dosage)|should i take|am i (having|getting)|do i have (cancer|diabetes|covid)|cure for|treat(ment)? for)\b/i;
 const EMERGENCY = /\b(chest pain|can't breathe|cannot breathe|suicid|kill myself|stroke|heart attack|bleeding heavily|unconscious)\b/i;
 const PRESCRIBE_OUT = /\b(you should take|take \d|start taking|stop taking|try (this|these) (tablet|medicine|pill)|recommended dose)\b/i;
 const MEDICINE_OUT = /\b(take|start|stop)\s+(this|that|the)?\s*(tablet|medicine|pill|dose)\b/i;
 
 const PROMPT_SCOPE = `Scope and safety (always follow):
-- Stay on blood donation, the donor's results, impact, cover, bookings and Pratidaan. Decline homework, finance, politics and other off-topic asks politely.
+- Stay on blood donation, the donor's results, impact, cover, bookings and Pratidaan inside this app.
 - Never diagnose, prescribe or recommend medicines or doses. Explain recorded results and the Plan; direct treatment decisions to a clinician.
 - Emergency symptoms (chest pain, can't breathe, suicide, stroke, severe bleeding, etc.): tell them to call emergency services or go to hospital now; do not handle emergencies in chat.`;
 
+const CHAT_SCOPE = `Off-scope requests (decline in one or two warm sentences — do not use tools to fulfill them):
+- You are not a homework helper, essay writer, poet, coder, or general assistant. Refuse to draft essays, school assignments, letters to teachers, speeches, or long-form creative writing — even when the topic is blood donation or their journey.
+- If they want facts for their own writing, give at most two short sentences of tool-backed stats (donation count, components, patients helped) and say you cannot write or structure the assignment for them.
+- Decline finance, politics, sports scores, recipes, entertainment, and unrelated chit-chat the same way; redirect to results, impact, cover, booking, or their Plan.
+- If you already offered help in an earlier turn but the deliverable is still an essay or assignment, decline when they confirm — scope does not change because the subject is donation-related.`;
+
 const PROMPT_BY_KIND = {
   chat: `${PROMPT_SCOPE}
-- Use tools for facts; never invent labs, dates or recipients.
+${CHAT_SCOPE}
+- Use tools for in-app donor questions only; never invent labs, dates or recipients.
 - For treatment questions, explain facts and offer check-up times (offer_care_slots), not medical advice.`,
   donor_copy: `${PROMPT_SCOPE}
 - Use only the facts given; add no new clinical claims or medicines.`,
@@ -47,14 +53,6 @@ function check(message) {
       block: true,
       reply: 'I cannot diagnose or prescribe. I can explain what your recorded results mean and what your Plan suggests — and I can offer check-up times to discuss with a clinician.',
       suggestCheckup: true,
-    };
-  }
-
-  if (OFF_TOPIC.test(m) && !/\b(donat|blood|health|result|bp|insur|cover|platelet|goal|plan|drop|pratidaan)\b/i.test(m)) {
-    return {
-      block: true,
-      reply: 'I stay focused on blood donation, your health results, impact, cover and bookings in Pratidaan. Try a question about those, or tap Book a doctor check-up.',
-      offTopic: true,
     };
   }
 

@@ -40,7 +40,8 @@ How you answer:
 - Booking: all clinic and blood-centre slots shown by Pratidaan are demo examples, not partner-confirmed reservations. A Google Calendar event/email can be real, but neither confirms a centre reservation.
 - When they ask where something is, call navigate.
 - Write in the language given below unless they write in another language; then use theirs. Keep numbers as digits.
-- Speak straight to the donor. Never call them "the user", and never include a plan, a draft or a critique.`;
+- Speak straight to the donor. Never call them "the user", and never include a plan, a draft or a critique.
+- Not a writing service: refuse to write or outline essays, homework, school assignments, or letters for a teacher — even about their donation journey. You may share two short, factual sentences from tools if they want stats for their own work; do not draft paragraphs, introductions, or "structure" for them.`;
 
 /** Who Drop is talking to. The New donor is the signed-in person themself, a new user with no records yet. */
 function who(donor, userName) {
@@ -122,7 +123,8 @@ async function chat({ donorId, history, message, userName, chat: chatId }) {
   if (result.text && isNote(result.text)) {
     const rules = fallback(donorId, message);
     const reply = rules.generic ? 'Sorry, I lost my words there. Could you ask me that again?' : rules.reply;
-    return { reply, steps: result.steps, actions: [...result.actions, ...rules.actions.filter((a) => !result.actions.some((b) => b.type === a.type && b.text === a.text))], history: null, answeredByRules: true };
+    chatCycles.recordTurn(donorId, chatKey, { userText: message, assistantText: reply, history: prior });
+    return { reply, steps: result.steps, actions: [...result.actions, ...rules.actions.filter((a) => !result.actions.some((b) => b.type === a.type && b.text === a.text))], history: prior, answeredByRules: true };
   }
   if (!result.text) {
     const rules = fallback(donorId, message);

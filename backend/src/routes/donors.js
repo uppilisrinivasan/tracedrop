@@ -184,6 +184,10 @@ router.get('/:donorId/chat/active', (req, res) => {
   ok(res, chatCycles.activeChat(req.donor.id, chat));
 });
 
+router.get('/:donorId/chat/current-cycle', (req, res) => {
+  ok(res, chatCycles.currentCycle(req.donor.id));
+});
+
 router.get('/:donorId/chat/cycles', (req, res) => {
   ok(res, { cycles: chatCycles.listPast(req.donor.id) });
 });

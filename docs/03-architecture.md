@@ -272,8 +272,8 @@ All model calls go through one gateway.
 
 Donor-facing safety is enforced in three layers, with one module owning both the static checks and the prompt text so they stay consistent.
 
-1. **Pre-LLM (Drop chat):** `check(message)` runs regex on the user's text. It blocks diagnosis or prescription requests, off-topic asks (when unrelated to donation/health/Pratidaan), and emergency language, returning a fixed reply (and often a check-up Card) without calling Gemini.
-2. **In prompt (every Gemini call):** `augmentSystem()` appends a `guardrailKind`-specific block: stay on scope, never diagnose or prescribe, redirect emergencies to emergency services, use only given facts. Copilot uses `chat`; intro translation uses `translation`; lab extraction uses `extraction`; home insight and Card wording use `donor_copy` (same as the gateway default).
+1. **Pre-LLM (Drop chat):** `check(message)` runs regex only for **emergency** wording and **diagnosis/prescription** asks, returning a fixed reply (and often a check-up Card) without calling Gemini. Other off-scope asks (essays, homework, unrelated topics) are **not** regex-filtered.
+2. **In prompt (every Gemini call):** `augmentSystem()` appends a `guardrailKind`-specific block: stay on scope, refuse homework/essays and general writing (including donation-themed school work), never diagnose or prescribe, redirect emergencies to emergency services, use only given facts. Copilot uses `chat`; intro translation uses `translation`; lab extraction uses `extraction`; home insight and Card wording use `donor_copy` (same as the gateway default).
 3. **Post-LLM (Drop chat):** `sanitizeReply()` rewrites assistant text that looks like medicine advice. Copilot still applies its own system rules (two sentences, tools for facts, at most one Card, no invented labs).
 
 Tests live in `backend/test/guardrails.test.js`.
@@ -305,7 +305,7 @@ A manual tool-use loop of up to 8 steps:
 - **What the model gets:**
   - Drop's rules: two short sentences, facts only from tools, at most one Card, no diagnosis or medicine, urgent means a doctor today, recipients stay anonymous, cover and slots are illustrative, never "the user";
   - per-turn context: the date, who the donor is (the New donor has no records), language, what Drop remembers, the Plan, Reminders, the latest reading, open Cards, each live Goal's target, why and steps (with "these come from rules, not a doctor", and no exercise for an urgent Goal), which Chat this is (`general`, `goal:<id>` or `habit:<name>`), and the Intro step if one is running.
-- **History:** the last 20 turns, kept in the browser and sent back each time.
+- **History:** the last 20 turns, kept in the browser and sent back each time. Each turn is also stored server-side in `domain/chatCycles.js` (current cycle); demo **Reset** archives into **Past Cycles** (`GET …/chat/cycles`). Not durable across restart or multiple Cloud Run instances.
 - **Leaked notes:** a reply that reads as the model's own notes ("The user wants…", "I should…", tool code) gets one retry with no tools. If it still fails, rules answer.
 - **Fallback:** `fallback()` answers common questions from rules when the AI is unavailable.
 - **Guardrails:** `check()` on the user message before the agent runs; `sanitizeReply()` on the final text; agent calls use `guardrailKind: 'chat'` on the gateway (see `ai/guardrails.js`).

@@ -60,17 +60,17 @@
     <span class="chip">What do you remember about me?</span>
     <span class="chip">Watch my impact story</span>
   </div>
-  <p>Use the demo bar: <strong>+1 day</strong> to advance the timeline; <strong>Reset</strong> archives this cycle’s chat and “Earlier this cycle” into <strong>Past cycles</strong> (Home feed + Chat sheet).</p>
+  <p>Use the demo bar: <strong>+1 day</strong> to advance the timeline; <strong>Reset</strong> archives this cycle’s Drop chats into <strong>Past Cycles</strong> (Ask Drop → Past Cycles). <strong>This cycle (live)</strong> updates as you chat. Demo personas show a sample earlier cycle. Vertex Agent Sessions mirror turns in the cloud when configured — they do not drive this UI.</p>
 
   <h2>Guardrails (three layers)</h2>
   <p>Implemented in <code>backend/src/ai/guardrails.js</code>. Static checks and prompts stay aligned; every Gemini call gets the same safety appendix via <code>llm.js</code> (<code>guardrailKind</code>).</p>
   <div class="card">
     <h3 style="margin:0 0 8px;font-size:1rem;color:var(--text);">1. Before the model (Drop chat only)</h3>
-    <p style="margin:0;">Regex on the donor’s message: block diagnosis/prescription asks, off-topic (crypto, homework, …), and emergency wording with a fixed reply (often + check-up card). The LLM is not called when blocked.</p>
+    <p style="margin:0;">Regex on the donor’s message: block diagnosis/prescription asks and emergency wording with a fixed reply (often + check-up card). The LLM is not called when blocked. Homework, essays, and other off-scope asks are <strong>not</strong> regex-filtered (donation-themed school work would bypass keyword lists).</p>
   </div>
   <div class="card">
     <h3 style="margin:0 0 8px;font-size:1rem;color:var(--text);">2. In every system prompt</h3>
-    <p style="margin:0;"><code>augmentSystem()</code> appends shared rules: Pratidaan scope only, no diagnose/prescribe, emergencies → call emergency services, facts from tools / given text only.</p>
+    <p style="margin:0;"><code>augmentSystem()</code> appends shared rules: Pratidaan scope only, refuse essays/homework and general writing (even about donations), no diagnose/prescribe, emergencies → call emergency services, facts from tools / given text only. Try: “Write an essay for my teacher about my donation journey” — Drop should decline politely and offer at most two factual sentences, not a draft.</p>
     <table style="width:100%;margin-top:10px;font-size:13px;color:var(--muted);">
       <tr><th style="text-align:left;padding:4px 8px;">Kind</th><th style="text-align:left;padding:4px 8px;">Feature</th></tr>
       <tr><td><code>chat</code></td><td>Drop copilot (<code>runAgent</code>, 18 tools)</td></tr>

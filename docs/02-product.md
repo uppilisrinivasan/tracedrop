@@ -299,7 +299,7 @@ Some of the console's feature descriptions are older than the current app:
 |---|---|
 | **Week plans**, **Your day**, **Simplify my plan** | Agreed in CONTEXT.md; Habits and This week show empty shells, and the chat says saving a Week plan is coming |
 | **From your doctor** (prescriptions read and confirmed) | Placeholder ("Nothing added yet") |
-| Stored Chats and **Past Cycles** | Chats live in the browser for the visit; Past Cycles shows "No past Cycles yet" |
+| **Past Cycles** | Server keeps this demo cycle’s Drop turns per persona; **Reset** archives to read-only past cycles. Demo personas include a sample earlier cycle. In-memory on Cloud Run (not Firestore); Vertex Sessions mirror separately when configured. |
 | AI-written Goal write-ups | Waiting on a team decision about Google Cloud's "no clinical purposes" term; the rules version runs and stays the fallback |
 | Card wording in the donor's language | The AI rewrite is wired, but only wording identical to the rules is accepted, so Cards keep their rule wording; only the slots Card has a Hindi version |
 | Drop's state, the New donor and memories per account in Firestore | In server memory, shared by everyone viewing a demo donor, reset on restart |

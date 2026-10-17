@@ -8,10 +8,14 @@ describe('guardrails', () => {
     assert.equal(r.block, true);
     assert.equal(r.suggestCheckup, true);
   });
-  it('blocks off-topic when unrelated', () => {
-    const r = guardrails.check('What is the bitcoin price today?');
-    assert.equal(r.block, true);
-    assert.equal(r.offTopic, true);
+  it('chat prompt declines essays and homework via LLM rules', () => {
+    const out = guardrails.augmentSystem('Base.', 'chat');
+    assert.match(out, /essay|homework|assignment/i);
+    assert.match(out, /cannot write|Refuse to draft|not a homework/i);
+  });
+  it('does not regex-block donation-themed essay asks (model declines via prompt)', () => {
+    const r = guardrails.check('Write an essay for my teacher about my blood donation journey');
+    assert.equal(r.block, false);
   });
   it('allows donation questions', () => {
     const r = guardrails.check('When can I donate next?');

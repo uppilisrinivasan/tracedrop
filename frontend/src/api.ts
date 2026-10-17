@@ -345,6 +345,10 @@ export const api = {
   /** `chat` says which Chat the question was asked in (General, a Goal's or a Habit's) */
   copilot: (id: string, message: string, history: unknown[] | null, chat = 'general') => post<CopilotReply>(`/donors/${id}/copilot`, { message, history, chat }),
   chatActive: (id: string, chat = 'general') => request<{ cycleId: string; turns: { at: string; user: string; assistant: string }[]; history: unknown[] | null }>(`/donors/${id}/chat/active?chat=${encodeURIComponent(chat)}`),
+  chatCurrentCycle: (id: string) => request<{
+    cycleId: string; label: string; startedOn: string;
+    chats: Record<string, { turns: { at: string; user: string; assistant: string }[]; history: unknown[] | null }>;
+  }>(`/donors/${id}/chat/current-cycle`),
   chatCycles: (id: string) => request<{ cycles: { id: string; label: string; startedOn: string; endedOn: string; chatCount: number; dropCount: number }[] }>(`/donors/${id}/chat/cycles`),
   chatCycle: (id: string, cycleId: string) => request<{
     id: string; label: string; startedOn: string; endedOn: string;

@@ -37,6 +37,7 @@ export default function ChatSheet({ donorId, go, clientId, screen }: { donorId: 
   const [reading, setReading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pastCycles, setPastCycles] = useState<{ id: string; label: string; endedOn: string; chatCount: number }[]>([]);
+  const [thisCycle, setThisCycle] = useState<Awaited<ReturnType<typeof api.chatCurrentCycle>> | null>(null);
   const [pastPick, setPastPick] = useState<string | null>(null);
   const [pastDetail, setPastDetail] = useState<Awaited<ReturnType<typeof api.chatCycle>> | null>(null);
   const panel = useRef<HTMLDivElement>(null);
@@ -84,7 +85,11 @@ export default function ChatSheet({ donorId, go, clientId, screen }: { donorId: 
     const onBook = offHome('book');
     const onCheckup = offHome('checkup');
     const onChanged = () => { if (sheet.open) reload(); };
-    const onReset = () => { setPastCycles([]); setPastPick(null); setPastDetail(null); close(); };
+    const reloadPast = () => {
+      api.chatCycles(donorId).then((r) => setPastCycles(r.cycles)).catch(() => setPastCycles([]));
+      api.chatCurrentCycle(donorId).then(setThisCycle).catch(() => setThisCycle(null));
+    };
+    const onReset = () => { setPastPick(null); setPastDetail(null); reloadPast(); close(); };
     window.addEventListener('drop:open', onOpen);
     window.addEventListener('drop:ask', onAsk);
     window.addEventListener('drop:book', onBook);
@@ -118,8 +123,14 @@ export default function ChatSheet({ donorId, go, clientId, screen }: { donorId: 
   }, [open, menu, memory]);
 
   useEffect(() => {
-    if (chat !== 'past') return;
-    api.chatCycles(donorId).then((r) => setPastCycles(r.cycles)).catch(() => setPastCycles([]));
+    if (chat !== 'past') return undefined;
+    const reloadPast = () => {
+      api.chatCycles(donorId).then((r) => setPastCycles(r.cycles)).catch(() => setPastCycles([]));
+      api.chatCurrentCycle(donorId).then(setThisCycle).catch(() => setThisCycle(null));
+    };
+    reloadPast();
+    window.addEventListener('drop:changed', reloadPast);
+    return () => window.removeEventListener('drop:changed', reloadPast);
   }, [donorId, chat]);
 
   useEffect(() => {
@@ -232,38 +243,53 @@ export default function ChatSheet({ donorId, go, clientId, screen }: { donorId: 
         {error && <div className="callout callout-warn small sheet-error">{error}</div>}
 
         {chat === 'past' ? (
-          pastCycles.length === 0 ? (
-            <div className="sheet-empty">
-              <Icon name="history" size={28} />
-              <b>No past cycles yet</b>
-              <span className="small muted">When you use Reset on the demo bar, this cycle&apos;s chats and Drop receipts are saved here, read-only.</span>
-            </div>
-          ) : (
-            <div className="sheet-past" style={{ padding: 16, overflow: 'auto', flex: 1 }}>
-              <label className="small muted">Choose a cycle</label>
-              <select className="input" value={pastPick || ''} onChange={(e) => setPastPick(e.target.value || null)}>
-                <option value="">—</option>
-                {pastCycles.map((c) => <option key={c.id} value={c.id}>{c.label} · ended {c.endedOn}</option>)}
-              </select>
-              {pastDetail && Object.entries(pastDetail.chats).map(([key, bucket]) => (
-                <div key={key} style={{ marginTop: 16 }}>
-                  <b className="small">{key === 'general' ? 'General chat' : key}</b>
-                  {bucket.turns.map((t, i) => (
-                    <div key={i} className="drop-earlier" style={{ marginTop: 8 }}>
-                      <div><span><b>You:</b> {t.user}</span></div>
-                      <div><span><b>Drop:</b> {t.assistant}</span><span className="on">{t.at}</span></div>
-                    </div>
-                  ))}
+          (() => {
+            const liveChats = thisCycle ? Object.entries(thisCycle.chats) : [];
+            const liveTurns = liveChats.reduce((n, [, b]) => n + b.turns.length, 0);
+            const renderTurns = (entries: [string, { turns: { at: string; user: string; assistant: string }[] }][]) => entries.map(([key, bucket]) => (
+              <div key={key} style={{ marginTop: 12 }}>
+                <b className="small">{key === 'general' ? 'General chat' : key}</b>
+                {bucket.turns.map((t, i) => (
+                  <div key={i} className="drop-earlier" style={{ marginTop: 8 }}>
+                    <div><span><b>You:</b> {t.user}</span></div>
+                    <div><span><b>Drop:</b> {t.assistant}</span><span className="on">{t.at}</span></div>
+                  </div>
+                ))}
+              </div>
+            ));
+            if (pastCycles.length === 0 && liveTurns === 0) {
+              return (
+                <div className="sheet-empty">
+                  <Icon name="history" size={28} />
+                  <b>No cycles yet</b>
+                  <span className="small muted">Chat with Drop in General or a Goal — turns show under <strong>This cycle</strong>. Use <strong>Reset</strong> on the demo bar to archive them here (read-only). Vertex Agent Sessions mirror chat separately for compliance; this view is in-app history.</span>
                 </div>
-              ))}
-              {pastDetail && pastDetail.dropEarlier.length > 0 && (
-                <div style={{ marginTop: 16 }}>
-                  <b className="small">Drop · earlier that cycle</b>
-                  <div className="drop-earlier">{pastDetail.dropEarlier.map((e) => <div key={e.id}><span>{e.receipt}</span><span className="on">{e.on}</span></div>)}</div>
-                </div>
-              )}
-            </div>
-          )
+              );
+            }
+            return (
+              <div className="sheet-past" style={{ padding: 16, overflow: 'auto', flex: 1 }}>
+                <b className="small">This cycle (live)</b>
+                <p className="small muted" style={{ margin: '4px 0 8px' }}>Since demo timeline {thisCycle?.startedOn || '…'}. Still writable in other chats.</p>
+                {liveTurns === 0 ? <p className="small muted">No Drop chats recorded this cycle yet.</p> : renderTurns(liveChats)}
+                {pastCycles.length > 0 && (
+                  <>
+                    <b className="small" style={{ display: 'block', marginTop: 20 }}>Earlier cycles (read-only)</b>
+                    <select className="input" value={pastPick || ''} onChange={(e) => setPastPick(e.target.value || null)}>
+                      <option value="">—</option>
+                      {pastCycles.map((c) => <option key={c.id} value={c.id}>{c.label} · ended {c.endedOn}</option>)}
+                    </select>
+                    {pastDetail && renderTurns(Object.entries(pastDetail.chats))}
+                    {pastDetail && pastDetail.dropEarlier.length > 0 && (
+                      <div style={{ marginTop: 16 }}>
+                        <b className="small">Drop · earlier that cycle</b>
+                        <div className="drop-earlier">{pastDetail.dropEarlier.map((e) => <div key={e.id}><span>{e.receipt}</span><span className="on">{e.on}</span></div>)}</div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            );
+          })()
         ) : (
           <Copilot key={`${donorId}|${chat}`} donorId={donorId} go={(s) => { close(); go(s); }} clientId={clientId}
             chat={chat} opener={opener} answers={answers} readOnly={readOnly}
