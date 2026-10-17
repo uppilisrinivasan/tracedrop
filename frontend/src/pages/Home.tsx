@@ -23,7 +23,7 @@ function greeting(donor: { name: string; newUser?: boolean }, user: AuthUser) {
  * as quiet tiles on the right, and the donation countdown always in the header.
  * A Donor with no donations yet (the New donor) sees plain empty tiles that point to their first donation.
  */
-export default function Home({ donorId, go, version, refresh, clientId, user }: PageProps & { user: AuthUser }) {
+export default function Home({ donorId, go, version, refresh, clientId, accountKey, user }: PageProps & { user: AuthUser }) {
   const { data, error, loading } = useLoad(() => api.overview(donorId), [donorId, version]);
   const [dropTick, setDropTick] = useState(0);
   const drop = useLoad(() => api.drop(donorId), [donorId, version, dropTick]);
@@ -78,7 +78,7 @@ export default function Home({ donorId, go, version, refresh, clientId, user }: 
 
       <div className="drop-board">
         <div className="drop-main">
-          <Copilot key={donorId} donorId={donorId} go={go} clientId={clientId} inline firstTime={firstTime}
+          <Copilot key={`${accountKey}|${donorId}`} accountKey={accountKey} donorId={donorId} go={go} clientId={clientId} inline firstTime={firstTime}
             top={<DropFeed donorId={donorId} version={version} refresh={refresh} calmLine={firstTime ? 'Your first donation will show here.' : `You have helped ${im.patientsHelped} patients so far.`} storiesInChat onDetails={() => go('checkups')} onDonate={() => go('donate')} />} />
         </div>
 

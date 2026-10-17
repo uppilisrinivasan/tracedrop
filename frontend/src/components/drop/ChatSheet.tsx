@@ -27,7 +27,7 @@ function whereYouAre(g: DropGoal) {
   return g.trend?.marker === 'hba1c' ? `${p.value}%` : `${p.value}`;
 }
 
-export default function ChatSheet({ donorId, go, clientId, screen }: { donorId: string; go: (s: Screen) => void; clientId: string; screen: Screen }) {
+export default function ChatSheet({ accountKey, donorId, go, clientId, screen }: { accountKey: string; donorId: string; go: (s: Screen) => void; clientId: string; screen: Screen }) {
   const [chat, setChat] = useState<ChatId | null>(null);
   const [opener, setOpener] = useState<ChatOpener | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -291,7 +291,7 @@ export default function ChatSheet({ donorId, go, clientId, screen }: { donorId: 
             );
           })()
         ) : (
-          <Copilot key={`${donorId}|${chat}`} donorId={donorId} go={(s) => { close(); go(s); }} clientId={clientId}
+          <Copilot key={`${accountKey}|${donorId}|${chat}`} accountKey={accountKey} donorId={donorId} go={(s) => { close(); go(s); }} clientId={clientId}
             chat={chat} opener={opener} answers={answers} readOnly={readOnly}
             placeholder={goal ? `Ask Drop about ${goal.name}` : habit ? `Ask Drop about ${habit.toLowerCase()}` : undefined} />
         )}

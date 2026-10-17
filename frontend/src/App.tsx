@@ -75,7 +75,8 @@ export default function App({ user, clientId, onSignOut }: { user: AuthUser; cli
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
   const refresh = () => setVersion((v) => v + 1);
-  const page = { donorId, go, version, refresh, clientId };
+  const accountKey = user.sub || (user.local ? 'local' : 'anonymous');
+  const page = { donorId, go, version, refresh, clientId, accountKey };
 
   // Choosing who to view is part of the demo, so it sits at the top of every screen
   const viewingAs = (
@@ -140,7 +141,7 @@ export default function App({ user, clientId, onSignOut }: { user: AuthUser; cli
         ))}
       </nav>
 
-      <ChatSheet key={donorId} donorId={donorId} go={go} clientId={clientId} screen={screen} />
+      <ChatSheet key={`${accountKey}|${donorId}`} accountKey={accountKey} donorId={donorId} go={go} clientId={clientId} screen={screen} />
     </div>
   );
 }
@@ -151,4 +152,5 @@ export interface PageProps {
   version: number;
   refresh: () => void;
   clientId: string;
+  accountKey: string;
 }

@@ -35,7 +35,10 @@ const BOOK_INTENT = /\b(book|schedule|reserve)\b.*\b(donat\w*|slot|appointment|b
 
 // One conversation per donor and Chat; the General one is shared by Home and the side sheet
 const conversations = new Map<string, { turns: Turn[]; history: unknown[] | null }>();
-const keyOf = (donorId: string, chat: ChatId) => (chat === 'general' ? donorId : `${donorId}|${chat}`);
+const keyOf = (accountKey: string, donorId: string, chat: ChatId) => {
+  const base = `${accountKey}|${donorId}`;
+  return chat === 'general' ? base : `${base}|${chat}`;
+};
 
 /** What the side sheet asks its Chat to do as it opens: show Drop's line, ask, book or offer check-ups. */
 export interface ChatOpener { id: number; kind: 'open' | 'say' | 'ask' | 'book' | 'checkup'; text?: string; questions?: string[] }
@@ -122,12 +125,12 @@ function ChartCard({ marker, points }: { marker: string; points: ChartPoint[] })
   );
 }
 
-export default function Copilot({ donorId, go, clientId, inline = false, top, firstTime = false, chat = 'general', opener, answers = {}, readOnly = false, placeholder }: {
-  donorId: string; go: (s: Screen) => void; clientId: string; inline?: boolean; top?: ReactNode; firstTime?: boolean;
+export default function Copilot({ accountKey, donorId, go, clientId, inline = false, top, firstTime = false, chat = 'general', opener, answers = {}, readOnly = false, placeholder }: {
+  accountKey: string; donorId: string; go: (s: Screen) => void; clientId: string; inline?: boolean; top?: ReactNode; firstTime?: boolean;
   /** In the side sheet: which Chat, what to do as it opens, fixed rule replies, and read-only for a done or stopped Goal */
   chat?: ChatId; opener?: ChatOpener | null; answers?: Record<string, string>; readOnly?: boolean; placeholder?: string;
 }) {
-  const key = keyOf(donorId, chat);
+  const key = keyOf(accountKey, donorId, chat);
   const [turns, setTurns] = useState<Turn[]>(() => conversations.get(key)?.turns || []);
   const [history, setHistory] = useState<unknown[] | null>(() => conversations.get(key)?.history || null);
   useEffect(() => { conversations.set(key, { turns, history }); }, [key, turns, history]);

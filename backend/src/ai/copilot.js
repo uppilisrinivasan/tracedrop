@@ -88,8 +88,9 @@ const NOTE_TO_SELF = /^(the user\b|okay, the user\b|i should\b|plan:|tool_code|`
 // Drop never calls the Donor "the user", and never narrates what it will do ("Given this, I should advise…")
 const isNote = (text) => NOTE_TO_SELF.test(text) || /\bthe user('s)?\b/i.test(text) || /^(given|therefore|so|based on)\b[^.]*\bI (should|will|need to)\b/i.test(text) || /^I will (inform|tell|advise|explain)\b/i.test(text);
 
-async function chat({ donorId, history, message, userName, chat: chatId }) {
+async function chat({ user, donorId, history, message, userName, chat: chatId }) {
   const chatKey = typeof chatId === 'string' ? chatId.slice(0, 40) : 'general';
+  const sessionId = chatCycles.agentSessionUserId(user, donorId);
   const guard = guardrails.check(message);
   if (guard.block) {
     let actions = [];
@@ -97,15 +98,15 @@ async function chat({ donorId, history, message, userName, chat: chatId }) {
       const card = drop.offerCard(donorId, 'care_slots');
       actions = [{ type: 'card', cardId: card.id }];
     }
-    const server = chatCycles.activeChat(donorId, chatKey);
+    const server = chatCycles.activeChat(user, donorId, chatKey);
     const prior = Array.isArray(history) && history.length ? history.slice(-20) : (server.history || []).slice(-20);
-    chatCycles.recordTurn(donorId, chatKey, { userText: message, assistantText: guard.reply, history: prior });
-    agentPlatform.appendEvent(donorId, { role: 'user', text: message }).catch(() => {});
-    agentPlatform.appendEvent(donorId, { role: 'assistant', text: guard.reply }).catch(() => {});
+    chatCycles.recordTurn(user, donorId, chatKey, { userText: message, assistantText: guard.reply, history: prior });
+    agentPlatform.appendEvent(sessionId, { role: 'user', text: message }).catch(() => {});
+    agentPlatform.appendEvent(sessionId, { role: 'assistant', text: guard.reply }).catch(() => {});
     return { reply: guard.reply, steps: [], actions, history: prior, answeredByRules: true, guardrail: true };
   }
 
-  const server = chatCycles.activeChat(donorId, chatKey);
+  const server = chatCycles.activeChat(user, donorId, chatKey);
   const prior = Array.isArray(history) && history.length ? history.filter((turn) => turn && ['user', 'assistant'].includes(turn.role) &&
     (typeof turn.content === 'string' || Array.isArray(turn.content))).slice(-20)
     : (server.history || []).filter((turn) => turn && ['user', 'assistant'].includes(turn.role)).slice(-20);
@@ -123,7 +124,7 @@ async function chat({ donorId, history, message, userName, chat: chatId }) {
   if (result.text && isNote(result.text)) {
     const rules = fallback(donorId, message);
     const reply = rules.generic ? 'Sorry, I lost my words there. Could you ask me that again?' : rules.reply;
-    chatCycles.recordTurn(donorId, chatKey, { userText: message, assistantText: reply, history: prior });
+    chatCycles.recordTurn(user, donorId, chatKey, { userText: message, assistantText: reply, history: prior });
     return { reply, steps: result.steps, actions: [...result.actions, ...rules.actions.filter((a) => !result.actions.some((b) => b.type === a.type && b.text === a.text))], history: prior, answeredByRules: true };
   }
   if (!result.text) {
@@ -131,7 +132,7 @@ async function chat({ donorId, history, message, userName, chat: chatId }) {
     const existing = result.actions;
     const actions = [...existing, ...rules.actions.filter((a) => !existing.some((b) => b.type === a.type && b.marker === a.marker && b.cardId === a.cardId))];
     const reply = existing.some((a) => ['memory', 'receipt', 'card'].includes(a.type)) ? defaultReply(existing) : rules.reply;
-    chatCycles.recordTurn(donorId, chatKey, { userText: message, assistantText: reply, history: prior });
+    chatCycles.recordTurn(user, donorId, chatKey, { userText: message, assistantText: reply, history: prior });
     return { reply, steps: result.steps, actions, history: prior, answeredByRules: true, offline: true, reason: 'AI response incomplete' };
   }
   let reply = result.text;
@@ -142,11 +143,11 @@ async function chat({ donorId, history, message, userName, chat: chatId }) {
     const card = drop.offerCard(donorId, 'care_slots');
     actions = [...actions.filter((a) => a.type !== 'card'), { type: 'card', cardId: card.id }];
   }
-  chatCycles.recordTurn(donorId, chatKey, { userText: message, assistantText: reply, history: result.messages });
-  agentPlatform.appendEvent(donorId, { role: 'user', text: message }).catch(() => {});
-  agentPlatform.appendEvent(donorId, { role: 'assistant', text: reply }).catch(() => {});
+  chatCycles.recordTurn(user, donorId, chatKey, { userText: message, assistantText: reply, history: result.messages });
+  agentPlatform.appendEvent(sessionId, { role: 'user', text: message }).catch(() => {});
+  agentPlatform.appendEvent(sessionId, { role: 'assistant', text: reply }).catch(() => {});
   const mem = drop.view(donorId).memory.map((x) => x.text);
-  if (mem.length) agentPlatform.syncMemoryFromDrop(donorId, mem).catch(() => {});
+  if (mem.length) agentPlatform.syncMemoryFromDrop(sessionId, mem).catch(() => {});
   return { reply, steps: result.steps, actions, history: result.messages };
 }
 

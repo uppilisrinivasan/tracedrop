@@ -1,20 +1,36 @@
 /**
- * Demo-cycle chat history: one "cycle" runs from timeline start until Reset.
- * Current-cycle turns are kept for Drop chat; past cycles are read-only archives.
- * Synced to Vertex Agent Engine Sessions when configured (see agentPlatform.js).
+ * Demo-cycle chat history per signed-in account (guest sub or Google sub) and persona.
+ * One "cycle" runs from timeline start until Reset. Past cycles are read-only archives.
+ * Vertex Agent Engine Sessions mirror when configured (see agentPlatform.js).
  */
 
 const store = require('../data/store');
 const drop = require('./drop');
 
-/** @type {Map<string, { id: string, label: string, startedOn: string, endedOn: string, chats: Record<string, { turns: object[], history: object[] | null }>, dropEarlier: object[] }[]>} */
-const pastByDonor = new Map();
+/** @type {Map<string, { id: string, label: string; startedOn: string; endedOn: string; chats: Record<string, { turns: object[], history: object[] | null }>, dropEarlier: object[] }[]>} */
+const pastByScope = new Map();
 
 /** @type {Map<string, Record<string, { turns: object[], history: object[] | null }>>} */
-const currentByDonor = new Map();
+const currentByScope = new Map();
 
-/** One seeded archive per demo persona so judges see Past Cycles before the first Reset. */
+/** One seeded archive per account+persona so judges see Past Cycles before the first Reset. */
 const demoPastSeeded = new Set();
+
+function accountSub(user) {
+  if (!user) return 'anonymous';
+  if (user.local || user.sub === 'local') return 'local';
+  return String(user.sub || 'anonymous');
+}
+
+/** Stable key: one browser session / Google account × demo persona. */
+function scopeKey(user, donorId) {
+  return `${accountSub(user)}|${donorId}`;
+}
+
+function donorFromScope(scope) {
+  const i = scope.indexOf('|');
+  return i >= 0 ? scope.slice(i + 1) : scope;
+}
 
 function cycleId() {
   return store.clock().start || store.today();
@@ -29,14 +45,15 @@ function chatKey(chat) {
   return typeof chat === 'string' && chat ? chat.slice(0, 40) : 'general';
 }
 
-function ensureCurrent(donorId) {
-  if (!currentByDonor.has(donorId)) currentByDonor.set(donorId, {});
-  return currentByDonor.get(donorId);
+function ensureCurrent(scope) {
+  if (!currentByScope.has(scope)) currentByScope.set(scope, {});
+  return currentByScope.get(scope);
 }
 
-function recordTurn(donorId, chat, { userText, assistantText, history }) {
+function recordTurn(user, donorId, chat, { userText, assistantText, history }) {
+  const scope = scopeKey(user, donorId);
   const key = chatKey(chat);
-  const bucket = ensureCurrent(donorId);
+  const bucket = ensureCurrent(scope);
   if (!bucket[key]) bucket[key] = { turns: [], history: null };
   const entry = bucket[key];
   entry.turns.push({ at: store.today(), user: userText, assistant: assistantText });
@@ -45,18 +62,20 @@ function recordTurn(donorId, chat, { userText, assistantText, history }) {
   return entry;
 }
 
-function activeChat(donorId, chat) {
+function activeChat(user, donorId, chat) {
+  const scope = scopeKey(user, donorId);
   const key = chatKey(chat);
-  const bucket = currentByDonor.get(donorId);
+  const bucket = currentByScope.get(scope);
   if (!bucket || !bucket[key]) return { cycleId: cycleId(), turns: [], history: null };
   return { cycleId: cycleId(), turns: bucket[key].turns, history: bucket[key].history };
 }
 
-function seedDemoPastIfEmpty(donorId) {
-  if (demoPastSeeded.has(donorId) || (pastByDonor.get(donorId) || []).length) return;
+function seedDemoPastIfEmpty(user, donorId) {
+  const scope = scopeKey(user, donorId);
+  if (demoPastSeeded.has(scope) || (pastByScope.get(scope) || []).length) return;
   const donor = store.getDonor(donorId);
   if (!donor || donor.newUser) return;
-  demoPastSeeded.add(donorId);
+  demoPastSeeded.add(scope);
   const start = store.clock().start || store.today();
   const endedOn = addDaysUtc(start, -14);
   const first = String(donor.name || '').split(' ')[0] || 'there';
@@ -76,7 +95,7 @@ function seedDemoPastIfEmpty(donorId) {
     },
     dropEarlier: [],
   }];
-  pastByDonor.set(donorId, list);
+  pastByScope.set(scope, list);
 }
 
 function addDaysUtc(isoDate, days) {
@@ -85,9 +104,10 @@ function addDaysUtc(isoDate, days) {
   return d.toISOString().slice(0, 10);
 }
 
-function currentCycle(donorId) {
-  seedDemoPastIfEmpty(donorId);
-  const bucket = currentByDonor.get(donorId) || {};
+function currentCycle(user, donorId) {
+  seedDemoPastIfEmpty(user, donorId);
+  const scope = scopeKey(user, donorId);
+  const bucket = currentByScope.get(scope) || {};
   const chats = {};
   for (const [key, entry] of Object.entries(bucket)) {
     if (entry.turns.length) chats[key] = { turns: entry.turns, history: entry.history };
@@ -95,9 +115,10 @@ function currentCycle(donorId) {
   return { cycleId: cycleId(), label: 'This cycle', startedOn: cycleId(), chats };
 }
 
-function listPast(donorId) {
-  seedDemoPastIfEmpty(donorId);
-  return (pastByDonor.get(donorId) || []).map((c) => ({
+function listPast(user, donorId) {
+  seedDemoPastIfEmpty(user, donorId);
+  const scope = scopeKey(user, donorId);
+  return (pastByScope.get(scope) || []).map((c) => ({
     id: c.id,
     label: c.label,
     startedOn: c.startedOn,
@@ -107,10 +128,16 @@ function listPast(donorId) {
   }));
 }
 
-function getPast(donorId, id) {
-  const c = (pastByDonor.get(donorId) || []).find((x) => x.id === id);
+function getPast(user, donorId, id) {
+  const scope = scopeKey(user, donorId);
+  const c = (pastByScope.get(scope) || []).find((x) => x.id === id);
   if (!c) return null;
   return c;
+}
+
+/** Session id for Vertex Agent Engine (account × persona). */
+function agentSessionUserId(user, donorId) {
+  return scopeKey(user, donorId);
 }
 
 /** Call before store.resetDemo() clears Drop state. */
@@ -118,9 +145,8 @@ function archiveCurrentCycle() {
   const endedOn = store.today();
   const id = cycleId();
   const label = `Cycle from ${cycleLabel(id)}`;
-  for (const donor of store.allDonors()) {
-    const donorId = donor.id;
-    const chats = currentByDonor.get(donorId) || {};
+  for (const [scope, chats] of currentByScope.entries()) {
+    const donorId = donorFromScope(scope);
     const hasChat = Object.values(chats).some((c) => c.turns.length);
     let dropEarlier = [];
     try {
@@ -129,28 +155,31 @@ function archiveCurrentCycle() {
       dropEarlier = [];
     }
     if (!hasChat && !dropEarlier.length) continue;
-    const list = pastByDonor.get(donorId) || [];
+    const list = pastByScope.get(scope) || [];
     list.unshift({
-      id: `${id}-${endedOn}`,
+      id: `${id}-${endedOn}-${scope.replace(/\|/g, '-')}`,
       label,
       startedOn: id,
       endedOn,
       chats: JSON.parse(JSON.stringify(chats)),
       dropEarlier: JSON.parse(JSON.stringify(dropEarlier)),
     });
-    pastByDonor.set(donorId, list.slice(0, 12));
+    pastByScope.set(scope, list.slice(0, 12));
   }
-  currentByDonor.clear();
+  currentByScope.clear();
 }
 
 /** @internal test isolation */
 function resetState() {
-  pastByDonor.clear();
-  currentByDonor.clear();
+  pastByScope.clear();
+  currentByScope.clear();
   demoPastSeeded.clear();
 }
 
 module.exports = {
+  scopeKey,
+  accountSub,
+  agentSessionUserId,
   recordTurn,
   activeChat,
   currentCycle,
