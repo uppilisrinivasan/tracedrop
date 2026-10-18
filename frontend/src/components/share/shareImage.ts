@@ -212,7 +212,7 @@ function drawPostcard(ctx: Ctx, p: Postcard) {
   const [month, year] = p.month.split(' ');
   ctx.fillText(`${month.slice(0, 3).toUpperCase()} ${year}`, 0, -14);
   font(ctx, `700 22px ${MONO}`, '4px');
-  ctx.fillText('TRACEDROP', 2, 30);
+  ctx.fillText(APP_NAME.toUpperCase(), 2, 30);
   ctx.restore();
 
   // Headline, context or role, month
